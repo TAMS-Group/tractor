@@ -42,8 +42,7 @@ int main(int argc, char **argv) {
   std::string command = argv[2];
   std::string solvername = argv[3];
 
-  // ros::WallDuration training_time(60 * 5);
-  ros::WallDuration training_time(60 * 60);
+  ros::WallDuration training_time(60 * 5);
 
   std::string filename = "weights-" + envname + "-" + solvername + ".dat";
 
@@ -77,9 +76,8 @@ int main(int argc, char **argv) {
   auto robot_model = robot_model_loader.getModel();
 
   auto engine = std::make_shared<tractor::SimpleEngine>();
-  // auto engine = std::make_shared<tractor::ParallelEngine>();
-  //  auto engine = std::make_shared<tractor::LoopEngine>();
-  //  auto engine = std::make_shared<tractor::JITEngine>();
+  // auto engine = std::make_shared<tractor::LoopEngine>();
+  // auto engine = std::make_shared<tractor::JITEngine>();
 
   ros::Publisher visualization_publisher =
       node_handle.advertise<visualization_msgs::MarkerArray>(
@@ -172,16 +170,6 @@ int main(int argc, char **argv) {
     solver = s;
   } else
 
-      if (solvername == "sq001i10") {
-    auto s = std::make_shared<tractor::LeastSquaresSolver<ValueSingle>>(engine);
-    s->_regularization = 0.01;
-    s->_max_linear_iterations = 10;
-    s->_step_scaling = 0.5;
-    s->setTimeout(1, false);
-    s->setTolerance(1e-9);
-    solver = s;
-  } else
-
       if (solvername == "sq03") {
     auto s = std::make_shared<tractor::LeastSquaresSolver<ValueSingle>>(engine);
     s->_regularization = 0.3;
@@ -236,16 +224,8 @@ int main(int argc, char **argv) {
     throw std::runtime_error("unknown solver " + solvername);
   }
 
-  moveit::core::RobotState robot_state(robot_model);
-  if (!robot_state.setToDefaultValues(robot_model->getJointModelGroup("arm"),
-                                      "home")) {
-    throw std::runtime_error("failed to set home pose");
-  }
-  // robot_state.setToRandomPositions();
-
   tractor::DexLearn<ValueSingle, ValueBatch> dexlearn(
-      solver, engine, robot_model, robot_state, acm2, group_robot, env,
-      outer_batch_size);
+      solver, engine, robot_model, acm2, group_robot, env, outer_batch_size);
 
   auto build = [&]() { dexlearn.build([&]() { env->goals(dexlearn); }); };
 

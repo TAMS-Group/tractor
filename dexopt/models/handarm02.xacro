@@ -11,19 +11,19 @@
     <link name="world"/>
     
     <xacro:include filename="$(find ur_description)/urdf/ur5.urdf.xacro"/>
-    <xacro:ur5_robot 
-        prefix="arm_" 
+    <xacro:ur5_robot
+        prefix="arm_"
         joint_limited="true"
-        
+
         wrist_2_lower_limit="${2*pi}"
         wrist_2_upper_limit="${3*pi}"
-        
+
         shoulder_lift_lower_limit="${1.5*pi - 0.7}"
         shoulder_lift_upper_limit="${2.0*pi - 0.7}"
-        
+
         elbow_joint_lower_limit="${2.0*pi + 0.7}"
         elbow_joint_upper_limit="${3.0*pi + 0.7}"
-        
+
         wrist_1_lower_limit="${3.5*pi}"
         wrist_1_upper_limit="${4.0*pi}"
         />
@@ -32,7 +32,7 @@
       <child link="arm_base_link" />
       <origin xyz="-0.75 -0.15 0" rpy="0 0 0" />
     </joint>
-      
+
 
     <xacro:include filename="$(find sr_description)/hand/xacro/full_hand.urdf.xacro"/>
     <xacro:include filename="$(find sr_description)/other/xacro/gazebo/gazebo.urdf.xacro"/>
@@ -50,9 +50,9 @@
             <inertial>
                 <mass value="${mass}"/>
                 <origin xyz="0 0 0" rpy="0 0 0"/>
-                <inertia 
-                    ixx="${1.0/12*mass*(sy*sy+sz*sz)}" ixy="0" ixz="0" 
-                    iyy="${1.0/12*mass*(sx*sx+sz*sz)}" iyz="0" 
+                <inertia
+                    ixx="${1.0/12*mass*(sy*sy+sz*sz)}" ixy="0" ixz="0"
+                    iyy="${1.0/12*mass*(sx*sx+sz*sz)}" iyz="0"
                     izz="${1.0/12*mass*(sx*sx+sy*sy)}"
                     />
             </inertial>
@@ -69,11 +69,11 @@
             <xacro:insert_block name="origin"/>
         </joint>
     </xacro:macro>
-    
+
     <xacro:invisible_box type="floating" name="object" parent="world" sx="0.06" sy="0.06" sz="0.06" mass="0.01">
         <origin xyz="0 0 0.03" rpy="0 0 0"/>
     </xacro:invisible_box>
-    
+
     <link name="object_visual">
         <visual>
             <geometry>
@@ -87,9 +87,9 @@
       <child link="object_visual" />
       <origin xyz="0 0 0" rpy="0 0 0" />
     </joint>
-    
+
     <xacro:invisible_box type="fixed" name="floor" parent="world" sx="0.5" sy="0.5" sz="0.4" mass="1">
         <origin xyz="0 0 -0.2" rpy="0 0 0"/>
     </xacro:invisible_box>
-    
+
 </robot>

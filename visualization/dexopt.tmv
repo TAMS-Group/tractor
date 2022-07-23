@@ -10,14 +10,15 @@ Display:
         Color: false
         Material:
           Color:
-            B: 1.000000
-            G: 1.000000
-            R: 1.000000
-          Metallic: 0.000000
+            B: 1,000000
+            G: 1,000000
+            R: 1,000000
+          Metallic: 0,000000
           Normals: ""
-          Opacity: 1.000000
-          Roughness: 0.375081
+          Opacity: 1,000000
+          Roughness: 0,100000
           Texture: ""
+          Unlit: false
           id: 748
         Normals: false
         Parameters: true
@@ -25,43 +26,43 @@ Display:
         id: 747
       MaxSteps: 10
       Name: RobotTrajectoryDisplay2
-      PlayTrajectory: false
+      PlayTrajectory: true
       ShowAllStates: false
-      Speed: 1.000000
+      Speed: 1,000000
       Topic: /move_group/display_planned_path
-      TrajectoryTime: 2.730000
+      TrajectoryTime: 2,000000
       Transform:
         Orientation:
-          Pitch: 0.000000
-          Roll: 0.000000
-          Yaw: 0.000000
+          Pitch: 0,000000
+          Roll: 0,000000
+          Yaw: 0,000000
         Position:
-          X: 0.000000
-          Y: 0.000000
-          Z: 0.000000
+          X: 0,000000
+          Y: 0,000000
+          Z: 0,000000
       Visible: true
       id: 746
       type: RobotTrajectoryDisplay
-    - Brightness: 27.340000
+    - Brightness: 27,000000
       Color:
-        B: 0.733011
-        G: 0.897749
-        R: 1.000000
+        B: 1,000000
+        G: 1,000000
+        R: 1,000000
       Frame: ""
       Name: DirectionalLight2
-      ShadowBias: 1.000000
-      ShadowDepth: 1.000000
+      ShadowBias: 1,000000
+      ShadowDepth: 1,000000
       ShadowEnable: true
-      ShadowWidth: 0.510000
+      ShadowWidth: 1,100000
       Transform:
         Orientation:
-          Pitch: 421.650000
-          Roll: 0.000000
-          Yaw: -34.200000
+          Pitch: 763,900000
+          Roll: 0,000000
+          Yaw: 326,000000
         Position:
-          X: -0.445000
-          Y: 0.010000
-          Z: 0.220000
+          X: -0,000000
+          Y: 0,000000
+          Z: 0,000000
       ViewSpace: false
       Visible: true
       id: 764
@@ -70,14 +71,15 @@ Display:
         Color: false
         Material:
           Color:
-            B: 0.800000
-            G: 0.800000
-            R: 0.800000
-          Metallic: 0.000000
+            B: 0,000000
+            G: 0,000000
+            R: 0,000000
+          Metallic: 0,000000
           Normals: ""
-          Opacity: 1.000000
-          Roughness: 0.400000
+          Opacity: 1,000000
+          Roughness: 0,000000
           Texture: ""
+          Unlit: false
           id: 70333
         Normals: false
         Parameters: false
@@ -85,34 +87,35 @@ Display:
         id: 70332
       Name: MarkerArrayDisplay2
       Topic: /tractor/visualization
-      Visible: false
+      Visible: true
       id: 70331
       type: MarkerArrayDisplay
     - Frame: ""
       Material:
         Color:
-          B: 0.400000
-          G: 0.400000
-          R: 0.400000
-        Metallic: 0.000000
+          B: 1,000000
+          G: 1,000000
+          R: 1,000000
+        Metallic: 0,000000
         Normals: ""
-        Opacity: 1.000000
-        Roughness: 0.322679
+        Opacity: 1,000000
+        Roughness: 0,685714
         Texture: ""
+        Unlit: false
         id: 70669
       Name: PlaneDisplay1
       Size:
-        X: 1000.000000
-        Y: 1000.000000
+        X: 1000,000000
+        Y: 1000,000000
       Transform:
         Orientation:
-          Pitch: 0.000000
-          Roll: 0.000000
-          Yaw: 0.000000
+          Pitch: 0,000000
+          Roll: 0,000000
+          Yaw: 0,000000
         Position:
-          X: 0.000000
-          Y: 0.000000
-          Z: 0.000000
+          X: 0,000000
+          Y: 0,000000
+          Z: 0,000000
       Visible: true
       id: 70668
       type: PlaneDisplay
@@ -126,42 +129,43 @@ Display:
         Color: false
         Material:
           Color:
-            B: 0.800000
-            G: 0.800000
-            R: 0.800000
-          Metallic: 0.000000
+            B: 0,000000
+            G: 0,000000
+            R: 0,000000
+          Metallic: 0,000000
           Normals: ""
-          Opacity: 1.000000
-          Roughness: 0.384647
+          Opacity: 1,000000
+          Roughness: 0,100000
           Texture: ""
+          Unlit: false
           id: 70777
         Normals: false
-        Parameters: false
+        Parameters: true
         Texture: false
         id: 70776
       Name: RobotStateDisplay1
       Topic: /joint_states
       Transform:
         Orientation:
-          Pitch: 0.000000
-          Roll: 0.000000
-          Yaw: 0.000000
+          Pitch: 0,000000
+          Roll: 0,000000
+          Yaw: 0,000000
         Position:
-          X: 0.000000
-          Y: 0.000000
-          Z: 0.000000
+          X: 0,000000
+          Y: 0,000000
+          Z: 0,000000
       Visible: false
       id: 70775
       type: RobotStateDisplay
     - DescriptionColor:
-        B: 1.000000
-        G: 1.000000
-        R: 1.000000
+        B: 1,000000
+        G: 1,000000
+        R: 1,000000
       DescriptionOffset:
-        X: 0.000000
-        Y: 0.850000
-      DescriptionOpacity: 1.000000
-      DescriptionSize: 0.200000
+        X: 0,000000
+        Y: 0,000000
+      DescriptionOpacity: 1,000000
+      DescriptionSize: 0,000000
       Name: InteractiveMarkerDisplay1
       ShowDescriptions: true
       TopicNamespace: /interactive_markers
@@ -178,14 +182,15 @@ Display:
         Color: false
         Material:
           Color:
-            B: 0.800000
-            G: 0.800000
-            R: 0.800000
-          Metallic: 0.000000
+            B: 0,000000
+            G: 0,000000
+            R: 0,000000
+          Metallic: 0,000000
           Normals: ""
-          Opacity: 1.000000
-          Roughness: 0.400000
+          Opacity: 1,000000
+          Roughness: 0,000000
           Texture: ""
+          Unlit: false
           id: 77220
         Normals: false
         Parameters: false
@@ -195,61 +200,63 @@ Display:
       Topic: /joint_states
       Transform:
         Orientation:
-          Pitch: 0.000000
-          Roll: 0.000000
-          Yaw: 0.000000
+          Pitch: 0,000000
+          Roll: 0,000000
+          Yaw: 0,000000
         Position:
-          X: 0.000000
-          Y: 0.000000
-          Z: 0.000000
+          X: 0,000000
+          Y: 0,000000
+          Z: 0,000000
       Visible: false
       id: 77218
       type: RobotStateDisplay
   Environment:
-    AmbientLighting: 1.000000
-    BackgroundBrightness: 3.265000
+    AmbientLighting: 1,000000
+    BackgroundBrightness: 3,000000
     BackgroundColor:
-      A: 1.000000
-      B: 1.000000
-      G: 1.000000
-      R: 1.000000
+      A: 1,000000
+      B: 1,000000
+      G: 1,000000
+      R: 1,000000
     EnvironmentMap: package://tamsviz_media/environments/the_lost_city.jpg
     GroundColor:
-      B: 0.000000
-      G: 0.000000
-      R: 0.000000
-    HemisphericLighting: 1.000000
+      B: 0,000000
+      G: 0,000000
+      R: 0,000000
+    HemisphericLighting: 1,000000
     UseEnvironmentMap: true
     id: 30
     type: EnvironmentComponent
   FixedFrame: base_frame
   Name: Document
   Rendering:
-    BlackLevel: 0.000000
-    Exposure: 1.000000
+    BlackLevel: 0,000000
+    Exposure: 1,000000
     MultiSampling: 4
     SampleShading: 1
     ShadowCubeResolution: 512
     ShadowMapResolution: 4096
     ToneMapping: true
-    WhiteLevel: 1.000000
+    WhiteLevel: 1,000000
     id: 77222
     type: RenderingComponent
+  Republish: true
   id: 8
 Timeline:
   Tracks:
     []
   id: 7
 Window:
+  FieldOfView: 57,295780
   Name: Window
   ViewPosition:
-    X: 0.089887
-    Y: -0.178939
-    Z: 0.193439
+    X: 0,232946
+    Y: 0,276284
+    Z: 0,212027
   ViewTarget:
-    X: 0.013685
-    Y: 0.009664
-    Z: 0.067218
-  id: 9
+    X: -0,041608
+    Y: 0,006481
+    Z: 0,073290
+  id: 77426
   type: SceneWindow
 id: 6
