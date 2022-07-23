@@ -42,7 +42,8 @@ int main(int argc, char **argv) {
   std::string command = argv[2];
   std::string solvername = argv[3];
 
-  ros::WallDuration training_time(60 * 5);
+  // ros::WallDuration training_time(60 * 5);
+  ros::WallDuration training_time(60 * 10);
 
   std::string filename = "weights-" + envname + "-" + solvername + ".dat";
 
@@ -56,7 +57,7 @@ int main(int argc, char **argv) {
     throw std::runtime_error("unknown env " + envname);
   }
 
-  std::string robot = "robot_description";
+  std::string robot_description = "dexopt_robot_description";
 
   ros::init(argc, argv, "tractor_test_sim", 0);
   ros::NodeHandle node_handle;
@@ -66,13 +67,11 @@ int main(int argc, char **argv) {
 
   RobotTrajectoryPublisher robot_trajectory_publisher;
 
-  std::string robot_name;
-  node_handle.param(robot, robot_name, std::string("???"));
-
   ros::AsyncSpinner spinner(4);
   spinner.start();
 
-  robot_model_loader::RobotModelLoader robot_model_loader(robot, false);
+  robot_model_loader::RobotModelLoader robot_model_loader(robot_description,
+                                                          false);
   auto robot_model = robot_model_loader.getModel();
 
   auto engine = std::make_shared<tractor::SimpleEngine>();
