@@ -1,9 +1,11 @@
-// (c) 2020-2021 Philipp Ruppel
+// (c) 2020-2022 Philipp Ruppel
 
 #pragma once
 
 #include <Eigen/Dense>
 #include <cstdint>
+
+#include <immintrin.h>
 
 namespace tractor {
 
@@ -243,17 +245,17 @@ public:
   BatchLoop(const F &f) : _f(f) {}
 
   template <class... Args>
-  auto run(Args &&... args) const -> decltype(std::declval<F>()(args...)) {
+  auto run(Args &&...args) const -> decltype(std::declval<F>()(args...)) {
     _f(args...);
   }
 
   template <size_t S, class... Args>
-  static constexpr size_t _findBatchSize(const Batch<Args, S> &... args) {
+  static constexpr size_t _findBatchSize(const Batch<Args, S> &...args) {
     return S;
   }
 
   template <class... Args>
-  auto run(Args &&... args) const -> decltype(std::declval<F>()(args[0]...)) {
+  auto run(Args &&...args) const -> decltype(std::declval<F>()(args[0]...)) {
     static constexpr size_t N = _findBatchSize(args...);
     for (size_t i = 0; i < N; i++) {
       _f(args[i]...);

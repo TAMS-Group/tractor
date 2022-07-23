@@ -1,6 +1,6 @@
 project(dexopt)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++17 -O3 -mavx -U__AVX__")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fopenmp -std=c++17 -O3 -mavx -U__AVX__")
 
 find_package(OpenCV REQUIRED)
 
@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   interactive_markers
   moveit_ros_robot_interaction
   kdl_parser
+  eigen_conversions
 )
 
 catkin_package(
@@ -25,6 +26,7 @@ catkin_package(
   interactive_markers
   moveit_ros_robot_interaction
   kdl_parser
+  eigen_conversions
 )
 
 include_directories(

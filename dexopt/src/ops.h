@@ -1,4 +1,4 @@
-// (c) 2020-2021 Philipp Ruppel
+// (c) 2020-2022 Philipp Ruppel
 
 #pragma once
 
@@ -7,6 +7,8 @@
 #include <tractor/core/operator.h>
 #include <tractor/core/recorder.h>
 #include <tractor/geometry/vector3.h>
+
+#include <random>
 
 namespace tractor {
 

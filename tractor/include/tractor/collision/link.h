@@ -1,4 +1,4 @@
-// (c) 2020-2021 Philipp Ruppel
+// (c) 2020-2022 Philipp Ruppel
 
 #pragma once
 
@@ -29,6 +29,9 @@ public:
   virtual void
   addConvexPolyhedron(const std::vector<Vector3<double>> &points,
                       const std::vector<Plane<double>> &planes) override {
+    if (points.empty() || planes.empty()) {
+      return;
+    }
     std::vector<Vector3<Scalar>> points2;
     for (auto &p : points) {
       points2.emplace_back(Scalar(p.x()), Scalar(p.y()), Scalar(p.z()));

@@ -6,17 +6,21 @@
 
 namespace tractor {
 
-class LoopEngine : public EngineBase {
+class ParallelEngine : public EngineBase {
 
 private:
   class ExecutableImpl : public ExecutableBase {
+
     struct Instruction {
-      LoopFunction loop_function = nullptr;
+      OpFunction op = nullptr;
       size_t base = 0;
-      size_t iterations = 0;
     };
-    std::vector<Instruction> _instructions;
-    std::vector<uintptr_t> _arguments;
+
+    struct Wave {
+      std::vector<Instruction> instructions;
+      std::vector<uintptr_t> arguments;
+    };
+    std::vector<Wave> _waves;
 
   protected:
     virtual void _compile(const Program &program) override;

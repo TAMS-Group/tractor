@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<robot
+    xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
+    xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
+    xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface"
+    xmlns:xacro="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface"
+    name="simple_box">
+
+    <xacro:macro name="invisible_box" params="name parent sx sy sz mass type:=fixed *origin">
+        <link name="${name}">
+            <inertial>
+                <mass value="${mass}"/>
+                <origin xyz="0 0 0" rpy="0 0 0"/>
+                <inertia
+                    ixx="${1.0/12*mass*(sy*sy+sz*sz)}" ixy="0" ixz="0"
+                    iyy="${1.0/12*mass*(sx*sx+sz*sz)}" iyz="0"
+                    izz="${1.0/12*mass*(sx*sx+sy*sy)}"
+                    />
+            </inertial>
+            <collision>
+                <origin xyz="0 0 0" rpy="0 0 0"/>
+                <geometry>
+                    <box size="${sx} ${sy} ${sz}"/>
+                </geometry>
+            </collision>
+        </link>
+        <joint name="${name}_joint" type="${type}">
+            <parent link="${parent}"/>
+            <child link="${name}"/>
+            <xacro:insert_block name="origin"/>
+        </joint>
+    </xacro:macro>
+
+</robot>

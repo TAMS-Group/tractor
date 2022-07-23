@@ -1,4 +1,4 @@
-// (c) 2020-2021 Philipp Ruppel
+// (c) 2020-2022 Philipp Ruppel
 
 #pragma once
 
@@ -40,10 +40,13 @@ struct DexEnvGrasp : tractor::DexEnv<ValueSingle, ValueBatch> {
     this->_info.contact_point_regularization = 0.1;
     this->_info.contact_force_regularization = 0.1;
 
-    this->_info.collision_penalty = 1;
+    this->_info.collision_penalty = 2;
 
     this->_info.end_effectors = {
-        "ffdistal", "mfdistal", "thdistal", "rfdistal", "lfdistal", "floor",
+        "lh_ffdistal", "lh_mfdistal", "lh_thdistal",
+        "lh_rfdistal", "lh_lfdistal",
+
+        "floor",
     };
   }
 
@@ -101,10 +104,10 @@ struct DexEnvGrasp : tractor::DexEnv<ValueSingle, ValueBatch> {
       neural_input(i++) = ryz;
 
       ScalarBatch hx, hy, hz;
-      GeometryBatch::unpack(
-          GeometryBatch::translation(simulator->state().links().pose("palm")) -
-              object_position,
-          hx, hy, hz);
+      GeometryBatch::unpack(GeometryBatch::translation(
+                                simulator->state().links().pose("lh_palm")) -
+                                object_position,
+                            hx, hy, hz);
       neural_input(i++) = hx;
       neural_input(i++) = hy;
       neural_input(i++) = hz;
@@ -198,10 +201,10 @@ struct DexEnvGrasp : tractor::DexEnv<ValueSingle, ValueBatch> {
     }
 
     std::vector<std::pair<std::string, std::string>> couplings;
-    couplings.emplace_back("FFJ1", "FFJ2");
-    couplings.emplace_back("RFJ1", "RFJ2");
-    couplings.emplace_back("LFJ1", "LFJ2");
-    couplings.emplace_back("MFJ1", "MFJ2");
+    couplings.emplace_back("lh_FFJ1", "lh_FFJ2");
+    couplings.emplace_back("lh_RFJ1", "lh_RFJ2");
+    couplings.emplace_back("lh_LFJ1", "lh_LFJ2");
+    couplings.emplace_back("lh_MFJ1", "lh_MFJ2");
     auto *group = _robot_model->getJointModelGroup(_group_robot);
     for (auto &pair : couplings) {
       int i = group->getVariableGroupIndex(pair.first);

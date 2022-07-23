@@ -1,4 +1,4 @@
-// (c) 2020-2021 Philipp Ruppel
+// (c) 2020-2022 Philipp Ruppel
 
 #pragma once
 
@@ -22,6 +22,7 @@
 
 #include <tractor/engines/jit.h>
 #include <tractor/engines/loop.h>
+#include <tractor/engines/parallel.h>
 #include <tractor/engines/simple.h>
 #include <tractor/engines/test.h>
 

@@ -1,4 +1,4 @@
-// (c) 2020-2021 Philipp Ruppel
+// (c) 2020-2022 Philipp Ruppel
 
 #pragma once
 
@@ -393,7 +393,8 @@ template <class ValueSingle, class ValueBatch> class DexLearn {
   auto _runBatch(tractor::RobotTrajectory<GeometryBatch> *trajectory,
                  const LayerMode &mode) {
     _viz.clear();
-    trajectory->state(0).joints().init(*_simulator->model());
+    // trajectory->state(0).joints().init(*_simulator->model());
+    trajectory->state(0).fromMoveIt(_robot_state);
     _simulator->model()->computeFK(trajectory->state(0).joints(),
                                    trajectory->state(0).links());
     _simulator->init(trajectory->state(0));
@@ -456,6 +457,7 @@ public:
   DexLearn(const std::shared_ptr<Solver> &solver,
            const std::shared_ptr<tractor::Engine> &engine,
            const robot_model::RobotModelConstPtr &robot_model,
+           const moveit::core::RobotState &robot_state,
            collision_detection::AllowedCollisionMatrix allowed_collision_matrix,
            std::string group_robot,
            const std::shared_ptr<DexEnv<ValueSingle, ValueBatch>> &env,
@@ -467,7 +469,7 @@ public:
         _frames(env->info().frame_count), _group_robot(group_robot),
         _joint_names(
             _robot_model->getJointModelGroup(group_robot)->getVariableNames()),
-        _robot_state(robot_model),
+        _robot_state(robot_state),
         _test_trajectory(*robot_model, env->info().frame_count),
         _outer_batch_size(outer_batch_size),
         _joints(

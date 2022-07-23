@@ -1,5 +1,6 @@
-// (c) 2020-2021 Philipp Ruppel
+// (c) 2020-2022 Philipp Ruppel
 
+#include <tractor/core/profiler.h>
 #include <tractor/engines/simple.h>
 
 namespace tractor {
@@ -24,13 +25,20 @@ void SimpleEngine::ExecutableImpl::_execute(
 
   auto &temp = *(MemoryImpl *)(memory.get());
   temp.resize(std::max(temp.size(), _memory_size));
-  for (auto &port : _constants) {
-    std::memcpy((uint8_t *)temp.data() + port.address(),
-                _const_data.data() + port.offset(), port.size());
+
+  {
+    TRACTOR_PROFILER("load constants");
+    for (auto &port : _constants) {
+      std::memcpy((uint8_t *)temp.data() + port.address(),
+                  _const_data.data() + port.offset(), port.size());
+    }
   }
 
-  for (auto &inst : _instructions) {
-    inst.op(temp.data(), _arguments.data() + inst.base);
+  {
+    TRACTOR_PROFILER("execute instructions");
+    for (auto &inst : _instructions) {
+      inst.op(temp.data(), _arguments.data() + inst.base);
+    }
   }
 }
 

@@ -1,6 +1,6 @@
 project(tractor)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++17 -O3 -mavx -U__AVX__")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++17 -fopenmp -O3 -mavx -U__AVX__")
 
 find_package(Bullet REQUIRED)
 
@@ -48,6 +48,7 @@ add_library(${PROJECT_NAME}
     src/engines/base.cpp
     src/engines/jit.cpp
     src/engines/loop.cpp
+    src/engines/parallel.cpp
     src/engines/simple.cpp
     src/engines/test.cpp
     src/geometry/eigen.cpp
