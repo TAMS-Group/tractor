@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
 
   std::string robot_description = "dexopt_robot_description";
 
-  ros::init(argc, argv, "tractor_test_sim", 0);
+  ros::init(argc, argv, "tractor_test_sim", ros::init_options::NoSigintHandler);
   ros::NodeHandle node_handle;
 
   std::string group_robot = "robot";
@@ -338,12 +338,18 @@ int main(int argc, char **argv) {
 
   if (command == "run") {
 
+    auto arm_command_pub =
+        node_handle.advertise<trajectory_msgs::JointTrajectory>(
+            "/arm/scaled_pos_joint_traj_controller/command", 1);
+
     auto hand_command_pub =
         node_handle.advertise<trajectory_msgs::JointTrajectory>(
             "/hand/lh_trajectory_controller/command", 1);
+
     DisplayRobotStatePublisher display_robot_state_pub(
         "/dexopt/display_robot_state");
-    JointStatePublisher joint_state_pub("/joint_states");
+
+    JointStatePublisher joint_state_pub("/test_joint_states");
 
     tf::TransformBroadcaster tf_br;
 
@@ -414,30 +420,41 @@ int main(int argc, char **argv) {
     ROS_INFO_STREAM("plan to first state");
     step_policy();
 
-    {
+    auto source_object_pose =
+        source_robot_state.getGlobalLinkTransform("object");
+    auto target_object_pose = getTransform("object");
 
+    ROS_INFO_STREAM(__LINE__);
+
+    auto mapForearmPose = [&]() {
       Eigen::Isometry3d goal_pose(
-          (getTransform("object") *
+          (target_object_pose *
            Eigen::Affine3d(Eigen::Scaling(Eigen::Vector3d(1, -1, 1))) *
-           source_robot_state.getGlobalLinkTransform("object").inverse() *
+           source_object_pose.inverse() *
            source_robot_state.getGlobalLinkTransform("forearm") *
            Eigen::Affine3d(Eigen::Scaling(Eigen::Vector3d(-1, 1, 1))))
               .matrix());
+      {
+        geometry_msgs::TransformStamped transform;
+        transform.header.stamp = ros::Time::now();
+        transform.header.frame_id = "world";
+        transform.child_frame_id = "goal";
+        tf::transformEigenToMsg(goal_pose, transform.transform);
+        tf_br.sendTransform(transform);
+      }
+      return goal_pose;
+    };
 
-      geometry_msgs::TransformStamped transform;
-      transform.header.stamp = ros::Time::now();
-      transform.header.frame_id = "world";
-      transform.child_frame_id = "goal";
-      tf::transformEigenToMsg(goal_pose, transform.transform);
-      tf_br.sendTransform(transform);
-
-      bool ok = target_move_group.setPoseTarget(goal_pose, "lh_forearm");
+    {
+      bool ok = target_move_group.setPoseTarget(mapForearmPose(), "lh_forearm");
       ROS_INFO_STREAM("set pose target " << (int)ok);
       if (!ok) {
         ROS_ERROR_STREAM("set pose target failed");
         return -1;
       }
     }
+
+    ROS_INFO_STREAM(__LINE__);
 
     {
       auto ok = target_move_group.move();
@@ -448,7 +465,46 @@ int main(int argc, char **argv) {
       }
     }
 
-    // target_move_group.
+    ROS_INFO_STREAM(__LINE__);
+
+    const static std::vector<std::string> source_hand_joint_names = {
+        "FFJ4", "FFJ3", "FFJ2", "FFJ1", "LFJ5", "LFJ4", "LFJ3", "LFJ2",
+        "LFJ1", "MFJ4", "MFJ3", "MFJ2", "MFJ1", "RFJ4", "RFJ3", "RFJ2",
+        "RFJ1", "THJ5", "THJ4", "THJ3", "THJ2", "THJ1", "WRJ2", "WRJ1",
+    };
+
+    const static std::vector<std::string> target_hand_joint_names = []() {
+      std::vector<std::string> ret;
+      for (auto &n : source_hand_joint_names) {
+        ret.push_back("lh_" + n);
+      }
+      return ret;
+    }();
+
+    const static std::vector<std::string> arm_joint_names = {
+        "arm_shoulder_pan_joint", "arm_shoulder_lift_joint",
+        "arm_elbow_joint",        "arm_wrist_1_joint",
+        "arm_wrist_2_joint",      "arm_wrist_3_joint",
+    };
+
+    auto sendCommands = [](const robot_state::RobotState &robot_state,
+                           const std::vector<std::string> &joint_names,
+                           ros::Publisher &publisher) {
+      trajectory_msgs::JointTrajectory traj;
+      traj.points.emplace_back();
+      traj.points.front().time_from_start = ros::Duration(0.1);
+      for (auto &joint_name : joint_names) {
+        traj.joint_names.push_back(joint_name);
+        traj.points.front().positions.push_back(
+            robot_state.getJointPositions(joint_name)[0]);
+      }
+      publisher.publish(traj);
+    };
+
+    ROS_INFO_STREAM(__LINE__);
+
+    robot_state::RobotState target_robot_state =
+        *target_move_group.getCurrentState();
 
     ROS_INFO_STREAM("start main loop");
     while (true) {
@@ -456,24 +512,23 @@ int main(int argc, char **argv) {
       ROS_INFO_STREAM("loop");
 
       {
-        const static std::vector<std::string> joint_names = {
-            "FFJ4", "FFJ3", "FFJ2", "FFJ1", "LFJ5", "LFJ4", "LFJ3", "LFJ2",
-            "LFJ1", "MFJ4", "MFJ3", "MFJ2", "MFJ1", "RFJ4", "RFJ3", "RFJ2",
-            "RFJ1", "THJ5", "THJ4", "THJ3", "THJ2", "THJ1", "WRJ2", "WRJ1",
-        };
-        trajectory_msgs::JointTrajectory traj;
-        traj.points.emplace_back();
-        traj.points.front().time_from_start = ros::Duration(0.1);
-        for (auto &joint_name : joint_names) {
-          ROS_INFO_STREAM("joint " << joint_name);
-          traj.joint_names.push_back("lh_" + joint_name);
-          traj.points.front().positions.push_back(
-              source_robot_state.getJointPositions(joint_name)[0]);
-        }
-        hand_command_pub.publish(traj);
+        bool ok = target_robot_state.setFromIK(
+            target_robot_state.getJointModelGroup("arm"), mapForearmPose(),
+            "lh_forearm");
+        ROS_INFO_STREAM("ik ok " << (int)ok);
+      }
+
+      for (auto &joint_name : source_hand_joint_names) {
+        target_robot_state.setJointPositions(
+            "lh_" + joint_name,
+            source_robot_state.getJointPositions(joint_name));
       }
 
       getchar();
+
+      sendCommands(target_robot_state, target_hand_joint_names,
+                   hand_command_pub);
+      sendCommands(target_robot_state, arm_joint_names, arm_command_pub);
 
       step_policy();
     }
