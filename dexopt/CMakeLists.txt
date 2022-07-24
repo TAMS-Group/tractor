@@ -14,6 +14,8 @@ find_package(catkin REQUIRED COMPONENTS
   moveit_ros_robot_interaction
   kdl_parser
   eigen_conversions
+  moveit_core
+  moveit_ros_planning_interface
 )
 
 catkin_package(
@@ -27,6 +29,8 @@ catkin_package(
   moveit_ros_robot_interaction
   kdl_parser
   eigen_conversions
+  moveit_core
+  moveit_ros_planning_interface
 )
 
 include_directories(

@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<robot
+  xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
+  xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
+  xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface"
+  xmlns:xacro="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface"
+  name="object">
+
+  <xacro:include filename="$(find dexopt)/models/invisible_box.xacro"/>
+
+  <xacro:invisible_box_link name="object" sx="0.06" sy="0.06" sz="0.06" mass="0.01"/>
+
+  <link name="object_visual">
+      <visual>
+          <geometry>
+              <mesh filename="package://dexopt/models/cube02.dae" scale="0.03 0.03 0.03"/>
+          </geometry>
+          <origin rpy="0 0 0" xyz="0 0 0"/>
+      </visual>
+  </link>
+
+  <joint name="object_visual_joint" type="fixed">
+    <parent link="object" />
+    <child link="object_visual" />
+    <origin xyz="0 0 0" rpy="0 0 0" />
+  </joint>
+
+</robot>

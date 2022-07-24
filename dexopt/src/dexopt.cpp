@@ -13,6 +13,10 @@
 #include "neural.h"
 #include "physics5.h"
 
+#include <moveit/move_group_interface/move_group_interface.h>
+
+#include <tf/transform_listener.h>
+
 static constexpr size_t inner_batch_size = 8;
 static constexpr size_t outer_batch_size = 2;
 
@@ -334,10 +338,39 @@ int main(int argc, char **argv) {
 
   if (command == "run") {
 
-    // build();
+    auto hand_command_pub =
+        node_handle.advertise<trajectory_msgs::JointTrajectory>(
+            "/hand/lh_trajectory_controller/command", 1);
+    DisplayRobotStatePublisher display_robot_state_pub(
+        "/dexopt/display_robot_state");
+    JointStatePublisher joint_state_pub("/joint_states");
 
+    tf::TransformBroadcaster tf_br;
+
+    tf::TransformListener tf_listener;
+    auto getTransform = [&](const std::string &name) {
+      ROS_INFO_STREAM("get transform " << name);
+      while (true) {
+        tf::StampedTransform transform;
+        try {
+          tf_listener.lookupTransform("/world", name, ros::Time(0), transform);
+          Eigen::Isometry3d pose;
+          tf::transformTFToEigen(transform, pose);
+          ROS_INFO_STREAM("transform found " << name);
+          return pose;
+        } catch (tf::TransformException ex) {
+          ROS_ERROR("%s", ex.what());
+          ros::Duration(0.5).sleep();
+          continue;
+        }
+      }
+    };
+
+    ROS_INFO_STREAM("init robot move group");
+    moveit::planning_interface::MoveGroupInterface target_move_group("arm");
+
+    ROS_INFO_STREAM("init policy");
     dexlearn.makeSimulator();
-
     {
       tractor::RobotState<GeometryBatch> robot_state(
           *dexlearn.simulator()->model());
@@ -354,45 +387,95 @@ int main(int argc, char **argv) {
     ROS_INFO_STREAM("loading weights from " << filename);
     dexlearn.policyNetwork().loadWeights(filename);
 
-    ROS_INFO_STREAM("init env");
-    env->init(dexlearn);
-
-    ROS_INFO_STREAM("create state publishers");
-    DisplayRobotStatePublisher display_robot_state_pub(
-        "/dexopt/display_robot_state");
-    JointStatePublisher joint_state_pub("/joint_states");
+    // ROS_INFO_STREAM("init env");
+    // env->init(dexlearn);
 
     ROS_INFO_STREAM("clear viz");
     dexlearn.dexviz().clear();
 
+    moveit::core::RobotState source_robot_state(robot_model);
+
+    size_t iframe = 0;
+    auto step_policy = [&]() {
+      dexlearn.dexviz().clear();
+      dexlearn.simulator()->step();
+      auto policy_output = dexlearn.runPolicyNetwork(layer_mode, iframe++);
+      ROS_INFO_STREAM("policy output size " << policy_output.size());
+      ROS_INFO_STREAM("joints " << dexlearn.jointNames().size());
+      ROS_INFO_STREAM("eefs " << dexlearn.endEffectors().size());
+      env->controlRobot(dexlearn, policy_output);
+      dexlearn.applyContacts(policy_output);
+      visualization_publisher.publish(dexlearn.visualization());
+      toMoveIt(dexlearn.simulator()->state(), source_robot_state);
+      display_robot_state_pub.publish(source_robot_state);
+      joint_state_pub.publish(source_robot_state);
+    };
+
+    ROS_INFO_STREAM("plan to first state");
+    step_policy();
+
+    {
+
+      Eigen::Isometry3d goal_pose(
+          (getTransform("object") *
+           Eigen::Affine3d(Eigen::Scaling(Eigen::Vector3d(1, -1, 1))) *
+           source_robot_state.getGlobalLinkTransform("object").inverse() *
+           source_robot_state.getGlobalLinkTransform("forearm") *
+           Eigen::Affine3d(Eigen::Scaling(Eigen::Vector3d(-1, 1, 1))))
+              .matrix());
+
+      geometry_msgs::TransformStamped transform;
+      transform.header.stamp = ros::Time::now();
+      transform.header.frame_id = "world";
+      transform.child_frame_id = "goal";
+      tf::transformEigenToMsg(goal_pose, transform.transform);
+      tf_br.sendTransform(transform);
+
+      bool ok = target_move_group.setPoseTarget(goal_pose, "lh_forearm");
+      ROS_INFO_STREAM("set pose target " << (int)ok);
+      if (!ok) {
+        ROS_ERROR_STREAM("set pose target failed");
+        return -1;
+      }
+    }
+
+    {
+      auto ok = target_move_group.move();
+      ROS_INFO_STREAM("move target " << ok);
+      if (!ok) {
+        ROS_ERROR_STREAM("move failed");
+        return -1;
+      }
+    }
+
+    // target_move_group.
+
     ROS_INFO_STREAM("start main loop");
-    for (size_t iframe = 0;; iframe++) {
+    while (true) {
 
       ROS_INFO_STREAM("loop");
 
       {
-        moveit::core::RobotState robot_state(robot_model);
-        toMoveIt(dexlearn.simulator()->state(), robot_state);
-        display_robot_state_pub.publish(robot_state);
-        joint_state_pub.publish(robot_state);
+        const static std::vector<std::string> joint_names = {
+            "FFJ4", "FFJ3", "FFJ2", "FFJ1", "LFJ5", "LFJ4", "LFJ3", "LFJ2",
+            "LFJ1", "MFJ4", "MFJ3", "MFJ2", "MFJ1", "RFJ4", "RFJ3", "RFJ2",
+            "RFJ1", "THJ5", "THJ4", "THJ3", "THJ2", "THJ1", "WRJ2", "WRJ1",
+        };
+        trajectory_msgs::JointTrajectory traj;
+        traj.points.emplace_back();
+        traj.points.front().time_from_start = ros::Duration(0.1);
+        for (auto &joint_name : joint_names) {
+          ROS_INFO_STREAM("joint " << joint_name);
+          traj.joint_names.push_back("lh_" + joint_name);
+          traj.points.front().positions.push_back(
+              source_robot_state.getJointPositions(joint_name)[0]);
+        }
+        hand_command_pub.publish(traj);
       }
-
-      visualization_publisher.publish(dexlearn.visualization());
 
       getchar();
 
-      dexlearn.dexviz().clear();
-
-      dexlearn.simulator()->step();
-
-      auto policy_output = dexlearn.runPolicyNetwork(layer_mode, iframe);
-
-      ROS_INFO_STREAM("policy output size " << policy_output.size());
-      ROS_INFO_STREAM("joints " << dexlearn.jointNames().size());
-      ROS_INFO_STREAM("eefs " << dexlearn.endEffectors().size());
-
-      env->controlRobot(dexlearn, policy_output);
-      dexlearn.applyContacts(policy_output);
+      step_policy();
     }
   }
 }

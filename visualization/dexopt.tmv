@@ -1,7 +1,7 @@
 Display:
   Displays:
     - Description: /dexopt_robot_description
-      DoubleSided: false
+      DoubleSided: true
       Frame: ""
       ImportOptions:
         RecomputeNormals: false
@@ -16,7 +16,7 @@ Display:
           Metallic: 0,000000
           Normals: ""
           Opacity: 1,000000
-          Roughness: 0,000000
+          Roughness: 0,200000
           Texture: ""
           Unlit: false
           id: 748
@@ -27,7 +27,7 @@ Display:
       MaxSteps: 10
       Name: RobotTrajectoryDisplay2
       PlayTrajectory: true
-      ShowAllStates: false
+      ShowAllStates: true
       Speed: 1,000000
       Topic: /move_group/display_planned_path
       TrajectoryTime: 0,000000
@@ -40,7 +40,7 @@ Display:
           X: 0,000000
           Y: 0,000000
           Z: 0,000000
-      Visible: false
+      Visible: true
       id: 746
       type: RobotTrajectoryDisplay
     - Brightness: 8,620000
@@ -173,7 +173,7 @@ Display:
       id: 75321
       type: InteractiveMarkerDisplay
     - Description: /dexopt_robot_description
-      DoubleSided: false
+      DoubleSided: true
       Frame: ""
       ImportOptions:
         RecomputeNormals: false
@@ -185,10 +185,10 @@ Display:
             B: 0,800000
             G: 0,800000
             R: 0,800000
-          Metallic: 1,000000
+          Metallic: 0,000000
           Normals: ""
           Opacity: 1,000000
-          Roughness: 0,171206
+          Roughness: 0,159533
           Texture: ""
           Unlit: false
           id: 77614
@@ -207,9 +207,37 @@ Display:
           X: 0,000000
           Y: 0,000000
           Z: 0,000000
-      Visible: true
+      Visible: false
       id: 77612
       type: DisplayRobotStateDisplay
+    - Frame: ""
+      Length: 1,000000
+      Material:
+        Color:
+          B: 1,000000
+          G: 1,000000
+          R: 1,000000
+        Metallic: 0,000000
+        Normals: ""
+        Opacity: 1,000000
+        Roughness: 0,400000
+        Texture: ""
+        Unlit: false
+        id: 77671
+      Name: AxesDisplay1
+      Radius: 0,005000
+      Transform:
+        Orientation:
+          Pitch: 0,000000
+          Roll: 0,000000
+          Yaw: 0,000000
+        Position:
+          X: 0,000000
+          Y: 0,000000
+          Z: 0,000000
+      Visible: true
+      id: 77670
+      type: AxesDisplay
   Environment:
     AmbientLighting: 1,000000
     BackgroundBrightness: 3,000000
@@ -250,13 +278,13 @@ Window:
   FieldOfView: 45,000000
   Name: Window
   ViewPosition:
-    X: 0,099624
-    Y: -0,293385
-    Z: 0,150141
+    X: 0,198346
+    Y: -0,364307
+    Z: 0,136763
   ViewTarget:
-    X: -0,011350
-    Y: 0,100098
-    Z: 0,055229
+    X: 0,033140
+    Y: 0,020220
+    Z: 0,105147
   id: 77426
   type: SceneWindow
 id: 6

@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+  <arg name="world"/>
+  <param name="/dexopt_robot_description" command="$(find xacro)/xacro --inorder '$(find dexopt)/worlds/$(arg world).xacro'"/>
+  <param name="/dexopt_robot_description_semantic" textfile="$(find dexopt)/worlds/$(arg world).srdf"/>
+</launch>
