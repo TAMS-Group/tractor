@@ -47,12 +47,11 @@ struct DexEnvGrasp : tractor::DexEnv<ValueSingle, ValueBatch> {
     };
   }
 
-  virtual tractor::Tensor<ScalarBatch>
-  makePolicyInput(tractor::DexLearn<ValueSingle, ValueBatch> &dexlearn,
-                  size_t frame) override {
-
-    auto &joint_names = dexlearn.jointNames();
-    auto &simulator = dexlearn.simulator();
+  virtual tractor::Tensor<ScalarBatch> makePolicyInput(
+      const std::shared_ptr<tractor::PhysicsSimulator<GeometryBatch>>
+          &simulator,
+      const std::vector<std::string> &joint_names, size_t frame,
+      size_t frame_count) override {
 
     tractor::Tensor<ScalarBatch> neural_input;
 
@@ -63,7 +62,6 @@ struct DexEnvGrasp : tractor::DexEnv<ValueSingle, ValueBatch> {
     neural_input.resize(joint_names.size() + 3 + 6 + 3);
 
     for (size_t i = 0; i < joint_names.size(); i++) {
-      auto *joint = dexlearn.joints()[i];
       auto &joint_state = simulator->state().joints().joint(joint_names[i]);
       if (auto *revolute_joint_state =
               dynamic_cast<tractor::RevoluteJointState<GeometryBatch> *>(
@@ -113,13 +111,11 @@ struct DexEnvGrasp : tractor::DexEnv<ValueSingle, ValueBatch> {
     return neural_input;
   }
 
-  virtual tractor::NeuralNetwork<ScalarBatch> makePolicyNetwork(
-      tractor::DexLearn<ValueSingle, ValueBatch> &dexlearn) override {
+  virtual tractor::NeuralNetwork<ScalarBatch>
+  makePolicyNetwork(size_t joint_count, size_t end_effector_count,
+                    size_t contact_dimensions) override {
 
     tractor::SequentialNeuralNetwork<ScalarBatch> policy_net;
-
-    auto &joint_names = dexlearn.jointNames();
-    auto &end_effectors = dexlearn.endEffectors();
 
     double regularization = 0.01;
 
@@ -137,8 +133,7 @@ struct DexEnvGrasp : tractor::DexEnv<ValueSingle, ValueBatch> {
         tractor::ActivationLayer<ScalarBatch>(tractor::Activation::TanH));
 
     policy_net.add(tractor::DenseLayer<ScalarBatch>(
-        joint_names.size() +
-            end_effectors.size() * dexlearn.contactDimensions(),
+        joint_count + end_effector_count * contact_dimensions,
         tractor::Activation::Linear, regularization, regularization));
 
     // policy_net.add(tractor::GaussianNoiseLayer<ScalarBatch>(0.001));

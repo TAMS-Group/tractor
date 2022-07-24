@@ -13,7 +13,7 @@ namespace tractor {
 template <class Scalar> class Tensor {
   std::vector<size_t> _shape;
   AlignedStdVector<Scalar> _data;
-  template <class... Indices> size_t _index(const Indices &... indices) const {
+  template <class... Indices> size_t _index(const Indices &...indices) const {
     if (_shape.size() != sizeof...(Indices)) {
       throw std::runtime_error("incorrect number of tensor index dimensions");
     }
@@ -31,7 +31,7 @@ template <class Scalar> class Tensor {
 
 public:
   Tensor() {}
-  template <class... Shape> void resize(const Shape &... shape) {
+  template <class... Shape> void resize(const Shape &...shape) {
     std::vector<size_t> sh = {shape...};
     if (sh != _shape) {
       _shape = sh;
@@ -40,10 +40,10 @@ public:
     }
   }
   template <class... Indices>
-  auto &operator()(const Indices &... indices) const {
+  auto &operator()(const Indices &...indices) const {
     return _data.at(_index(indices...));
   }
-  template <class... Indices> auto &operator()(const Indices &... indices) {
+  template <class... Indices> auto &operator()(const Indices &...indices) {
     return _data.at(_index(indices...));
   }
   size_t size() const {
@@ -125,7 +125,7 @@ std::ostream &operator<<(std::ostream &stream, const Tensor<Scalar> &tensor) {
   stream << "[ ";
   size_t s = tensor.size();
   for (size_t i = 0; i < s; i++) {
-    std::cout << tensor[i] << " ";
+    std::cout << firstBatchElement(value(tensor[i])) << " ";
   }
   stream << "]";
   return stream;

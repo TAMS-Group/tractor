@@ -23,6 +23,7 @@ class LeastSquaresSolver : public SolverBase {
   Vector _previous_nonlinear_solution;
   Vector _linear_solution;
   Vector _gradient_temp;
+  Vector _test;
 
 public:
   bool _use_adaptive_regularization = 0;
@@ -66,15 +67,30 @@ protected:
 
     _hgrad_p->setRegularization(_regularization);
 
-    _x_prog->run(_nonlinear_solution, _memory, _gradient_temp);
+    {
+      TRACTOR_PROFILER("nonlinear");
+      _x_prog->run(_nonlinear_solution, _memory, _gradient_temp);
+    }
 
     // std::cout << "loss " << _gradient_temp.squaredNorm() << std::endl;
     _loss = _gradient_temp.squaredNorm();
 
     TRACTOR_CHECK_ALL_FINITE(_gradient_temp);
 
-    _x_prep->execute(_memory);
-    _x_bprop->run(_gradient_temp, _memory, _residuals);
+    {
+      TRACTOR_PROFILER("linearize");
+      _x_prep->execute(_memory);
+    }
+
+    {
+      TRACTOR_PROFILER("bprop");
+      _x_bprop->run(_gradient_temp, _memory, _residuals);
+    }
+
+    // {
+    //   TRACTOR_PROFILER("fprop");
+    //   _x_fprop->run(_residuals, _memory, _test);
+    // }
 
     TRACTOR_CHECK_ALL_FINITE(_residuals);
 

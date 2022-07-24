@@ -42,8 +42,8 @@ int main(int argc, char **argv) {
   std::string command = argv[2];
   std::string solvername = argv[3];
 
-  // ros::WallDuration training_time(60 * 5);
-  ros::WallDuration training_time(60 * 10);
+  ros::WallDuration training_time(60 * 5);
+  // ros::WallDuration training_time(60 * 10);
 
   std::string filename = "weights-" + envname + "-" + solvername + ".dat";
 
@@ -77,6 +77,7 @@ int main(int argc, char **argv) {
   auto engine = std::make_shared<tractor::SimpleEngine>();
   // auto engine = std::make_shared<tractor::LoopEngine>();
   // auto engine = std::make_shared<tractor::JITEngine>();
+  // auto engine = std::make_shared<tractor::ParallelEngine>();
 
   ros::Publisher visualization_publisher =
       node_handle.advertise<visualization_msgs::MarkerArray>(
@@ -328,6 +329,70 @@ int main(int argc, char **argv) {
       visualization_publisher.publish(dexlearn.visualization());
       robot_trajectory_publisher.publish(robot_model, group_all,
                                          dexlearn.trajectory());
+    }
+  }
+
+  if (command == "run") {
+
+    // build();
+
+    dexlearn.makeSimulator();
+
+    {
+      tractor::RobotState<GeometryBatch> robot_state(
+          *dexlearn.simulator()->model());
+      dexlearn.simulator()->model()->computeFK(robot_state.joints(),
+                                               robot_state.links());
+      dexlearn.simulator()->init(robot_state);
+    }
+
+    ROS_INFO_STREAM("init neural network");
+    tractor::LayerMode layer_mode;
+    layer_mode.training = false;
+    dexlearn.runPolicyNetwork(layer_mode, 0);
+
+    ROS_INFO_STREAM("loading weights from " << filename);
+    dexlearn.policyNetwork().loadWeights(filename);
+
+    ROS_INFO_STREAM("init env");
+    env->init(dexlearn);
+
+    ROS_INFO_STREAM("create state publishers");
+    DisplayRobotStatePublisher display_robot_state_pub(
+        "/dexopt/display_robot_state");
+    JointStatePublisher joint_state_pub("/joint_states");
+
+    ROS_INFO_STREAM("clear viz");
+    dexlearn.dexviz().clear();
+
+    ROS_INFO_STREAM("start main loop");
+    for (size_t iframe = 0;; iframe++) {
+
+      ROS_INFO_STREAM("loop");
+
+      {
+        moveit::core::RobotState robot_state(robot_model);
+        toMoveIt(dexlearn.simulator()->state(), robot_state);
+        display_robot_state_pub.publish(robot_state);
+        joint_state_pub.publish(robot_state);
+      }
+
+      visualization_publisher.publish(dexlearn.visualization());
+
+      getchar();
+
+      dexlearn.dexviz().clear();
+
+      dexlearn.simulator()->step();
+
+      auto policy_output = dexlearn.runPolicyNetwork(layer_mode, iframe);
+
+      ROS_INFO_STREAM("policy output size " << policy_output.size());
+      ROS_INFO_STREAM("joints " << dexlearn.jointNames().size());
+      ROS_INFO_STREAM("eefs " << dexlearn.endEffectors().size());
+
+      env->controlRobot(dexlearn, policy_output);
+      dexlearn.applyContacts(policy_output);
     }
   }
 }

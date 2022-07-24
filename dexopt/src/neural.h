@@ -53,7 +53,7 @@ public:
   Synapse() {}
   template <class LayerType, class... InputTypes>
   Synapse(int constructor_tag, const LayerType &layer,
-          const InputTypes &... inputs)
+          const InputTypes &...inputs)
       : _layer(std::make_shared<LayerType>(layer)), _inputs({inputs...}) {}
   auto &layer() const { return _layer; }
   auto &inputs() const { return _inputs; }
@@ -78,7 +78,7 @@ public:
 template <class Scalar, class Impl> class LayerBase : public Layer<Scalar> {
 public:
   template <class... Inputs>
-  Synapse<Scalar> operator()(const Inputs &... inputs) {
+  Synapse<Scalar> operator()(const Inputs &...inputs) {
     return Synapse<Scalar>(0, *(Impl *)this, inputs...);
   }
 };
@@ -395,6 +395,9 @@ public:
   }
   void loadWeights(const std::string &filename) {
     std::ifstream s(filename);
+    if (!s) {
+      throw std::runtime_error("failed to open weight file " + filename);
+    }
     deserializeWeights(s);
   }
 };

@@ -90,6 +90,9 @@ public:
   void visualizeContact(const Vector3 &point, const Vector3 &normal,
                         const Vector3 &force, size_t i) {
 
+    ROS_INFO_STREAM("viz contact " << point << " " << normal << " " << force
+                                   << " " << i);
+
     // static std::vector<Eigen::Vector3d> colors = {
     //     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {1, 1, 0}, {0, 1, 1},
     // };
@@ -133,12 +136,12 @@ public:
     //   _line_marker.colors.back().b = color.z();
     // }
 
-    // {
-    //   _point_marker.points.emplace_back();
-    //   _point_marker.points.back().x = point.x();
-    //   _point_marker.points.back().y = point.y();
-    //   _point_marker.points.back().z = point.z();
-    // }
+    {
+      _point_marker.points.emplace_back();
+      _point_marker.points.back().x = point.x();
+      _point_marker.points.back().y = point.y();
+      _point_marker.points.back().z = point.z();
+    }
   }
 };
 

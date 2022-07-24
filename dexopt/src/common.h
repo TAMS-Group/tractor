@@ -10,6 +10,52 @@
 
 #include <moveit_msgs/DisplayTrajectory.h>
 
+template <class Geometry>
+void toMoveIt(const tractor::RobotState<Geometry> &tractor_state,
+              robot_state::RobotState &moveit_state) {
+  tractor::AlignedStdVector<typename Geometry::Scalar> pp;
+  tractor_state.joints().serializePositions(pp);
+  for (size_t i = 0; i < pp.size(); i++) {
+    moveit_state.setVariablePosition(i, firstBatchElement(value(pp[i])));
+  }
+  moveit_state.update();
+}
+
+class DisplayRobotStatePublisher {
+  ros::NodeHandle node_handle;
+  ros::Publisher robot_state_pub;
+
+public:
+  DisplayRobotStatePublisher(const std::string &topic)
+      : robot_state_pub(node_handle.advertise<moveit_msgs::DisplayRobotState>(
+            topic, 10, true)) {}
+  void publish(const robot_state::RobotState &robot_state) {
+    {
+      moveit_msgs::DisplayRobotState msg;
+      moveit::core::robotStateToRobotStateMsg(robot_state, msg.state);
+      robot_state_pub.publish(msg);
+    }
+  }
+};
+
+class JointStatePublisher {
+  ros::NodeHandle node_handle;
+  ros::Publisher joint_state_pub;
+
+public:
+  JointStatePublisher(const std::string &topic)
+      : joint_state_pub(
+            node_handle.advertise<sensor_msgs::JointState>(topic, 10, true)) {}
+  void publish(const robot_state::RobotState &robot_state) {
+    {
+      sensor_msgs::JointState msg;
+      moveit::core::robotStateToJointStateMsg(robot_state, msg);
+      joint_state_pub.publish(msg);
+    }
+  }
+};
+
+/*
 class RobotStatePublisher {
   ros::NodeHandle node_handle;
   ros::Publisher joint_state_pub =
@@ -38,6 +84,7 @@ public:
     }
   }
 };
+*/
 
 class RobotTrajectoryPublisher {
   ros::NodeHandle node_handle;

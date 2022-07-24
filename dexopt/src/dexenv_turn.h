@@ -46,11 +46,11 @@ struct DexEnvTurn : tractor::DexEnv<ValueSingle, ValueBatch> {
     };
   }
 
-  virtual tractor::Tensor<ScalarBatch>
-  makePolicyInput(tractor::DexLearn<ValueSingle, ValueBatch> &dexlearn,
-                  size_t frame) override {
-
-    auto &simulator = dexlearn.simulator();
+  virtual tractor::Tensor<ScalarBatch> makePolicyInput(
+      const std::shared_ptr<tractor::PhysicsSimulator<GeometryBatch>>
+          &simulator,
+      const std::vector<std::string> &joint_names, size_t frame,
+      size_t frame_count) override {
 
     auto object_pose = simulator->state().links().pose("object");
     auto object_orientation = GeometryBatch::orientation(object_pose);
@@ -64,7 +64,7 @@ struct DexEnvTurn : tractor::DexEnv<ValueSingle, ValueBatch> {
     neural_input.resize(frequencies * 2 + 2);
     // neural_input.resize(2);
 
-    double t = frame * 1.0 / dexlearn.frameCount();
+    double t = frame * 1.0 / frame_count;
 
     {
       size_t i = 0;
@@ -84,11 +84,9 @@ struct DexEnvTurn : tractor::DexEnv<ValueSingle, ValueBatch> {
     return neural_input;
   }
 
-  virtual tractor::NeuralNetwork<ScalarBatch> makePolicyNetwork(
-      tractor::DexLearn<ValueSingle, ValueBatch> &dexlearn) override {
-
-    auto &joint_names = dexlearn.jointNames();
-    auto &end_effectors = dexlearn.endEffectors();
+  virtual tractor::NeuralNetwork<ScalarBatch>
+  makePolicyNetwork(size_t joint_count, size_t end_effector_count,
+                    size_t contact_dimensions) override {
 
     double regularization = 0.1;
 
@@ -100,8 +98,7 @@ struct DexEnvTurn : tractor::DexEnv<ValueSingle, ValueBatch> {
     // policy_net.add(tractor::DropoutLayer<ScalarBatch>(0.3));
 
     policy_net.add(tractor::DenseLayer<ScalarBatch>(
-        joint_names.size() +
-            end_effectors.size() * dexlearn.contactDimensions(),
+        joint_count + end_effector_count * contact_dimensions,
         tractor::Activation::Linear, 0, regularization, 0));
 
     return policy_net;
@@ -115,7 +112,6 @@ struct DexEnvTurn : tractor::DexEnv<ValueSingle, ValueBatch> {
 
     simulator.setUserConstraints(
         [](PhysicsSimulator<GeometryBatch> &simulator) {
-
           auto &body = simulator.body("object");
 
           {
@@ -136,7 +132,6 @@ struct DexEnvTurn : tractor::DexEnv<ValueSingle, ValueBatch> {
 
           body.linear_velocity = GeometryBatch::Vector3Zero();
           body.angular_velocity = GeometryBatch::Vector3Zero();
-
         });
 
     {

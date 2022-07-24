@@ -130,12 +130,6 @@ template <class ValueSingle, class ValueBatch> class DexLearn {
     }
   }
 
-  auto _runPolicyNetwork(const LayerMode &mode, size_t frame) {
-    auto input = _env->makePolicyInput(*this, frame);
-    auto output = _policy_net.predict(input, mode);
-    return output;
-  }
-
   void _applyJointLimitPenalties() {
     for (size_t i = 0; i < _joint_names.size(); i++) {
       auto *joint = _joints[i];
@@ -232,10 +226,52 @@ template <class ValueSingle, class ValueBatch> class DexLearn {
     }
   }
 
-  void _evaluateContact(const std::string &end_effector_name,
-                        const std::string &object_name,
-                        const tractor::Tensor<ScalarBatch> &contact_parameters,
-                        size_t end_effector_index) {
+  auto _runTraining() {
+    for (size_t i = 0; i < _outer_batch_size; i++) {
+      auto trajectory_optimization =
+          std::make_shared<tractor::TrajectoryOptimization<GeometryBatch>>();
+      trajectory_optimization->makeTrajectory(
+          *_robot_model, _group_robot, _frames, 1, _joint_variable_options,
+          &_robot_state, false);
+      runBatch(&trajectory_optimization->trajectory(), LayerMode());
+      for (auto &goal : _goals) {
+        trajectory_optimization->add(goal);
+      }
+      trajectory_optimization->applyGoals();
+    }
+  }
+
+public:
+  DexLearn(const std::shared_ptr<Solver> &solver,
+           const std::shared_ptr<tractor::Engine> &engine,
+           const robot_model::RobotModelConstPtr &robot_model,
+           collision_detection::AllowedCollisionMatrix allowed_collision_matrix,
+           std::string group_robot,
+           const std::shared_ptr<DexEnv<ValueSingle, ValueBatch>> &env,
+           size_t outer_batch_size)
+      : _solver(solver), _engine(engine), _robot_model(robot_model), _env(env),
+        _collision_robot(*robot_model, false),
+        _allowed_collision_matrix(allowed_collision_matrix),
+        _end_effectors(env->info().end_effectors),
+        _frames(env->info().frame_count), _group_robot(group_robot),
+        _joint_names(
+            _robot_model->getJointModelGroup(group_robot)->getVariableNames()),
+        _robot_state(robot_model),
+        _test_trajectory(*robot_model, env->info().frame_count),
+        _outer_batch_size(outer_batch_size),
+        _joints(
+            _robot_model->getJointModelGroup(_group_robot)->getJointModels()) {
+
+    _policy_net = env->makePolicyNetwork(
+        jointNames().size(), endEffectors().size(), contactDimensions());
+  }
+
+  void evaluateContact(const std::string &end_effector_name,
+                       const std::string &object_name,
+                       const tractor::Tensor<ScalarBatch> &contact_parameters,
+                       size_t end_effector_index) {
+
+    ROS_INFO_STREAM("contact " << end_effector_name << " " << object_name);
 
     auto object_pose = _simulator->state().links().pose(object_name);
     auto object_orientation = GeometryBatch::orientation(object_pose);
@@ -335,9 +371,9 @@ template <class ValueSingle, class ValueBatch> class DexLearn {
             ValueBatch(_env->info().friction_cone_penalty));
       }
 
-      //   _viz.visualizeContact(indexBatch(value(contact_point_1), 0),
-      //                         indexBatch(value(contact_normal), 0),
-      //                         indexBatch(value(contact_force), 0), 0);
+      _viz.visualizeContact(indexBatch(value(contact_point_1), 0),
+                            indexBatch(value(contact_normal), 0),
+                            indexBatch(value(contact_force), 0), 0);
     }
 
     // friction cone penalty
@@ -358,15 +394,15 @@ template <class ValueSingle, class ValueBatch> class DexLearn {
             ValueBatch(_env->info().friction_cone_penalty));
       }
 
-      //   _viz.visualizeContact(indexBatch(value(contact_point_2), 0),
-      //                         indexBatch(value(contact_normal), 0),
-      //                         indexBatch(value(contact_force), 0), 1);
+      _viz.visualizeContact(indexBatch(value(contact_point_2), 0),
+                            indexBatch(value(contact_normal), 0),
+                            indexBatch(value(contact_force), 0), 1);
     }
 
-    _viz.visualizeContact(
-        indexBatch(value(contact_point_1) + value(contact_point_2), 0) * 0.5,
-        value(GeometrySingle::Vector3Zero()),
-        indexBatch(value(contact_force), 0), end_effector_index);
+    // _viz.visualizeContact(
+    //     indexBatch(value(contact_point_1) + value(contact_point_2), 0) * 0.5,
+    //     value(GeometrySingle::Vector3Zero()),
+    //     indexBatch(value(contact_force), 0), end_effector_index);
 
     if (_env->info().contact_distance_penalty) {
       auto d = (contact_point_2 - contact_point_1) *
@@ -390,8 +426,21 @@ template <class ValueSingle, class ValueBatch> class DexLearn {
     _simulator->applyForce(1, contact_point_1, contact_force);
   }
 
-  auto _runBatch(tractor::RobotTrajectory<GeometryBatch> *trajectory,
-                 const LayerMode &mode) {
+  void applyContacts(const Tensor<ScalarBatch> &policy_output) {
+    ROS_INFO_STREAM("apply contacts");
+    for (size_t end_effector_index = 0;
+         end_effector_index < _end_effectors.size(); end_effector_index++) {
+      auto &end_effector_name = _end_effectors[end_effector_index];
+      tractor::Tensor<ScalarBatch> contact_parameters = policy_output.range(
+          _joint_names.size() + end_effector_index * _contact_dimensions,
+          _contact_dimensions);
+      evaluateContact(end_effector_name, "object", contact_parameters,
+                      end_effector_index);
+    }
+  }
+
+  auto runBatch(tractor::RobotTrajectory<GeometryBatch> *trajectory,
+                const LayerMode &mode) {
     _viz.clear();
     trajectory->state(0).joints().init(*_simulator->model());
     _simulator->model()->computeFK(trajectory->state(0).joints(),
@@ -406,74 +455,18 @@ template <class ValueSingle, class ValueBatch> class DexLearn {
       _simulator->step();
       trajectory->state(frame_index) = _simulator->state();
       _applyJointLimitPenalties();
-      auto policy_output = _runPolicyNetwork(mode, frame_index);
+      auto policy_output = runPolicyNetwork(mode, frame_index);
       _env->controlRobot(*this, policy_output);
-      for (size_t end_effector_index = 0;
-           end_effector_index < _end_effectors.size(); end_effector_index++) {
-        auto &end_effector_name = _end_effectors[end_effector_index];
-        tractor::Tensor<ScalarBatch> contact_parameters = policy_output.range(
-            _joint_names.size() + end_effector_index * _contact_dimensions,
-            _contact_dimensions);
-        _evaluateContact(end_effector_name, "object", contact_parameters,
-                         end_effector_index);
-      }
+      applyContacts(policy_output);
       _applyCollisionPenalties();
     }
   }
 
-  auto _makeSimulator() {
-    planning_scene::PlanningScene planning_scene(_robot_model);
-    auto acm1 = planning_scene.getAllowedCollisionMatrix();
-    {
-      for (auto &a : _robot_model->getLinkModelNames()) {
-        for (auto &b : _robot_model->getLinkModelNames()) {
-          acm1.setEntry(a, b, true);
-        }
-      }
-    }
-
-    _simulator = std::allocate_shared<tractor::PhysicsSimulator<GeometryBatch>>(
-        tractor::AlignedStdAlloc<tractor::PhysicsSimulator<GeometryBatch>>(),
-        *_robot_model, acm1);
-  }
-
-  auto _runTraining() {
-    for (size_t i = 0; i < _outer_batch_size; i++) {
-      auto trajectory_optimization =
-          std::make_shared<tractor::TrajectoryOptimization<GeometryBatch>>();
-      trajectory_optimization->makeTrajectory(
-          *_robot_model, _group_robot, _frames, 1, _joint_variable_options,
-          &_robot_state, false);
-      _runBatch(&trajectory_optimization->trajectory(), LayerMode());
-      for (auto &goal : _goals) {
-        trajectory_optimization->add(goal);
-      }
-      trajectory_optimization->applyGoals();
-    }
-  }
-
-public:
-  DexLearn(const std::shared_ptr<Solver> &solver,
-           const std::shared_ptr<tractor::Engine> &engine,
-           const robot_model::RobotModelConstPtr &robot_model,
-           collision_detection::AllowedCollisionMatrix allowed_collision_matrix,
-           std::string group_robot,
-           const std::shared_ptr<DexEnv<ValueSingle, ValueBatch>> &env,
-           size_t outer_batch_size)
-      : _solver(solver), _engine(engine), _robot_model(robot_model), _env(env),
-        _collision_robot(*robot_model, false),
-        _allowed_collision_matrix(allowed_collision_matrix),
-        _end_effectors(env->info().end_effectors),
-        _frames(env->info().frame_count), _group_robot(group_robot),
-        _joint_names(
-            _robot_model->getJointModelGroup(group_robot)->getVariableNames()),
-        _robot_state(robot_model),
-        _test_trajectory(*robot_model, env->info().frame_count),
-        _outer_batch_size(outer_batch_size),
-        _joints(
-            _robot_model->getJointModelGroup(_group_robot)->getJointModels()) {
-
-    _policy_net = env->makePolicyNetwork(*this);
+  auto runPolicyNetwork(const LayerMode &mode, size_t frame) {
+    auto input =
+        _env->makePolicyInput(_simulator, _joint_names, frame, _frames);
+    auto output = _policy_net.predict(input, mode);
+    return output;
   }
 
   auto &robotJointGroup() const { return _group_robot; }
@@ -499,6 +492,9 @@ public:
 
   auto visualization() const { return _viz.finish(); }
 
+  auto &dexviz() { return _viz; }
+  auto &dexviz() const { return _viz; }
+
   auto &trajectory() const { return _test_trajectory; }
 
   auto &simulator() { return _simulator; }
@@ -511,10 +507,26 @@ public:
   void build(const std::function<void()> &goal_factory) {
     tractor::Program program([&]() {
       goal_factory();
-      _makeSimulator();
+      makeSimulator();
       _runTraining();
     });
     _solver->compile(program);
+  }
+
+  void makeSimulator() {
+    planning_scene::PlanningScene planning_scene(_robot_model);
+    auto acm1 = planning_scene.getAllowedCollisionMatrix();
+    {
+      for (auto &a : _robot_model->getLinkModelNames()) {
+        for (auto &b : _robot_model->getLinkModelNames()) {
+          acm1.setEntry(a, b, true);
+        }
+      }
+    }
+
+    _simulator = std::allocate_shared<tractor::PhysicsSimulator<GeometryBatch>>(
+        tractor::AlignedStdAlloc<tractor::PhysicsSimulator<GeometryBatch>>(),
+        *_robot_model, acm1);
   }
 
   size_t contactDimensions() const { return _contact_dimensions; }
@@ -533,7 +545,7 @@ public:
     ROS_INFO_STREAM("test");
     LayerMode mode;
     mode.training = training;
-    _runBatch(&_test_trajectory, mode);
+    runBatch(&_test_trajectory, mode);
   }
 };
 
