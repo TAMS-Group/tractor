@@ -387,6 +387,21 @@ private:
           break;
         }
       }
+      if (auto *prismatic_joint_state =
+              dynamic_cast<tractor::PrismaticJointState<Geometry> *>(
+                  &_robot_state.joints().joint(i))) {
+        auto &pos = prismatic_joint_state->position();
+        auto &controller = _controllers[i];
+        switch (controller.mode) {
+        case ControlMode::Velocity:
+          pos += controller.command * _time_step;
+          break;
+        case ControlMode::Position:
+          pos +=
+              (controller.command - pos) * _time_step * _controller_stiffness;
+          break;
+        }
+      }
     }
   }
 
@@ -674,6 +689,12 @@ public:
                 dynamic_cast<tractor::RevoluteJointState<Geometry> *>(
                     &_robot_state.joints().joint(i))) {
           auto &pos = revolute_joint_state->position();
+          pos = position;
+        }
+        if (auto *prismatic_joint_state =
+                dynamic_cast<tractor::PrismaticJointState<Geometry> *>(
+                    &_robot_state.joints().joint(i))) {
+          auto &pos = prismatic_joint_state->position();
           pos = position;
         }
       }

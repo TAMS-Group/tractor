@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# (c) 2022 Philipp Ruppel
+
 rostopic pub --once /hand/lh_trajectory_controller/command trajectory_msgs/JointTrajectory \
 '{
   joint_names: [

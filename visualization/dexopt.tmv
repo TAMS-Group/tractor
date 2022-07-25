@@ -27,7 +27,7 @@ Display:
       MaxSteps: 10
       Name: RobotTrajectoryDisplay2
       PlayTrajectory: true
-      ShowAllStates: true
+      ShowAllStates: false
       Speed: 1,000000
       Topic: /move_group/display_planned_path
       TrajectoryTime: 0,000000
@@ -43,7 +43,7 @@ Display:
       Visible: true
       id: 746
       type: RobotTrajectoryDisplay
-    - Brightness: 8,620000
+    - Brightness: 10,000000
       Color:
         B: 1,000000
         G: 1,000000
@@ -87,19 +87,19 @@ Display:
         id: 70332
       Name: MarkerArrayDisplay2
       Topic: /tractor/visualization
-      Visible: true
+      Visible: false
       id: 70331
       type: MarkerArrayDisplay
     - Frame: ""
       Material:
         Color:
-          B: 1,000000
-          G: 1,000000
-          R: 1,000000
+          B: 0,500000
+          G: 0,500000
+          R: 0,500000
         Metallic: 0,000000
         Normals: ""
         Opacity: 1,000000
-        Roughness: 0,685714
+        Roughness: 0,257142
         Texture: ""
         Unlit: false
         id: 70669
@@ -120,7 +120,7 @@ Display:
       id: 70668
       type: PlaneDisplay
     - Description: /dexopt_robot_description
-      DoubleSided: false
+      DoubleSided: true
       Frame: ""
       ImportOptions:
         RecomputeNormals: false
@@ -132,10 +132,10 @@ Display:
             B: 1,000000
             G: 1,000000
             R: 1,000000
-          Metallic: 0,542857
+          Metallic: 0,000000
           Normals: ""
           Opacity: 1,000000
-          Roughness: 0,000000
+          Roughness: 0,200000
           Texture: ""
           Unlit: false
           id: 70777
@@ -154,7 +154,7 @@ Display:
           X: 0,000000
           Y: 0,000000
           Z: 0,000000
-      Visible: false
+      Visible: true
       id: 70775
       type: RobotStateDisplay
     - DescriptionColor:
@@ -188,12 +188,12 @@ Display:
           Metallic: 0,000000
           Normals: ""
           Opacity: 1,000000
-          Roughness: 0,159533
+          Roughness: 0,200000
           Texture: ""
           Unlit: false
           id: 77614
         Normals: false
-        Parameters: true
+        Parameters: false
         Texture: false
         id: 77613
       Name: DisplayRobotStateDisplay1
@@ -235,7 +235,7 @@ Display:
           X: 0,000000
           Y: 0,000000
           Z: 0,000000
-      Visible: true
+      Visible: false
       id: 77670
       type: AxesDisplay
   Environment:
@@ -259,7 +259,7 @@ Display:
   Name: Document
   Rendering:
     BlackLevel: 0,000000
-    Exposure: 1,000000
+    Exposure: 1,500000
     MultiSampling: 4
     SampleShading: 1
     ShadowCubeResolution: 512
@@ -278,13 +278,13 @@ Window:
   FieldOfView: 45,000000
   Name: Window
   ViewPosition:
-    X: 0,198346
-    Y: -0,364307
-    Z: 0,136763
+    X: 0,283546
+    Y: 0,285691
+    Z: 0,310632
   ViewTarget:
-    X: 0,033140
-    Y: 0,020220
-    Z: 0,105147
+    X: -0,049515
+    Y: -0,003836
+    Z: 0,065304
   id: 77426
   type: SceneWindow
 id: 6

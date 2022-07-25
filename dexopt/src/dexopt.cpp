@@ -5,6 +5,7 @@
 #include "dexlearn.h"
 
 #include "dexenv_grasp.h"
+#include "dexenv_grasp_2.h"
 #include "dexenv_push.h"
 #include "dexenv_turn.h"
 
@@ -36,6 +37,7 @@ int main(int argc, char **argv) {
           std::make_shared<tractor::DexEnvGrasp<ValueSingle, ValueBatch>>(),
           std::make_shared<tractor::DexEnvTurn<ValueSingle, ValueBatch>>(),
           std::make_shared<tractor::DexEnvPush<ValueSingle, ValueBatch>>(),
+          std::make_shared<tractor::DexEnvGrasp2<ValueSingle, ValueBatch>>(),
       };
 
   if (argc < 4) {
@@ -63,7 +65,7 @@ int main(int argc, char **argv) {
 
   std::string robot_description = "dexopt_robot_description";
 
-  ros::init(argc, argv, "tractor_test_sim", ros::init_options::NoSigintHandler);
+  ros::init(argc, argv, "dexopt", ros::init_options::NoSigintHandler);
   ros::NodeHandle node_handle;
 
   std::string group_robot = "robot";
@@ -519,9 +521,12 @@ int main(int argc, char **argv) {
       }
 
       for (auto &joint_name : source_hand_joint_names) {
-        target_robot_state.setJointPositions(
-            "lh_" + joint_name,
-            source_robot_state.getJointPositions(joint_name));
+        double p = source_robot_state.getJointPositions(joint_name)[0];
+        if (joint_name == "THJ3") {
+          p *= 1;
+          ROS_INFO_STREAM("THJ3");
+        }
+        target_robot_state.setJointPositions("lh_" + joint_name, &p);
       }
 
       getchar();

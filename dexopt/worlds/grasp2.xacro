@@ -10,38 +10,40 @@
 
     <link name="world"/>
 
-    <xacro:include filename="$(find ur_description)/urdf/ur5.urdf.xacro"/>
-    <xacro:ur5_robot
-        prefix="arm_"
-        joint_limited="true"
-
-        wrist_2_lower_limit="${2*pi}"
-        wrist_2_upper_limit="${3*pi}"
-
-        shoulder_lift_lower_limit="${1.5*pi - 0.7}"
-        shoulder_lift_upper_limit="${2.0*pi - 0.7}"
-
-        elbow_joint_lower_limit="${2.0*pi + 0.7}"
-        elbow_joint_upper_limit="${3.0*pi + 0.7}"
-
-        wrist_1_lower_limit="${3.5*pi}"
-        wrist_1_upper_limit="${4.0*pi}"
-        />
-
     <xacro:include filename="$(find sr_description)/hand/xacro/full_hand.urdf.xacro"/>
     <xacro:include filename="$(find sr_description)/other/xacro/gazebo/gazebo.urdf.xacro"/>
 
     <xacro:shadowhand muscletrans="false" muscle="false" bio="false" bt_sp="false" ubi="false" eli="false" reflect="1.0" prefix="" lf="true"/>
-    <joint name="world_arm_joint" type="fixed">
-      <parent link="world" />
-      <child link="arm_base_link" />
-      <origin xyz="-0.75 -0.15 0" rpy="0 0 0" />
+
+    <link name="hand_lift_link"/>
+    <joint name="hand_lift" type="prismatic">
+      <origin xyz="0 0 0.05" rpy="0 0 0"/>
+      <parent link="world"/>
+      <child link="hand_lift_link"/>
+      <axis xyz="0 0 1"/>
+      <limit effort="100" velocity="10" lower="-0.1" upper="0.1"/>
     </joint>
 
-    <joint name="arm_hand_joint" type="fixed">
-      <parent link="arm_ee_link" />
-      <child link="forearm" />
-      <origin xyz="0.0 0.0 0.0" rpy="${pi/-2} 0 ${pi/-2}" />
+    <link name="hand_pan_link"/>
+    <joint name="hand_pan" type="revolute">
+      <parent link="hand_lift_link"/>
+      <child link="hand_pan_link"/>
+      <axis xyz="0 0 1"/>
+      <limit effort="100" velocity="10" lower="${pi*-0.25}" upper="${pi*0.25}"/>
+    </joint>
+
+    <link name="hand_tilt_link"/>
+    <joint name="hand_tilt" type="revolute">
+      <parent link="hand_pan_link"/>
+      <child link="hand_tilt_link"/>
+      <axis xyz="0 1 0"/>
+      <limit effort="100" velocity="10" lower="${pi*-0.25}" upper="${pi*0.25}"/>
+    </joint>
+
+    <joint name="world_hand_joint" type="fixed">
+      <parent link="hand_tilt_link"/>
+      <child link="forearm"/>
+      <origin xyz="-0.35 -0.03 0.05" rpy="${pi/-2} ${pi} ${pi/-2}"/>
     </joint>
 
     <xacro:include filename="$(find dexopt)/objects/cube.xacro"/>
