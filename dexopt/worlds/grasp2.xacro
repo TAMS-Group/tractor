@@ -21,7 +21,7 @@
       <parent link="world"/>
       <child link="hand_lift_link"/>
       <axis xyz="0 0 1"/>
-      <limit effort="100" velocity="10" lower="-0.1" upper="0.1"/>
+      <limit effort="100" velocity="10" lower="-0.2" upper="0.2"/>
     </joint>
 
     <link name="hand_pan_link"/>

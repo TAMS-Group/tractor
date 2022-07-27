@@ -129,15 +129,18 @@ class DenseLayer : public LayerBase<Scalar, DenseLayer<Scalar>> {
   double _weight_regularization = 0;
   double _activity_regularization = 0;
   double _stdev = 0;
+  bool _use_bias = true;
 
 public:
   DenseLayer(size_t units, Activation activation = Activation::Linear,
              double bias_regularization = 0, double weight_regularization = 0,
-             double activity_regularization = 0, double stdev = 0.001)
+             double activity_regularization = 0, double stdev = 0.001,
+             bool use_bias = true)
       : _units(units), _activation(activation),
         _bias_regularization(bias_regularization),
         _weight_regularization(weight_regularization),
-        _activity_regularization(activity_regularization), _stdev(stdev) {}
+        _activity_regularization(activity_regularization), _stdev(stdev),
+        _use_bias(use_bias) {}
   virtual Tensor<Scalar> evaluate(const std::vector<Tensor<Scalar>> &inputs,
                                   const LayerMode &mode) override {
     auto &input = inputs.at(0);
@@ -147,14 +150,16 @@ public:
       _initialized = true;
       std::cout << "build dense layer " << input.size() << " x " << _units
                 << std::endl;
+
       _weights.resize(input.size(), _units);
-      _bias.resize(_units);
-
       randomize(_weights, _stdev);
-      randomize(_bias, _stdev);
-
       variable(_weights);
-      variable(_bias);
+
+      if (_use_bias) {
+        _bias.resize(_units);
+        randomize(_bias, _stdev);
+        variable(_bias);
+      }
 
       if (_weight_regularization != 0) {
         for (size_t row = 0; row < input.size(); row++) {
@@ -164,9 +169,11 @@ public:
         }
       }
 
-      if (_bias_regularization != 0) {
-        for (size_t i = 0; i < _units; i++) {
-          goal(_bias(i) * _bias_regularization);
+      if (_use_bias) {
+        if (_bias_regularization != 0) {
+          for (size_t i = 0; i < _units; i++) {
+            goal(_bias(i) * _bias_regularization);
+          }
         }
       }
     }
@@ -174,10 +181,13 @@ public:
     // Tensor<Scalar> activity = tensor_mul_vec_mat(input, _weights) + _bias;
 
     Tensor<Scalar> activity = tensor_mul_vec_mat(input, _weights);
-    for (size_t i = 0; i < _units; i++) {
-      Scalar bias;
-      batch(_bias[i], bias);
-      activity[i] += bias;
+
+    if (_use_bias) {
+      for (size_t i = 0; i < _units; i++) {
+        Scalar bias;
+        batch(_bias[i], bias);
+        activity[i] += bias;
+      }
     }
 
     if (_activity_regularization != 0) {

@@ -5,6 +5,8 @@
 #include "dexenv.h"
 #include "dexlearn.h"
 
+#include <tams_hand_synergies/hand_synergies.h>
+
 namespace tractor {
 
 template <class ValueSingle, class ValueBatch>
@@ -16,29 +18,33 @@ struct DexEnvGrasp2 : tractor::DexEnv<ValueSingle, ValueBatch> {
   typedef tractor::Var<ValueBatch> ScalarBatch;
   typedef tractor::GeometryFast<ScalarBatch> GeometryBatch;
 
+  tams_hand_synergies::HandSynergies hand_synergies;
+
+  bool use_synergies = true;
+
   DexEnvGrasp2() {
 
     this->_info.name = "grasp2";
 
     this->_info.frame_count = 20;
 
-    this->_info.collision_avoidance_distance = 0.01;
-    this->_info.collision_avoidance_weight = 0.02;
+    this->_info.collision_avoidance_distance = 0;
+    this->_info.collision_avoidance_weight = 0;
 
-    this->_info.slip_avoidance_distance = 0.01;
-    this->_info.slip_avoidance_weight = 0.1;
+    this->_info.slip_avoidance_distance = 0;
+    this->_info.slip_avoidance_weight = 0;
 
     this->_info.friction_cone_penalty = 1;
 
-    this->_info.contact_distance_penalty = 10;
-    this->_info.contact_slip_penalty = 1;
+    this->_info.contact_distance_penalty = 1;
+    this->_info.contact_slip_penalty = 0;
 
     this->_info.joint_limit_penalty = 1;
 
     this->_info.shape_penalty = 1;
 
-    this->_info.contact_point_regularization = 0.01;
-    this->_info.contact_force_regularization = 0.01;
+    this->_info.contact_point_regularization = 0;
+    this->_info.contact_force_regularization = 0;
 
     this->_info.collision_penalty = 1;
 
@@ -53,60 +59,50 @@ struct DexEnvGrasp2 : tractor::DexEnv<ValueSingle, ValueBatch> {
       const std::vector<std::string> &joint_names, size_t frame,
       size_t frame_count) override {
 
+    /*
+    size_t frequencies = 2;
+    tractor::Tensor<ScalarBatch> neural_input;
+    neural_input.resize(frequencies * 2 + 3);
+
+    double t = frame * 1.0 / frame_count;
+
+    for (size_t i = 0; i < frequencies; i++) {
+      neural_input[i * 2 + 0] = ValueBatch(sin(t * (i + 1) * M_PI * 0.5));
+      neural_input[i * 2 + 1] = ValueBatch(cos(t * (i + 1) * M_PI * 0.5));
+    }
+    */
+
+    size_t frequencies = 3;
+    tractor::Tensor<ScalarBatch> neural_input;
+    neural_input.resize(frequencies + 3);
+
+    double t = frame * 1.0 / frame_count;
+
+    for (size_t i = 0; i < frequencies; i++) {
+      neural_input[i] = ValueBatch(0.5 - cos(t * (i + 1) * M_PI) * 0.5);
+    }
+
+    /*
     tractor::Tensor<ScalarBatch> neural_input;
 
-    auto object_pose = simulator->state().links().pose("object");
-    auto object_orientation = GeometryBatch::orientation(object_pose);
-    auto object_position = GeometryBatch::translation(object_pose);
+    // auto object_pose = simulator->state().links().pose("object");
+    // auto object_position = GeometryBatch::translation(object_pose);
 
-    neural_input.resize(joint_names.size() + 3 + 6 + 3);
+    auto object_position = simulator->body("object").position;
 
-    for (size_t i = 0; i < joint_names.size(); i++) {
-      auto &joint_state = simulator->state().joints().joint(joint_names[i]);
-      if (auto *revolute_joint_state =
-              dynamic_cast<tractor::RevoluteJointState<GeometryBatch> *>(
-                  &joint_state)) {
-        neural_input(i) = revolute_joint_state->position();
-      }
-    }
+    neural_input.resize(4);
 
     {
-      size_t i = joint_names.size();
+      size_t i = 0;
 
-      ScalarBatch pscale = ValueBatch(10);
+      // ScalarBatch pscale = ValueBatch(10);
       ScalarBatch px, py, pz;
       GeometryBatch::unpack(object_position, px, py, pz);
-      neural_input(i++) = px * pscale;
-      neural_input(i++) = py * pscale;
-      neural_input(i++) = pz * pscale;
-
-      ScalarBatch rxx, rxy, rxz;
-      GeometryBatch::unpack(
-          object_orientation *
-              GeometryBatch::pack(ValueBatch(1), ValueBatch(0), ValueBatch(0)),
-          rxx, rxy, rxz);
-      neural_input(i++) = rxx;
-      neural_input(i++) = rxy;
-      neural_input(i++) = rxz;
-
-      ScalarBatch ryx, ryy, ryz;
-      GeometryBatch::unpack(
-          object_orientation *
-              GeometryBatch::pack(ValueBatch(0), ValueBatch(1), ValueBatch(0)),
-          ryx, ryy, ryz);
-      neural_input(i++) = ryx;
-      neural_input(i++) = ryy;
-      neural_input(i++) = ryz;
-
-      ScalarBatch hx, hy, hz;
-      GeometryBatch::unpack(
-          GeometryBatch::translation(simulator->state().links().pose("palm")) -
-              object_position,
-          hx, hy, hz);
-      neural_input(i++) = hx;
-      neural_input(i++) = hy;
-      neural_input(i++) = hz;
+      neural_input(0) = px;
+      neural_input(1) = py;
+      neural_input(2) = pz;
     }
+    */
 
     return neural_input;
   }
@@ -117,32 +113,9 @@ struct DexEnvGrasp2 : tractor::DexEnv<ValueSingle, ValueBatch> {
 
     tractor::SequentialNeuralNetwork<ScalarBatch> policy_net;
 
-    /*
-    double regularization = 0.01;
-
-    // policy_net.add(tractor::DropoutLayer<ScalarBatch>(0.3));
-
     policy_net.add(tractor::DenseLayer<ScalarBatch>(
-        64, tractor::Activation::Linear, regularization, regularization));
-
-    policy_net.add(
-        tractor::ActivityRegularizationLayer<ScalarBatch>(regularization));
-
-    policy_net.add(tractor::DropoutLayer<ScalarBatch>(0.3));
-
-    policy_net.add(
-        tractor::ActivationLayer<ScalarBatch>(tractor::Activation::TanH));
-
-    policy_net.add(tractor::DenseLayer<ScalarBatch>(
-        joint_count + end_effector_count * contact_dimensions,
-        tractor::Activation::Linear, regularization, regularization));
-    */
-
-    policy_net.add(tractor::DenseLayer<ScalarBatch>(
-        joint_count + end_effector_count * contact_dimensions,
-        tractor::Activation::Linear, 0, 0));
-
-    // policy_net.add(tractor::GaussianNoiseLayer<ScalarBatch>(0.001));
+        joint_count + end_effector_count * contact_dimensions + 3,
+        tractor::Activation::Linear, 0, 0, 0, 0.001, false));
 
     return policy_net;
   }
@@ -150,19 +123,21 @@ struct DexEnvGrasp2 : tractor::DexEnv<ValueSingle, ValueBatch> {
   virtual void
   init(tractor::DexLearn<ValueSingle, ValueBatch> &dexlearn) override {
     auto &simulator = *dexlearn.simulator();
-    {
-      double s = 0.02;
-      ScalarBatch px = add_random_uniform(this->makeZero(), s * -0.5, s * 0.5);
-      ScalarBatch py = add_random_uniform(this->makeZero(), s * -0.5, s * 0.5);
-      ScalarBatch pz = ValueBatch(0);
-      simulator.moveBody("object", GeometryBatch::pack(px, py, pz));
-    }
-    {
-      auto rot = GeometryBatch::angleAxisOrientation(
-          add_random_uniform(this->makeZero(), 0, M_PI * 2),
-          GeometryBatch::import(Eigen::Vector3d(0, 0, 1)));
-      simulator.rotateBody("object", rot);
-    }
+
+    // {
+    //   double s = 0.02;
+    //   ScalarBatch px = add_random_uniform(this->makeZero(), s * -0.5, s *
+    //   0.5); ScalarBatch py = add_random_uniform(this->makeZero(), s * -0.5, s
+    //   * 0.5); ScalarBatch pz = ValueBatch(0); simulator.moveBody("object",
+    //   GeometryBatch::pack(px, py, pz));
+    // }
+
+    // {
+    //   auto rot = GeometryBatch::angleAxisOrientation(
+    //       add_random_uniform(this->makeZero(), 0, M_PI * 2),
+    //       GeometryBatch::import(Eigen::Vector3d(0, 0, 1)));
+    //   simulator.rotateBody("object", rot);
+    // }
   }
 
   virtual void
@@ -172,7 +147,7 @@ struct DexEnvGrasp2 : tractor::DexEnv<ValueSingle, ValueBatch> {
         tractor::AlignedStdAlloc<tractor::MoveGoal<GeometryBatch>>(), "object",
         dexlearn.frameCount() - 1,
         GeometryBatch::pack(ValueBatch(0.0), ValueBatch(0.0), ValueBatch(0.1)),
-        ValueBatch(2)));
+        ValueBatch(1)));
 
     dexlearn.addGoal(
         std::allocate_shared<tractor::RelativeOrientationGoal<GeometryBatch>>(
@@ -192,11 +167,28 @@ struct DexEnvGrasp2 : tractor::DexEnv<ValueSingle, ValueBatch> {
     auto &_group_robot = dexlearn.robotJointGroup();
     auto &joint_names = dexlearn.jointNames();
 
-    auto velocities = policy_output;
-    for (size_t i = 0; i < velocities.size(); i++) {
-      goal(velocities[i] * ValueBatch(0.01));
-      velocities[i] = tanh(velocities[i]);
+    auto positions = policy_output;
+
+    /*
+    for (size_t i = 0; i < joint_names.size(); i++) {
+
+      positions[i] = tanh(positions[i]) * ValueBatch(0.5) + ValueBatch(0.5);
+
+      auto *joint = dexlearn.joints()[i];
+
+      if (joint->getName() != joint_names[i]) {
+        throw std::runtime_error("");
+      }
+
+      auto &bounds = joint->getVariableBounds().at(0);
+
+      positions[i] = positions[i] * ValueBatch(bounds.max_position_ -
+                                               bounds.min_position_) +
+                     ValueBatch(bounds.min_position_);
+
+      positions[i] *= ValueBatch(0.5);
     }
+    */
 
     std::vector<std::pair<std::string, std::string>> couplings;
     couplings.emplace_back("FFJ1", "FFJ2");
@@ -207,17 +199,11 @@ struct DexEnvGrasp2 : tractor::DexEnv<ValueSingle, ValueBatch> {
     for (auto &pair : couplings) {
       int i = group->getVariableGroupIndex(pair.first);
       int j = group->getVariableGroupIndex(pair.second);
-      velocities[i] = velocities[j];
+      positions[i] = positions[j];
     }
 
     for (size_t i = 0; i < joint_names.size(); i++) {
-      auto vel = velocities[i];
-      if (joint_names[i].substr(0, 4) == "arm_") {
-        vel *= ValueBatch(3);
-      } else {
-        vel *= ValueBatch(20);
-      }
-      dexlearn.simulator()->controlJointVelocity(joint_names[i], vel);
+      dexlearn.simulator()->setJointPosition(joint_names[i], positions[i]);
     }
   }
 };

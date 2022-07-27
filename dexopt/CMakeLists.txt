@@ -16,6 +16,7 @@ find_package(catkin REQUIRED COMPONENTS
   eigen_conversions
   moveit_core
   moveit_ros_planning_interface
+  tams_hand_synergies
 )
 
 catkin_package(
@@ -31,6 +32,7 @@ catkin_package(
   eigen_conversions
   moveit_core
   moveit_ros_planning_interface
+  tams_hand_synergies
 )
 
 include_directories(

@@ -48,6 +48,9 @@
     <build_depend>kdl_parser</build_depend>
     <run_depend>kdl_parser</run_depend>
 
+    <build_depend>tams_hand_synergies</build_depend>
+    <run_depend>tams_hand_synergies</run_depend>
+
     <export>
     </export>
 

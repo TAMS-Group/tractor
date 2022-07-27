@@ -19,7 +19,7 @@
 #include <tf/transform_listener.h>
 
 static constexpr size_t inner_batch_size = 8;
-static constexpr size_t outer_batch_size = 2;
+static constexpr size_t outer_batch_size = 1;
 
 typedef double ValueSingle;
 typedef tractor::Batch<ValueSingle, inner_batch_size> ValueBatch;
