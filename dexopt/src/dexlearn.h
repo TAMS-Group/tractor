@@ -220,7 +220,7 @@ template <class ValueSingle, class ValueBatch> class DexLearn {
             GeometryBatch::pack(ValueBatch(0), ValueBatch(1), ValueBatch(0)),
             GeometryBatch::pack(ValueBatch(0), ValueBatch(0), ValueBatch(1))}) {
         auto n = contact_normal;
-        n += cross(n, v * ValueBatch(sign * 0.5));
+        n += cross(n, v * ValueBatch(sign));
         TRACTOR_GOAL(relu(-dot(n, contact_force)) * weight);
       }
     }
@@ -262,8 +262,8 @@ public:
         _joints(
             _robot_model->getJointModelGroup(_group_robot)->getJointModels()) {
 
-    _policy_net = env->makePolicyNetwork(
-        jointNames().size(), endEffectors().size(), contactDimensions());
+    _policy_net = env->makePolicyNetwork(jointNames(), endEffectors().size(),
+                                         contactDimensions());
   }
 
   void evaluateContact(const std::string &end_effector_name,

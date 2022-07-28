@@ -112,8 +112,11 @@ struct DexEnvGrasp : tractor::DexEnv<ValueSingle, ValueBatch> {
   }
 
   virtual tractor::NeuralNetwork<ScalarBatch>
-  makePolicyNetwork(size_t joint_count, size_t end_effector_count,
+  makePolicyNetwork(const std::vector<std::string> &joint_names,
+                    size_t end_effector_count,
                     size_t contact_dimensions) override {
+
+    size_t joint_count = joint_names.size();
 
     tractor::SequentialNeuralNetwork<ScalarBatch> policy_net;
 

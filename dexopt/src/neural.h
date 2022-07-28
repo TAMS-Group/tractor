@@ -224,6 +224,19 @@ public:
 };
 
 template <class Scalar>
+class LambdaLayer : public LayerBase<Scalar, LambdaLayer<Scalar>> {
+  std::function<Tensor<Scalar>(const Tensor<Scalar>)> _lambda;
+
+public:
+  LambdaLayer(const std::function<Tensor<Scalar>(const Tensor<Scalar>)> &lambda)
+      : _lambda(lambda) {}
+  virtual Tensor<Scalar> evaluate(const std::vector<Tensor<Scalar>> &inputs,
+                                  const LayerMode &mode) override {
+    return _lambda(inputs.at(0));
+  }
+};
+
+template <class Scalar>
 class GaussianNoiseLayer
     : public LayerBase<Scalar, GaussianNoiseLayer<Scalar>> {
   double _standard_deviation = 0.0;

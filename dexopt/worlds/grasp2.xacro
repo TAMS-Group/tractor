@@ -29,7 +29,7 @@
       <parent link="hand_lift_link"/>
       <child link="hand_pan_link"/>
       <axis xyz="0 0 1"/>
-      <limit effort="100" velocity="10" lower="${pi*-0.25}" upper="${pi*0.25}"/>
+      <limit effort="100" velocity="10" lower="${pi*-0.1}" upper="${pi*0.1}"/>
     </joint>
 
     <link name="hand_tilt_link"/>
@@ -37,13 +37,13 @@
       <parent link="hand_pan_link"/>
       <child link="hand_tilt_link"/>
       <axis xyz="0 1 0"/>
-      <limit effort="100" velocity="10" lower="0" upper="${pi*0.25}"/>
+      <limit effort="100" velocity="10" lower="0" upper="${pi*0.1}"/>
     </joint>
 
     <joint name="world_hand_joint" type="fixed">
       <parent link="hand_tilt_link"/>
       <child link="forearm"/>
-      <origin xyz="-0.35 -0.03 0.05" rpy="${pi/-2} ${pi} ${pi/-2}"/>
+      <origin xyz="-0.35 -0.01 0.075" rpy="${pi/-2} ${pi} ${pi/-2}"/>
     </joint>
 
     <xacro:include filename="$(find dexopt)/objects/cube.xacro"/>

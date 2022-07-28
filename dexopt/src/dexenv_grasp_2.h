@@ -36,17 +36,17 @@ struct DexEnvGrasp2 : tractor::DexEnv<ValueSingle, ValueBatch> {
 
     this->_info.friction_cone_penalty = 1;
 
-    this->_info.contact_distance_penalty = 1;
-    this->_info.contact_slip_penalty = 0;
+    this->_info.contact_distance_penalty = 3;
+    this->_info.contact_slip_penalty = 0.3;
 
     this->_info.joint_limit_penalty = 1;
 
-    this->_info.shape_penalty = 1;
+    this->_info.shape_penalty = 3;
 
     this->_info.contact_point_regularization = 0;
     this->_info.contact_force_regularization = 0;
 
-    this->_info.collision_penalty = 1;
+    this->_info.collision_penalty = 0.5;
 
     this->_info.end_effectors = {
         "ffdistal", "mfdistal", "thdistal", "rfdistal", "lfdistal", "floor",
@@ -59,63 +59,106 @@ struct DexEnvGrasp2 : tractor::DexEnv<ValueSingle, ValueBatch> {
       const std::vector<std::string> &joint_names, size_t frame,
       size_t frame_count) override {
 
-    /*
-    size_t frequencies = 2;
-    tractor::Tensor<ScalarBatch> neural_input;
-    neural_input.resize(frequencies * 2 + 3);
-
-    double t = frame * 1.0 / frame_count;
-
-    for (size_t i = 0; i < frequencies; i++) {
-      neural_input[i * 2 + 0] = ValueBatch(sin(t * (i + 1) * M_PI * 0.5));
-      neural_input[i * 2 + 1] = ValueBatch(cos(t * (i + 1) * M_PI * 0.5));
-    }
-    */
-
-    size_t frequencies = 3;
+    size_t frequencies = 4;
     tractor::Tensor<ScalarBatch> neural_input;
     neural_input.resize(frequencies + 3);
 
     double t = frame * 1.0 / frame_count;
 
     for (size_t i = 0; i < frequencies; i++) {
-      neural_input[i] = ValueBatch(0.5 - cos(t * (i + 1) * M_PI) * 0.5);
+      neural_input[i] =
+          ValueBatch((0.5 - cos(t * (i + 1) * M_PI) * 0.5) / (i + 1));
     }
-
-    /*
-    tractor::Tensor<ScalarBatch> neural_input;
-
-    // auto object_pose = simulator->state().links().pose("object");
-    // auto object_position = GeometryBatch::translation(object_pose);
-
-    auto object_position = simulator->body("object").position;
-
-    neural_input.resize(4);
-
-    {
-      size_t i = 0;
-
-      // ScalarBatch pscale = ValueBatch(10);
-      ScalarBatch px, py, pz;
-      GeometryBatch::unpack(object_position, px, py, pz);
-      neural_input(0) = px;
-      neural_input(1) = py;
-      neural_input(2) = pz;
-    }
-    */
 
     return neural_input;
   }
 
   virtual tractor::NeuralNetwork<ScalarBatch>
-  makePolicyNetwork(size_t joint_count, size_t end_effector_count,
+  makePolicyNetwork(const std::vector<std::string> &joint_names,
+                    size_t end_effector_count,
                     size_t contact_dimensions) override {
+
+    auto hand_synergies = this->hand_synergies;
 
     tractor::SequentialNeuralNetwork<ScalarBatch> policy_net;
 
+    std::unordered_set<std::string> hand_joints;
+    for (auto &joint_name : hand_synergies.joints()) {
+      hand_joints.insert(joint_name);
+    }
+
+    std::vector<std::string> arm_joints;
+    for (auto &joint_name : joint_names) {
+      if (hand_joints.find(joint_name) == hand_joints.end()) {
+        arm_joints.push_back(joint_name);
+      }
+    }
+
+    size_t output_dimensions;
+    if (use_synergies) {
+      output_dimensions = arm_joints.size() + hand_synergies.components() +
+                          end_effector_count * contact_dimensions;
+    } else {
+      output_dimensions =
+          joint_names.size() + end_effector_count * contact_dimensions;
+    }
+
+    // policy_net.add(tractor::GaussianNoiseLayer<ScalarBatch>(0.001));
+
     policy_net.add(tractor::DenseLayer<ScalarBatch>(
-        joint_count + end_effector_count * contact_dimensions + 3,
-        tractor::Activation::Linear, 0, 0, 0, 0.001, false));
+        output_dimensions, tractor::Activation::Linear, 0, 0, 0, 0.001, false));
+
+    // policy_net.add(tractor::GaussianNoiseLayer<ScalarBatch>(0.001));
+
+    if (use_synergies) {
+      policy_net.add(tractor::LambdaLayer<ScalarBatch>(
+          [hand_synergies, hand_joints, arm_joints, end_effector_count,
+           contact_dimensions, joint_names](const Tensor<ScalarBatch> &input) {
+            Tensor<ScalarBatch> ret;
+            ret.resize(joint_names.size() +
+                       end_effector_count * contact_dimensions);
+
+            std::map<std::string, ScalarBatch> joint_map;
+
+            size_t iin = 0;
+            for (size_t i = 0; i < arm_joints.size(); i++) {
+              joint_map[arm_joints[i]] = input[iin++];
+              // input[iin++];
+            }
+            {
+              ScalarBatch f = input[iin++];
+              f = f * ValueBatch(2);
+              f = (ValueBatch(1.0) + f * ValueBatch(0.5));
+              for (size_t i = 0; i < hand_synergies.joints().size(); i++) {
+                joint_map[hand_synergies.joints()[i]] =
+                    f * ValueBatch((double)hand_synergies.data()(0, i));
+              }
+            }
+            for (size_t j = 1; j < hand_synergies.components(); j++) {
+              ScalarBatch f = input[iin++];
+              f = f * ValueBatch(2);
+              for (size_t i = 0; i < hand_synergies.joints().size(); i++) {
+                joint_map[hand_synergies.joints()[i]] +=
+                    f * ValueBatch((double)hand_synergies.data()(j, i));
+              }
+            }
+
+            for (size_t i = 0; i < joint_names.size(); i++) {
+              ret[i] = joint_map[joint_names[i]];
+            }
+
+            for (size_t i = 0; i < end_effector_count * contact_dimensions;
+                 i++) {
+              ret[i + joint_names.size()] = input[iin++];
+            }
+
+            if (iin != input.size()) {
+              throw std::runtime_error("failed to unpack synergy tensor");
+            }
+
+            return ret;
+          }));
+    }
 
     return policy_net;
   }
@@ -131,7 +174,7 @@ struct DexEnvGrasp2 : tractor::DexEnv<ValueSingle, ValueBatch> {
     //   * 0.5); ScalarBatch pz = ValueBatch(0); simulator.moveBody("object",
     //   GeometryBatch::pack(px, py, pz));
     // }
-
+    //
     // {
     //   auto rot = GeometryBatch::angleAxisOrientation(
     //       add_random_uniform(this->makeZero(), 0, M_PI * 2),
@@ -156,7 +199,7 @@ struct DexEnvGrasp2 : tractor::DexEnv<ValueSingle, ValueBatch> {
             "object",
             GeometryBatch::pack(ValueBatch(0.0), ValueBatch(0.0),
                                 ValueBatch(0.0)),
-            ValueBatch(1)));
+            ValueBatch(2)));
   }
 
   virtual void
@@ -168,27 +211,6 @@ struct DexEnvGrasp2 : tractor::DexEnv<ValueSingle, ValueBatch> {
     auto &joint_names = dexlearn.jointNames();
 
     auto positions = policy_output;
-
-    /*
-    for (size_t i = 0; i < joint_names.size(); i++) {
-
-      positions[i] = tanh(positions[i]) * ValueBatch(0.5) + ValueBatch(0.5);
-
-      auto *joint = dexlearn.joints()[i];
-
-      if (joint->getName() != joint_names[i]) {
-        throw std::runtime_error("");
-      }
-
-      auto &bounds = joint->getVariableBounds().at(0);
-
-      positions[i] = positions[i] * ValueBatch(bounds.max_position_ -
-                                               bounds.min_position_) +
-                     ValueBatch(bounds.min_position_);
-
-      positions[i] *= ValueBatch(0.5);
-    }
-    */
 
     std::vector<std::pair<std::string, std::string>> couplings;
     couplings.emplace_back("FFJ1", "FFJ2");

@@ -89,8 +89,8 @@ public:
       size_t frame_count) = 0;
 
   virtual tractor::NeuralNetwork<ScalarBatch>
-  makePolicyNetwork(size_t joint_count, size_t end_effector_count,
-                    size_t contact_dimensions) = 0;
+  makePolicyNetwork(const std::vector<std::string> &joint_names,
+                    size_t end_effector_count, size_t contact_dimensions) = 0;
 
   virtual void
   controlRobot(tractor::DexLearn<ValueSingle, ValueBatch> &dexlearn,

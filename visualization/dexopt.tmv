@@ -87,7 +87,7 @@ Display:
         id: 70332
       Name: MarkerArrayDisplay2
       Topic: /tractor/visualization
-      Visible: false
+      Visible: true
       id: 70331
       type: MarkerArrayDisplay
     - Frame: ""
@@ -154,7 +154,7 @@ Display:
           X: 0,000000
           Y: 0,000000
           Z: 0,000000
-      Visible: true
+      Visible: false
       id: 70775
       type: RobotStateDisplay
     - DescriptionColor:
@@ -278,13 +278,13 @@ Window:
   FieldOfView: 45,000000
   Name: Window
   ViewPosition:
-    X: 0,283546
-    Y: 0,285691
-    Z: 0,310632
+    X: 0,322581
+    Y: 0,316000
+    Z: 0,341651
   ViewTarget:
-    X: -0,049515
-    Y: -0,003836
-    Z: 0,065304
+    X: -0,001484
+    Y: 0,039221
+    Z: 0,070879
   id: 77426
   type: SceneWindow
 id: 6
