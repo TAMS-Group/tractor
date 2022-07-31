@@ -1,5 +1,7 @@
 // (c) 2020-2022 Philipp Ruppel
 
+#if 0
+
 #include <tractor/test/test.h>
 
 #include <tractor/core/eigen.h>
@@ -663,3 +665,5 @@ void testGradientConsistency() {
 }
 
 } // namespace tractor
+
+#endif

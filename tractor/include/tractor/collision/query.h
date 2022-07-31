@@ -109,19 +109,6 @@ public:
 
 } // namespace internal
 
-template <class Scalar>
-void CollisionShape<Scalar>::project(const Vector3<Scalar> &point,
-                                     Vector3<Scalar> &normal,
-                                     Scalar &distance) {
-  auto a = tractor::internal::CollisionShapeSupport<Scalar>(
-      Pose<Scalar>::Identity(), this);
-  auto b = tractor::internal::PointSupport<Scalar>(point);
-  tractor::internal::CollisionResult r;
-  tractor::internal::doCollisionQuery(a, b, r);
-  normal = Vector3<Scalar>(Scalar(r.nx), Scalar(r.ny), Scalar(r.nz));
-  distance = r.d;
-}
-
 // template <class Scalar> class ShapeCollisionPair {
 //   bool _initialized = false;
 //   std::shared_ptr<const CollisionShape<Scalar>> _shape_a, _shape_b;

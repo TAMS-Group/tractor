@@ -7,14 +7,18 @@ find_package(Bullet REQUIRED)
 find_package(catkin REQUIRED COMPONENTS
     roscpp
     moveit_core
+    pybind11_catkin
 )
+
+set(LIBNAME libtractor)
 
 catkin_package(
     INCLUDE_DIRS include
-    LIBRARIES ${PROJECT_NAME}
+    LIBRARIES ${LIBNAME}
     CATKIN_DEPENDS
         roscpp
         moveit_core
+        pybind11_catkin
 )
 
 include_directories(
@@ -23,7 +27,12 @@ include_directories(
     include
 )
 
-add_library(${PROJECT_NAME}
+#catkin_python_setup()
+
+#set(CMAKE_STATIC_LIBRARY_PREFIX "")
+set(CMAKE_SHARED_LIBRARY_PREFIX "")
+
+add_library(${LIBNAME}
     src/collision/link.cpp
     src/collision/query.cpp
     src/collision/ops.cpp
@@ -72,6 +81,7 @@ add_library(${PROJECT_NAME}
     src/robot/jointstate.cpp
     src/robot/jointtypes.cpp
     src/robot/linkstate.cpp
+    # src/python/python.cpp
     src/robot/robot.cpp
     src/robot/robotinfo.cpp
     src/robot/robotmodel.cpp
@@ -88,9 +98,25 @@ add_library(${PROJECT_NAME}
     src/tensor/ops.cpp
     src/test/test.cpp
 )
-add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(${LIBNAME} ${${LIBNAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES} ${BULLET_LIBRARIES})
+target_link_libraries(${LIBNAME} ${catkin_LIBRARIES} ${BULLET_LIBRARIES})
 
-install(DIRECTORY include/${PROJECT_NAME}/ DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
-install(TARGETS ${PROJECT_NAME} LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
+install(DIRECTORY include/tractor DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
+
+install(TARGETS ${LIBNAME} LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
+
+#install(TARGETS ${PROJECT_NAME} LIBRARY DESTINATION ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_PYTHON_DESTINATION})
+
+#message(warn ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_PYTHON_DESTINATION})
+
+#set_target_properties(${PROJECT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_PYTHON_DESTINATION})
+
+catkin_python_setup()
+
+#pybind11_add_module(tractor)
+
+pybind_add_module(tractor
+  src/python/python.cpp
+)
+target_link_libraries(tractor PRIVATE libtractor ${catkin_LIBRARIES})

@@ -20,9 +20,9 @@ struct OperatorRegistry {
   }
 };
 
-Operator::Operator(const std::string &name, const OpMode &mode,
-                   const OpType &op, const OpGroup &group)
-    : _name(name), _op(op), _mode(mode) {
+Operator::Operator(const std::string &name, const std::string &label,
+                   const OpMode &mode, const OpType &op, const OpGroup &group)
+    : _name(name), _label(label), _op(op), _mode(mode) {
   // std::cout << name << " " << mode.name() << " " << group.name() <<
   // std::endl;
   auto *registry = OperatorRegistry::instance();

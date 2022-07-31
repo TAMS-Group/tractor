@@ -44,6 +44,8 @@ public:
   Recorder(const Recorder &) = delete;
   Recorder &operator=(const Recorder &) = delete;
 
+  void move(const TypeInfo &type, const void *from, void *to);
+
   const auto &instructions() const { return _instructions; }
 
   void push(uintptr_t a) { _instructions.push_back(a); }
@@ -79,28 +81,22 @@ public:
   template <class T>
   auto *input(Var<T> *p,
               Program::InputMode mode = Program::InputMode::Variable) {
-    _inputs.emplace_back(TypeInfo::get<T>(), (uintptr_t)&p->value(), 0,
-                         (uintptr_t)&p->value(), -1, -1, mode);
-    return &_inputs.back();
-  }
-
-  template <class T>
-  auto *input(Var<T> *p, const T &lower, const T &upper,
-              Program::InputMode mode = Program::InputMode::Variable) {
-    size_t offset_lower = _bound_data.size();
-    size_t offset_upper = _bound_data.size() + sizeof(T);
-    _inputs.emplace_back(TypeInfo::get<T>(), (uintptr_t)&p->value(), 0,
-                         (uintptr_t)&p->value(), offset_lower, offset_upper,
-                         mode);
-    _bound_data.resize(_bound_data.size() + sizeof(T) * 2);
-    std::memcpy(_bound_data.data() + offset_lower, &lower, sizeof(T));
-    std::memcpy(_bound_data.data() + offset_upper, &upper, sizeof(T));
+    uintptr_t addr = _alloc.alloc(TypeInfo::get<T>());
+    _inputs.emplace_back(TypeInfo::get<T>(), addr, 0, (uintptr_t)&p->value(),
+                         -1, -1, mode);
+    uintptr_t temp = (addr | 0x8000000000000000ul);
+    move((const T *)temp, (T *)&p->value());
     return &_inputs.back();
   }
 
   template <class T> void parameter(const Var<T> *p) {
-    _parameters.emplace_back(TypeInfo::get<T>(), (uintptr_t)&p->value(), 0,
+    // _parameters.emplace_back(TypeInfo::get<T>(), (uintptr_t)&p->value(), 0,
+    //                          (uintptr_t)&p->value());
+    uintptr_t addr = _alloc.alloc(TypeInfo::get<T>());
+    _parameters.emplace_back(TypeInfo::get<T>(), addr, 0,
                              (uintptr_t)&p->value());
+    uintptr_t temp = (addr | 0x8000000000000000ul);
+    move((const T *)temp, (T *)&p->value());
   }
 
   template <class T> void output(const Var<T> *p) { outputImpl(p, true); }
@@ -126,6 +122,22 @@ public:
     outputImpl(&v, false);
     _outputs.back().name() = name;
   }
+
+  void input(const TypeInfo &type, void *var, void *binding,
+             const char *name = nullptr);
+  void parameter(const TypeInfo &type, void *var, void *binding,
+                 const char *name = nullptr);
+  void output(const TypeInfo &type, void *var, void *binding,
+              const char *name = nullptr);
+  void goal(const TypeInfo &type, void *var, size_t priority = 0,
+            const char *name = nullptr);
+
+  // void input(const Program::Input &input) { _inputs.push_back(input); }
+  // void output(const Program::Output &output) { _outputs.push_back(output); }
+  // void goal(const Program::Goal &goal) { _goals.push_back(goal); }
+  // void parameter(const Program::Parameter &parameter) {
+  //   _parameters.push_back(parameter);
+  // }
 };
 
 template <class T>

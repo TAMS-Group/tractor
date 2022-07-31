@@ -57,7 +57,7 @@ protected:
 
   virtual double _step() override {
 
-    std::cout << "sq step" << std::endl;
+    // std::cout << "sq step" << std::endl;
 
     // std::cout << "reg " << _regularization << std::endl;
 
@@ -283,11 +283,14 @@ protected:
 #endif
 
     // applyBounds(_nonlinear_solution);
-    /*double step =
+
+    double step =
         (_previous_nonlinear_solution - _nonlinear_solution).squaredNorm();
     _previous_nonlinear_solution = _nonlinear_solution;
-    return step;*/
-    return 1;
+    std::cout << "sq step " << step << std::endl;
+    return step;
+
+    // return 1;
   }
 
 public:

@@ -83,10 +83,11 @@ void Solver::solve() {
   while (true) {
     double step = _step();
     _first_step = false;
-    /*if (step < _tolerance * _tolerance) {
+    // if (step < _tolerance * _tolerance) {
+    if (step < _tolerance) {
       std::cout << "converged" << std::endl;
       break;
-  }*/
+    }
     /*auto t = std::chrono::steady_clock::now();
     std::cout << "time "
               << std::chrono::duration<double>(t - _start_time).count()

@@ -13,6 +13,51 @@ namespace tractor {
 
 static thread_local Recorder *g_recorder_instance = nullptr;
 
+void Recorder::goal(const TypeInfo &type, void *var, size_t priority,
+                    const char *name) {
+  _goals.emplace_back(_outputs.size(), priority);
+  output(type, var, nullptr, name);
+  if (name) {
+    _outputs.back().name() = name;
+  }
+}
+
+void Recorder::move(const TypeInfo &type, const void *from, void *to) {
+  const Operator *move_op = Operator::tryFind(
+      OpMode(typeid(compute *)), OpType(typeid(op_move *)), {type.type()});
+  op(move_op);
+  push((uintptr_t)from);
+  push((uintptr_t)to);
+}
+
+void Recorder::input(const TypeInfo &type, void *var, void *binding,
+                     const char *name) {
+  uintptr_t addr = _alloc.alloc(type);
+  _inputs.emplace_back(type, addr, 0, (uintptr_t)binding, -1, -1,
+                       Program::InputMode::Variable);
+  uintptr_t temp = (addr | 0x8000000000000000ul);
+  move(type, (void *)temp, var);
+}
+
+void Recorder::parameter(const TypeInfo &type, void *var, void *binding,
+                         const char *name) {
+  uintptr_t addr = _alloc.alloc(type);
+  _parameters.emplace_back(type, addr, 0, (uintptr_t)binding);
+  uintptr_t temp = (addr | 0x8000000000000000ul);
+  move(type, (void *)temp, var);
+}
+
+void Recorder::output(const TypeInfo &type, void *var, void *binding,
+                      const char *name) {
+  if (binding) {
+    _outputs.emplace_back(type, (uintptr_t)var, 0, (uintptr_t)binding);
+  } else {
+    uintptr_t temp = (((uintptr_t)_alloc.alloc(type)) | 0x8000000000000000ul);
+    move(type, var, (void *)temp);
+    _outputs.emplace_back(type, temp, 0, 0);
+  }
+}
+
 Recorder *Recorder::instance() { return g_recorder_instance; }
 
 void Recorder::op(const Operator *op) {
@@ -312,7 +357,7 @@ static void checkMemory(const Program &program) {
                         << std::endl;
             }
             throw std::runtime_error(
-                "read from uninitialized memory " + inst.op()->name() + " " +
+                "read from uninitialized memory t " + inst.op()->name() + " " +
                 std::to_string(iarg) + " " + std::to_string(i) + " " +
                 std::to_string(inst.op()->arg(iarg).size()) + " " +
                 std::to_string(inst.arg(iarg)));
@@ -328,7 +373,7 @@ static void checkMemory(const Program &program) {
   for (auto &port : program.outputs()) {
     for (size_t i = 0; i < port.size(); i++) {
       if (memory.find(port.address() + i) == memory.end()) {
-        throw std::runtime_error("read from uninitialized memory");
+        throw std::runtime_error("read from uninitialized memory z");
       }
     }
   }
@@ -381,7 +426,7 @@ static void checkMemory(const Program &program) {
             std::cout << "parameter " << port.address() << " " << port.size()
                       << std::endl;
           }
-          throw std::runtime_error("read from uninitialized memory " +
+          throw std::runtime_error("read from uninitialized memory x " +
                                    inst.op()->name() + " " +
                                    std::to_string(iarg) + " " +
                                    std::to_string(inst.op()->arg(iarg).size()) +
@@ -396,7 +441,7 @@ static void checkMemory(const Program &program) {
 
   for (auto &port : program.outputs()) {
     if (memory.find(port.address()) == memory.end()) {
-      throw std::runtime_error("read from uninitialized memory");
+      throw std::runtime_error("read from uninitialized memory y");
     }
   }
 }
@@ -457,11 +502,11 @@ static void checkMemory(const Program &program) {
             std::cout << "parameter " << port.address() << " " << port.size()
                       << std::endl;
           }
-          throw std::runtime_error("read from uninitialized memory " +
-                                   inst.op()->name() + " " +
-                                   std::to_string(iarg) + " " +
-                                   std::to_string(inst.op()->arg(iarg).size()) +
-                                   " " + std::to_string(inst.arg(iarg)));
+          throw std::runtime_error(
+              "parameter read from uninitialized memory z " +
+              inst.op()->name() + " " + std::to_string(iarg) + " " +
+              std::to_string(inst.op()->arg(iarg).size()) + " " +
+              std::to_string(inst.arg(iarg)));
         }
       }
       if (inst.op()->arg(iarg).isOutput()) {
@@ -472,7 +517,7 @@ static void checkMemory(const Program &program) {
 
   for (auto &port : program.outputs()) {
     if (!memory[port.address()]) {
-      throw std::runtime_error("read from uninitialized memory");
+      throw std::runtime_error("output read from uninitialized memory");
     }
   }
 }
@@ -483,60 +528,32 @@ void Recorder::finish(Program &program) {
   {
     program.clear();
 
-    std::unordered_map<uintptr_t, uintptr_t> page_map;
+    std::unordered_map<uintptr_t, uintptr_t> host_to_buffer_address;
     auto map = [&](uintptr_t a, const TypeInfo &type, bool alloc = false) {
       if (a & 0x8000000000000000ul) {
         return a & ~0x8000000000000000ul;
       }
-      auto &addr = page_map[a];
+      auto &addr = host_to_buffer_address[a];
       if (!addr || alloc) {
-        // addr = _memory_size;
-        //_memory_size += size;
         addr = _alloc.alloc(type);
       }
       return addr;
     };
 
-    std::unordered_map<size_t, const void *> address_to_output;
-    for (auto &rec_inst :
-         ArrayRef<Program::Instruction,
-                  Program::InstructionIterator<const Program::Instruction>>(
-             _instructions)) {
-      // std::cout << "op" << std::endl;
-      auto *op = rec_inst.op();
-      // std::cout << op->name() << " " << op->argumentCount() << " "
-      //           << op->arguments().size() << std::endl;
-      for (size_t i = 0; i < op->argumentCount(); i++) {
-        auto &rec_arg = rec_inst.arg(i);
-        auto &op_arg = op->arg(i);
-        if (op_arg.isOutput()) {
-          address_to_output[rec_arg] = &rec_arg;
-        }
-      }
-    }
-
-    std::unordered_map<const void *, size_t> output_to_address;
     {
       size_t offset = 0;
       for (auto port : _inputs) {
-        // auto addr = _memory_size;
-        //_memory_size += port.size();
-        auto addr = _alloc.alloc(port.typeInfo());
-        output_to_address[address_to_output[port.address()]] = addr;
-        port.address() = addr;
+        port.address() = port.address();
         port.offset() = offset;
         offset += port.size();
         program.addInput(port);
       }
     }
+
     {
       size_t offset = 0;
       for (auto port : _parameters) {
-        // auto addr = _memory_size;
-        //_memory_size += port.size();
-        auto addr = _alloc.alloc(port.typeInfo());
-        output_to_address[address_to_output[port.address()]] = addr;
-        port.address() = addr;
+        port.address() = port.address();
         port.offset() = offset;
         offset += port.size();
         program.addParameter(port);
@@ -553,16 +570,8 @@ void Recorder::finish(Program &program) {
       for (size_t i = 0; i < op->argumentCount(); i++) {
         auto &rec_arg = rec_inst.arg(i);
         auto &op_arg = op->arg(i);
-
         auto prog_arg = map(rec_arg, op_arg.typeInfo(), op_arg.isOutput());
         prog_insts.emplace_back(prog_arg);
-
-        {
-          auto out_it = output_to_address.find(&rec_arg);
-          if (op_arg.isOutput() && out_it != output_to_address.end()) {
-            page_map[rec_arg] = out_it->second;
-          }
-        }
       }
     }
 
@@ -587,9 +596,119 @@ void Recorder::finish(Program &program) {
     program.setBoundData(_bound_data);
     program.setConstData(_const_data);
     program.setInstructions(prog_insts);
-    // program.setMemorySize(_memory_size);
     _alloc.apply(program);
   }
+
+  /*
+    {
+      program.clear();
+
+      std::unordered_map<uintptr_t, uintptr_t> page_map;
+      auto map = [&](uintptr_t a, const TypeInfo &type, bool alloc = false) {
+        if (a & 0x8000000000000000ul) {
+          return a & ~0x8000000000000000ul;
+        }
+        auto &addr = page_map[a];
+        if (!addr || alloc) {
+          addr = _alloc.alloc(type);
+        }
+        return addr;
+      };
+
+      std::unordered_map<size_t, const void *> address_to_output;
+      for (auto &rec_inst :
+           ArrayRef<Program::Instruction,
+                    Program::InstructionIterator<const Program::Instruction>>(
+               _instructions)) {
+        // std::cout << "op" << std::endl;
+        auto *op = rec_inst.op();
+        // std::cout << op->name() << " " << op->argumentCount() << " "
+        //           << op->arguments().size() << std::endl;
+        for (size_t i = 0; i < op->argumentCount(); i++) {
+          auto &rec_arg = rec_inst.arg(i);
+          auto &op_arg = op->arg(i);
+          if (op_arg.isOutput()) {
+            address_to_output[rec_arg] = &rec_arg;
+          }
+        }
+      }
+
+      std::unordered_map<const void *, size_t> output_to_address;
+      {
+        size_t offset = 0;
+        for (auto port : _inputs) {
+          // auto addr = _memory_size;
+          //_memory_size += port.size();
+          auto addr = _alloc.alloc(port.typeInfo());
+          output_to_address[address_to_output[port.address()]] = addr;
+          port.address() = addr;
+          port.offset() = offset;
+          offset += port.size();
+          program.addInput(port);
+        }
+      }
+      {
+        size_t offset = 0;
+        for (auto port : _parameters) {
+          // auto addr = _memory_size;
+          //_memory_size += port.size();
+          auto addr = _alloc.alloc(port.typeInfo());
+          output_to_address[address_to_output[port.address()]] = addr;
+          port.address() = addr;
+          port.offset() = offset;
+          offset += port.size();
+          program.addParameter(port);
+        }
+      }
+
+      std::vector<Program::Instruction> prog_insts;
+      for (auto &rec_inst :
+           ArrayRef<Program::Instruction,
+                    Program::InstructionIterator<const Program::Instruction>>(
+               _instructions)) {
+        auto *op = rec_inst.op();
+        prog_insts.emplace_back(rec_inst.code());
+        for (size_t i = 0; i < op->argumentCount(); i++) {
+          auto &rec_arg = rec_inst.arg(i);
+          auto &op_arg = op->arg(i);
+
+          auto prog_arg = map(rec_arg, op_arg.typeInfo(), op_arg.isOutput());
+          prog_insts.emplace_back(prog_arg);
+
+          {
+            auto out_it = output_to_address.find(&rec_arg);
+            if (op_arg.isOutput() && out_it != output_to_address.end()) {
+              page_map[rec_arg] = out_it->second;
+            }
+          }
+        }
+      }
+
+      {
+        size_t offset = 0;
+        for (auto port : _outputs) {
+          port.address() = map(port.address(), port.typeInfo());
+          port.offset() = offset;
+          offset += port.size();
+          program.addOutput(port);
+        }
+      }
+
+      for (auto &goal : _goals) {
+        program.addGoal(goal);
+      }
+
+      for (auto port : _constants) {
+        program.addConstant(port);
+      }
+
+      program.setBoundData(_bound_data);
+      program.setConstData(_const_data);
+      program.setInstructions(prog_insts);
+      // program.setMemorySize(_memory_size);
+      _alloc.apply(program);
+    }
+  */
 
   checkMemory(program);
 

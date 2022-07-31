@@ -11,21 +11,22 @@ OpGroup makeOpGroup(const std::string &name);
 class ListOperator : public Operator {
 
 public:
-  ListOperator(const std::string &name, const OpMode &mode,
-               const OpGroup &group, const std::vector<Argument> &args,
+  ListOperator(const std::string &name, const std::string &label,
+               const OpMode &mode, const OpGroup &group,
+               const std::vector<Argument> &args,
                void (*callback)(const void *base, const uintptr_t *offsets))
-      : Operator(name, mode, this, group) {
+      : Operator(name, label, mode, this, group) {
     _arguments = args;
     _argument_count = args.size();
     _functions.indirect = callback;
   }
 };
 
-const Operator *makeListOperator(const std::string &name, const OpMode &mode,
-                                 const OpGroup &group,
-                                 const std::vector<Operator::Argument> &args,
-                                 void (*callback)(const void *base,
-                                                  const uintptr_t *offsets));
+const Operator *
+makeListOperator(const std::string &name, const std::string &label,
+                 const OpMode &mode, const OpGroup &group,
+                 const std::vector<Operator::Argument> &args,
+                 void (*callback)(const void *base, const uintptr_t *offsets));
 
 std::vector<Operator::Argument>
 makeForwardArgs(const ArrayRef<const Operator::Argument> &args);
@@ -34,7 +35,8 @@ std::vector<Operator::Argument>
 makeReverseArgs(const ArrayRef<const Operator::Argument> &args);
 
 const Operator *makeListOperator(
-    const std::string &name, const std::vector<Operator::Argument> &args,
+    const std::string &name, const std::string &label,
+    const std::vector<Operator::Argument> &args,
     void (*fun_compute)(const void *base, const uintptr_t *offsets),
     void (*fun_forward)(const void *base, const uintptr_t *offsets),
     void (*fun_reverse)(const void *base, const uintptr_t *offsets));

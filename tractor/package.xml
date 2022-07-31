@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package>
-    
+
     <name>tractor</name>
     <version>0.0.0</version>
     <description>-</description>
@@ -14,12 +14,15 @@
 
     <build_depend>roscpp</build_depend>
     <run_depend>roscpp</run_depend>
-    
+
     <build_depend>moveit_core</build_depend>
     <run_depend>moveit_core</run_depend>
-    
+
     <build_depend>eigen</build_depend>
     <run_depend>eigen</run_depend>
+
+    <build_depend>pybind11_catkin</build_depend>
+    <run_depend>pybind11_catkin</run_depend>
 
     <export>
     </export>

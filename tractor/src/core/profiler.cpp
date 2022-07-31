@@ -115,6 +115,6 @@ ProfilerThread::~ProfilerThread() {
   _thread.join();
 }
 
-ProfilerThread g_profiler_thread;
+// ProfilerThread g_profiler_thread;
 
 } // namespace tractor

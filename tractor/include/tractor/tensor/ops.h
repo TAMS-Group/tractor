@@ -71,7 +71,9 @@ Tensor<ActivationScalar> dense_mul_vec_mat(const Tensor<ActivationScalar> &a,
 
   if (auto rec = Recorder::instance()) {
 
-    std::string name = "dense_mul_vec_mat_" + std::to_string(rows) + "_" +
+    std::string label = "dense_mul_vec_mat";
+
+    std::string name = label + "_" + std::to_string(rows) + "_" +
                        std::to_string(cols) + "_" +
                        typeid(ActivationScalar).name();
 
@@ -91,7 +93,7 @@ Tensor<ActivationScalar> dense_mul_vec_mat(const Tensor<ActivationScalar> &a,
     }
 
     const Operator *op = makeListOperator(
-        name, arguments,
+        name, label, arguments,
         [](const void *base, const uintptr_t *offsets) {
           auto rows = bindArg<uint64_t>(base, &offsets);
           auto cols = bindArg<uint64_t>(base, &offsets);

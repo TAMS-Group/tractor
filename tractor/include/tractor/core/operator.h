@@ -182,7 +182,7 @@ public:
   };
 
 private:
-  std::string _name;
+  std::string _name, _label;
   OpMode _mode;
   OpType _op;
   const OperatorModeMap *_map = nullptr;
@@ -192,13 +192,9 @@ protected:
   size_t _argument_count = 0;
   std::vector<Argument> _arguments;
   static const Operator *tryFind(const OpMode &mode, const OpGroup &group);
-  Operator(const std::string &name, const OpMode &mode, const OpType &op,
-           const OpGroup &group);
+  Operator(const std::string &name, const std::string &label,
+           const OpMode &mode, const OpType &op, const OpGroup &group);
   virtual ~Operator();
-  static const Operator *
-  tryFind(const OpMode &mode, const OpType &op,
-          const std::initializer_list<std::type_index> &args);
-
   template <class Mode, class Op, class... Args>
   static const Operator *tryFind(const Args &...args) {
     return tryFind(OpMode(typeid(Mode *)), OpType(typeid(Op *)), {args...});
@@ -211,6 +207,7 @@ public:
     return _mode == OpMode(typeid(T *));
   }
   inline const std::string &name() const { return _name; }
+  inline const std::string &label() const { return _label; }
   inline OperatorFunctions functions() const { return _functions; }
   inline size_t argumentCount() const { return _argument_count; }
   inline size_t argumentSize(size_t i) const { return _arguments[i].size(); }
@@ -251,6 +248,9 @@ public:
     }
     return ret;
   }
+  static const Operator *
+  tryFind(const OpMode &mode, const OpType &op,
+          const std::initializer_list<std::type_index> &args);
   template <class Op> bool is() const { return _op == OpType(typeid(Op *)); }
   static std::vector<const Operator *> all();
 };
@@ -320,20 +320,20 @@ class OperatorImpl : public Operator {
   typedef typename RawArgumentTuple<decltype(&Impl::call)>::Type ArgumentTuple;
 
 public:
-  OperatorImpl(const std::string &name)
-      : Operator(name, OpMode(typeid(Mode *)), OpType(typeid(Op *)),
+  OperatorImpl(const std::string &name, const std::string &label)
+      : Operator(name, label, OpMode(typeid(Mode *)), OpType(typeid(Op *)),
                  OpGroup(typeid(Group *))) {
     constexpr size_t argument_count = std::tuple_size<ArgumentTuple>::value;
     _argument_count =
         argument_count + (std::is_same<Return, void>::value ? 0 : 1);
     init(std::make_index_sequence<argument_count>(), (ArgumentTuple *)nullptr);
   }
-  static const Operator *instance(const char *name) {
-    static const Operator *instance = [name]() {
+  static const Operator *instance(const char *name, const char *label) {
+    static const Operator *instance = [name, label]() {
       auto *instance =
           tryFind(OpMode(typeid(Mode *)), OpGroup(typeid(Group *)));
       if (!instance) {
-        instance = new OperatorImpl(name);
+        instance = new OperatorImpl(name, label);
       }
       return instance;
     }();
@@ -408,7 +408,8 @@ template <class Op> struct Caller<void, Op> {
   const Operator *op_##prefix##name##_##postfix##_inst =                       \
       OperatorImpl<op_##prefix##name##_##postfix##_impl_1, mode, op_##name,    \
                    std::tuple<op_##name *, scalar##postfix##_group *>>::       \
-          instance(TRACTOR_STRINGIFY(prefix##name##_##postfix));               \
+          instance(TRACTOR_STRINGIFY(prefix##name##_##postfix),                \
+                   TRACTOR_STRINGIFY(name));                                   \
                                                                                \
   struct op_##prefix##name##_##postfix##_impl_2                                \
       : op_##prefix##name##_##postfix##_impl_1 {                               \

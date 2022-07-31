@@ -15,6 +15,9 @@ class TypeInfo {
 
 public:
   inline TypeInfo() {}
+  inline TypeInfo(const size_t &size, const std::type_index &type,
+                  const size_t &alignment)
+      : _size(size), _type(type), _alignment(alignment) {}
   template <class T> static inline TypeInfo get() {
     typedef typename std::decay<T>::type X;
     TypeInfo t;

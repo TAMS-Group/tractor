@@ -2,6 +2,8 @@
 
 #pragma once
 
+#if 0
+
 #include <tractor/core/operator.h>
 
 namespace tractor {
@@ -15,3 +17,5 @@ void testSignatures();
 void testOutputs();
 
 } // namespace tractor
+
+#endif

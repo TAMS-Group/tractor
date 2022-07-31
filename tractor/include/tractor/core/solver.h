@@ -17,7 +17,7 @@ class Solver {
   std::vector<Program::Input> _inputs;
   std::vector<Program::Parameter> _parameters;
   Buffer _buffer;
-  double _tolerance = 1e-9;
+  double _tolerance = 1e-6;
   double _timeout = -1;
   // double _loss = -1;
   bool _compiled = false;
@@ -62,7 +62,7 @@ public:
     _timeout = v;
     _hard_timeout = hard;
   }
-  // double timeout() const { return _timeout; }
+  double timeout() const { return _timeout; }
   void clearTimeout() { _timeout = 0; }
   virtual double loss() const { return -1; }
 };
