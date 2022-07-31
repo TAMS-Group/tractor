@@ -39,6 +39,7 @@ add_library(${PROJECT_NAME}
     src/core/engine.cpp
     src/core/gradients.cpp
     src/core/linesearch.cpp
+    src/core/list.cpp
     src/core/matrix.cpp
     src/core/operator.cpp
     src/core/ops.cpp
