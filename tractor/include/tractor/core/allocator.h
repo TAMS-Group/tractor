@@ -24,11 +24,9 @@ public:
   void clear() { _top = 32; }
   size_t top() const { return _top; }
   size_t alloc(const TypeInfo &type);
-  // size_t alloc(size_t s);
   void keep(const Program &program);
   void init(size_t i) { _top = i; }
   void apply(Program &program);
-  // Allocator(const Program &program);
 };
 
 template <class T> struct AlignedStdAlloc : std::allocator<T> {
@@ -52,13 +50,5 @@ template <class T> struct AlignedStdAlloc : std::allocator<T> {
 };
 
 template <class T> using AlignedStdVector = std::vector<T, AlignedStdAlloc<T>>;
-
-/*
-template <class T, class... Args>
-std::shared_ptr<T> aligned_make_shared(const Args &&... args) {
-  return std::allocate_shared<T, AlignedStdAlloc<T>, Args...>(
-      AlignedStdAlloc<T>(), args...);
-}
-*/
 
 } // namespace tractor

@@ -12,12 +12,6 @@ void buildGradients(const Program &src, Program &prep, Program *fprop,
                     Program *bprop, Program *hessian = nullptr,
                     Program *accumulate = nullptr);
 
-/*
-void buildDual(const Program &prog, const Program &fprop, const Program &bprop,
-               const TypeInfo &parameter_type, Program &gradients,
-               Program &residual);
-*/
-
 void buildConstraints(const Program &prog, const Program &fprop,
                       const Program &bprop, const Program &hprop,
                       const TypeInfo &padding_type, Program *proj,

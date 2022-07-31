@@ -3,12 +3,15 @@
 #pragma once
 
 #include <tractor/core/eigen.h>
-#include <tractor/tractor.h>
+//#include <tractor/tractor.h>
 
 #include <interactive_markers/interactive_marker_server.h>
 #include <moveit/robot_interaction/interactive_marker_helpers.h>
 
 #include <moveit_msgs/DisplayTrajectory.h>
+
+#include <tractor/robot/robotstate.h>
+#include <tractor/robot/trajectory.h>
 
 template <class Geometry>
 void toMoveIt(const tractor::RobotState<Geometry> &tractor_state,

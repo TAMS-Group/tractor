@@ -28,8 +28,14 @@ void printPorts(std::ostream &stream, const char *label, const T &data) {
 }
 
 void Program::record(const std::function<void()> &function) {
-  Recorder rec(this);
+  struct RecorderImpl : Recorder {
+    RecorderImpl(Program *prog) : Recorder(prog) {}
+  };
+  RecorderImpl rec(this);
   function();
+  if (Recorder::instance() != &rec) {
+    throw std::runtime_error("recorder not active anymore");
+  }
 }
 
 std::ostream &operator<<(std::ostream &stream, const Program &prog) {

@@ -5,6 +5,9 @@
 #include "goals.h"
 #include "ops.h"
 
+#include <tractor/collision/robot.h>
+#include <tractor/collision/types.h>
+
 namespace tractor {
 
 template <class Geometry> class TouchGoal : public MotionGoal<Geometry> {
@@ -71,114 +74,115 @@ public:
   }
 };
 
-template <class Geometry>
-class CollisionPairConstraint : public MotionGoal<Geometry> {
-  size_t _frame_index = 0;
-  tractor::CollisionRobot<typename Geometry::Value> _collision_robot;
-  tractor::LinkCollisionPair<typename Geometry::Value> _link_pair;
-  // typename Geometry::Vector3 _slack;
-  typename Geometry::Pose _slack;
-  uint64_t link_pair_ptr = uintptr_t(&_link_pair);
-
-public:
-  CollisionPairConstraint(size_t frame,
-                          const moveit::core::RobotModel &robot_model,
-                          const std::string &a, const std::string &b)
-      : _frame_index(frame), _collision_robot(robot_model),
-        _link_pair(_collision_robot.link(a), _collision_robot.link(b)) {}
-  virtual void apply(TrajectoryOptimization<Geometry> &trajectory_opt) {
-
-    auto pose_a = trajectory_opt.trajectory()
-                      .state(_frame_index)
-                      .links()
-                      .pose(_link_pair.linkA()->name());
-    auto pose_b = trajectory_opt.trajectory()
-                      .state(_frame_index)
-                      .links()
-                      .pose(_link_pair.linkB()->name());
-
-    _slack.value() = pose_a.value().inverse() * pose_b.value();
-    tractor::slackVariable(_slack);
-
-    tractor::goal(Geometry::residual(pose_a * _slack, pose_b), 1);
-
-    tractor::goal(collision_constraint(_slack, link_pair_ptr));
-  }
-  virtual void visualize(const TrajectoryOptimization<Geometry> &trajectory_opt,
-                         visualization_msgs::MarkerArray &marker_array) {
-    auto &trajectory = trajectory_opt.trajectory();
-
-    auto &pose_a = value(trajectory.state(_frame_index)
-                             .links()
-                             .pose(_link_pair.linkA()->name()));
-    auto &pose_b = value(trajectory.state(_frame_index)
-                             .links()
-                             .pose(_link_pair.linkB()->name()));
-
-    std::cout << "pose_a " << pose_a << std::endl;
-    std::cout << "pose_b " << pose_b << std::endl;
-
-    for (auto &shape_pair : _link_pair.elements()) {
-      std::cout << "distance " << shape_pair.distance() << std::endl;
-    }
-
-    auto addPoint = [&](Vector3<typename Geometry::Value> p) {
-      p = pose_a * p;
-      auto &marker = marker_array.markers.back();
-      marker.points.emplace_back();
-      marker.points.back().x = p.x();
-      marker.points.back().y = p.y();
-      marker.points.back().z = p.z();
-    };
-
-    {
-      marker_array.markers.emplace_back();
-      auto &marker = marker_array.markers.back();
-      marker.type = visualization_msgs::Marker::LINE_LIST;
-      marker.scale.x = 0.01;
-      marker.color.r = 1;
-      marker.color.b = 1;
-      marker.color.a = 1;
-      for (auto &shape_pair : _link_pair.elements()) {
-        addPoint(shape_pair.pointA());
-        addPoint(shape_pair.pointB());
-      }
-    }
-
-    {
-      marker_array.markers.emplace_back();
-      auto &marker = marker_array.markers.back();
-      marker.type = visualization_msgs::Marker::TRIANGLE_LIST;
-      marker.scale.x = 1;
-      marker.scale.y = 1;
-      marker.scale.z = 1;
-      marker.color.r = 1;
-      marker.color.g = 1;
-      marker.color.b = 0;
-      marker.color.a = 0.5;
-      typename Geometry::Value size = 0.25;
-      for (auto &shape_pair : _link_pair.elements()) {
-        auto plane = shape_pair.barrier();
-        ROS_INFO_STREAM("plane " << plane);
-        auto normal = plane.normal();
-        auto point = plane.point();
-        auto tangent1 = normalized(
-            cross(normal, Vector3<typename Geometry::Value>(1, 2, 3)));
-        auto tangent2 = normalized(cross(normal, tangent1));
-        auto c = (pose_a.inverse() * pose_b).translation() *
-                 typename Geometry::Value(0.5);
-        point += tangent1 * dot(tangent1, c - point);
-        point += tangent2 * dot(tangent2, c - point);
-        addPoint(point - tangent1 * size - tangent2 * size);
-        addPoint(point + tangent1 * size - tangent2 * size);
-        addPoint(point + tangent1 * size + tangent2 * size);
-        addPoint(point - tangent1 * size - tangent2 * size);
-        addPoint(point + tangent1 * size + tangent2 * size);
-        addPoint(point - tangent1 * size + tangent2 * size);
-      }
-    }
-  }
-};
+// template <class Geometry>
+// class CollisionPairConstraint : public MotionGoal<Geometry> {
+//   size_t _frame_index = 0;
+//   tractor::CollisionRobot<typename Geometry::Value> _collision_robot;
+//   tractor::LinkCollisionPair<typename Geometry::Value> _link_pair;
+//   // typename Geometry::Vector3 _slack;
+//   typename Geometry::Pose _slack;
+//   uint64_t link_pair_ptr = uintptr_t(&_link_pair);
+//
+// public:
+//   CollisionPairConstraint(size_t frame,
+//                           const moveit::core::RobotModel &robot_model,
+//                           const std::string &a, const std::string &b)
+//       : _frame_index(frame), _collision_robot(robot_model),
+//         _link_pair(_collision_robot.link(a), _collision_robot.link(b)) {}
+//   virtual void apply(TrajectoryOptimization<Geometry> &trajectory_opt) {
+//
+//     auto pose_a = trajectory_opt.trajectory()
+//                       .state(_frame_index)
+//                       .links()
+//                       .pose(_link_pair.linkA()->name());
+//     auto pose_b = trajectory_opt.trajectory()
+//                       .state(_frame_index)
+//                       .links()
+//                       .pose(_link_pair.linkB()->name());
+//
+//     _slack.value() = pose_a.value().inverse() * pose_b.value();
+//     tractor::slackVariable(_slack);
+//
+//     tractor::goal(Geometry::residual(pose_a * _slack, pose_b), 1);
+//
+//     tractor::goal(collision_constraint(_slack, link_pair_ptr));
+//   }
+//   virtual void visualize(const TrajectoryOptimization<Geometry>
+//   &trajectory_opt,
+//                          visualization_msgs::MarkerArray &marker_array) {
+//     auto &trajectory = trajectory_opt.trajectory();
+//
+//     auto &pose_a = value(trajectory.state(_frame_index)
+//                              .links()
+//                              .pose(_link_pair.linkA()->name()));
+//     auto &pose_b = value(trajectory.state(_frame_index)
+//                              .links()
+//                              .pose(_link_pair.linkB()->name()));
+//
+//     std::cout << "pose_a " << pose_a << std::endl;
+//     std::cout << "pose_b " << pose_b << std::endl;
+//
+//     for (auto &shape_pair : _link_pair.elements()) {
+//       std::cout << "distance " << shape_pair.distance() << std::endl;
+//     }
+//
+//     auto addPoint = [&](Vector3<typename Geometry::Value> p) {
+//       p = pose_a * p;
+//       auto &marker = marker_array.markers.back();
+//       marker.points.emplace_back();
+//       marker.points.back().x = p.x();
+//       marker.points.back().y = p.y();
+//       marker.points.back().z = p.z();
+//     };
+//
+//     {
+//       marker_array.markers.emplace_back();
+//       auto &marker = marker_array.markers.back();
+//       marker.type = visualization_msgs::Marker::LINE_LIST;
+//       marker.scale.x = 0.01;
+//       marker.color.r = 1;
+//       marker.color.b = 1;
+//       marker.color.a = 1;
+//       for (auto &shape_pair : _link_pair.elements()) {
+//         addPoint(shape_pair.pointA());
+//         addPoint(shape_pair.pointB());
+//       }
+//     }
+//
+//     {
+//       marker_array.markers.emplace_back();
+//       auto &marker = marker_array.markers.back();
+//       marker.type = visualization_msgs::Marker::TRIANGLE_LIST;
+//       marker.scale.x = 1;
+//       marker.scale.y = 1;
+//       marker.scale.z = 1;
+//       marker.color.r = 1;
+//       marker.color.g = 1;
+//       marker.color.b = 0;
+//       marker.color.a = 0.5;
+//       typename Geometry::Value size = 0.25;
+//       for (auto &shape_pair : _link_pair.elements()) {
+//         auto plane = shape_pair.barrier();
+//         ROS_INFO_STREAM("plane " << plane);
+//         auto normal = plane.normal();
+//         auto point = plane.point();
+//         auto tangent1 = normalized(
+//             cross(normal, Vector3<typename Geometry::Value>(1, 2, 3)));
+//         auto tangent2 = normalized(cross(normal, tangent1));
+//         auto c = (pose_a.inverse() * pose_b).translation() *
+//                  typename Geometry::Value(0.5);
+//         point += tangent1 * dot(tangent1, c - point);
+//         point += tangent2 * dot(tangent2, c - point);
+//         addPoint(point - tangent1 * size - tangent2 * size);
+//         addPoint(point + tangent1 * size - tangent2 * size);
+//         addPoint(point + tangent1 * size + tangent2 * size);
+//         addPoint(point - tangent1 * size - tangent2 * size);
+//         addPoint(point + tangent1 * size + tangent2 * size);
+//         addPoint(point - tangent1 * size + tangent2 * size);
+//       }
+//     }
+//   }
+// };
 
 template <class Geometry>
 class CollisionShapeVisualizer : public MotionGoal<Geometry> {

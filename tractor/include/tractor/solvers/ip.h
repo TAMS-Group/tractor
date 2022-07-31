@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <tractor/core/matrix.h>
 #include <tractor/solvers/base.h>
 
 namespace tractor {
@@ -429,8 +430,8 @@ protected:
     }
 
     if (_use_matrices) {
-      _buildGradientMatrix(_x_fprop, _memory, _m_fprop);
-      _buildGradientMatrix(_x_bprop, _memory, _m_bprop);
+      buildGradientMatrix(_x_fprop, _memory, _m_fprop);
+      buildGradientMatrix(_x_bprop, _memory, _m_bprop);
       if ((_m_fprop - _m_bprop.transpose()).squaredNorm() > 1e-12) {
         throw std::runtime_error("jacobians inconsistent");
       }
@@ -931,7 +932,6 @@ protected:
 
           if (1) {
             auto df = [&](const Scalar &v) {
-
               /*Scalar objective_weight = _computeObjectiveWeight();
               Scalar barrier_weight = _computeBarrierWeight();
 

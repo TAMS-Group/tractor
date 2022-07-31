@@ -11,6 +11,35 @@
 
 namespace tractor {
 
+template <class Scalar>
+const std::shared_ptr<CollisionLink<Scalar>> &
+CollisionRobot<Scalar>::link(const std::string &name) {
+  auto it = _link_map.find(name);
+  if (it == _link_map.end()) {
+    std::string message =
+        "Link \"" + name +
+        "\" not found in collision model. Known collision links:";
+    for (auto &pair : _link_map) {
+      message += " " + pair.first;
+    }
+    throw std::runtime_error(message);
+  }
+  return it->second;
+};
+
+template <class Scalar>
+std::shared_ptr<CollisionLinkBase>
+CollisionRobot<Scalar>::createLink(const std::string &name) {
+  if (_link_map.find(name) != _link_map.end()) {
+    throw std::runtime_error(
+        "collision link with the same name already exists");
+  }
+  auto link = std::make_shared<CollisionLink<Scalar>>(name);
+  _links.push_back(link);
+  _link_map[name] = link;
+  return link;
+}
+
 Vector3<double> convertBullet(const btVector3 &v) {
   return Vector3<double>(v.x(), v.y(), v.z());
 }
@@ -196,5 +225,8 @@ void CollisionRobotBase::_load(const moveit::core::RobotModel &robot_model,
       Eigen::Isometry3d::Identity(), robot_model.getRootLink(),
       merge_fixed_links);
 }
+
+template class CollisionRobot<double>;
+template class CollisionRobot<float>;
 
 } // namespace tractor

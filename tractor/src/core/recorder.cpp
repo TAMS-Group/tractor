@@ -15,6 +15,11 @@ static thread_local Recorder *g_recorder_instance = nullptr;
 
 Recorder *Recorder::instance() { return g_recorder_instance; }
 
+void Recorder::op(const Operator *op) {
+  // std::cout << "record op " << op->name() << std::endl;
+  _instructions.push_back((uintptr_t)op);
+}
+
 Recorder::Recorder(Program *program) : _program(program) {
   _const_data.resize(64, 0);
   //_memory_size = memory_alignment;
@@ -27,9 +32,6 @@ Recorder::Recorder(Program *program) : _program(program) {
 
 Recorder::~Recorder() {
   finish(*_program);
-  if (g_recorder_instance != this) {
-    throw std::runtime_error("recorder not active anymore");
-  }
   g_recorder_instance = nullptr;
 }
 
@@ -500,7 +502,10 @@ void Recorder::finish(Program &program) {
          ArrayRef<Program::Instruction,
                   Program::InstructionIterator<const Program::Instruction>>(
              _instructions)) {
+      // std::cout << "op" << std::endl;
       auto *op = rec_inst.op();
+      // std::cout << op->name() << " " << op->argumentCount() << " "
+      //           << op->arguments().size() << std::endl;
       for (size_t i = 0; i < op->argumentCount(); i++) {
         auto &rec_arg = rec_inst.arg(i);
         auto &op_arg = op->arg(i);

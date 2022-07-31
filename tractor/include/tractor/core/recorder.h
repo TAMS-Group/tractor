@@ -12,11 +12,7 @@ namespace tractor {
 template <class T> class Var;
 
 class Recorder {
-
-  // const size_t memory_alignment = 64;
-
   Program *_program = nullptr;
-
   std::vector<Program::Instruction> _instructions;
   std::vector<Program::Input> _inputs;
   std::vector<Program::Output> _outputs;
@@ -25,21 +21,11 @@ class Recorder {
   std::vector<Program::Constant> _constants;
   std::vector<uint8_t> _const_data;
   std::vector<uint8_t> _bound_data;
-  // size_t _memory_size = memory_alignment;
-
   Allocator _alloc;
 
   template <class T> void outputImpl(const Var<T> *p, bool bind) {
-
-    // uintptr_t temp = ((uintptr_t)_memory_size | 0x8000000000000000ul);
-    //_memory_size += sizeof(T);
-
-    // uintptr_t temp =
-    //    (((uintptr_t)_alloc.alloc(sizeof(T))) | 0x8000000000000000ul);
-
     uintptr_t temp =
         (((uintptr_t)_alloc.alloc(TypeInfo::get<T>())) | 0x8000000000000000ul);
-
     move(&p->value(), (T *)temp);
     _outputs.emplace_back(TypeInfo::get<T>(), temp, 0,
                           bind ? (uintptr_t)&p->value() : 0);
@@ -47,17 +33,31 @@ class Recorder {
 
   void finish(Program &program);
 
+protected:
+  Recorder(Program *program);
+
 public:
   static Recorder *instance();
 
-  Recorder(Program *program);
   ~Recorder();
 
   Recorder(const Recorder &) = delete;
   Recorder &operator=(const Recorder &) = delete;
 
-  template <class... Args> inline void op(const Operator *op, Args *... args) {
-    _instructions.push_back((uintptr_t)op);
+  const auto &instructions() const { return _instructions; }
+
+  void push(uintptr_t a) { _instructions.push_back(a); }
+
+  template <class Arg> inline void arg(const Var<Arg> *arg) {
+    _instructions.push_back((uintptr_t)(const void *)arg);
+  }
+
+  void op(const Operator *op);
+
+  template <class... Args> inline void op(const Operator *o, Args *...args) {
+    //  std::cout << "record op " << op->name() << std::endl;
+    //  _instructions.push_back((uintptr_t)op);
+    op(o);
     const void *pointers[] = {(const void *)args...};
     for (size_t i = 0; i < sizeof...(args); i++) {
       _instructions.push_back((uintptr_t)pointers[i]);
@@ -115,10 +115,6 @@ public:
 
     _constants.emplace_back(TypeInfo::get<T>(), addr, (uintptr_t)start);
 
-    // move((const T *)((uintptr_t)_memory_size | 0x8000000000000000ul),
-    //     (T *)&p->value());
-    //_memory_size += sizeof(T);
-
     uintptr_t temp = (addr | 0x8000000000000000ul);
     move((const T *)temp, (T *)&p->value());
   }
@@ -159,7 +155,7 @@ template <class T> inline void parameter(Var<T> &p) {
 }
 
 template <class... Args>
-inline void recordOperation(const Operator *op, Args *... args) {
+inline void recordOperation(const Operator *op, Args *...args) {
   if (auto inst = Recorder::instance()) {
     inst->op(op, args...);
   }

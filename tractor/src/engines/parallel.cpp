@@ -22,7 +22,7 @@ void ParallelEngine::ExecutableImpl::_compile(const Program &program) {
     level++;
     for (size_t iarg = 0; iarg < instp.argumentCount(); iarg++) {
       if (instp.op()->arg(iarg).isOutput()) {
-        levels[instp.arg(iarg)] = level;
+        levels[instp.arg(iarg)] = std::max(levels[instp.arg(iarg)], level);
       }
     }
 
@@ -35,6 +35,7 @@ void ParallelEngine::ExecutableImpl::_compile(const Program &program) {
     auto *op = instp.op();
     inst.op = op->functions().indirect;
     inst.base = wave.arguments.size();
+
     wave.instructions.push_back(inst);
     for (auto &arg : instp.args()) {
       wave.arguments.push_back(arg);
@@ -64,7 +65,7 @@ void ParallelEngine::ExecutableImpl::_execute(
   {
     TRACTOR_PROFILER("execute instructions");
 
-    if (0) {
+    if (1) {
       for (auto &wave : _waves) {
         for (auto &inst : wave.instructions) {
           inst.op(temp.data(), wave.arguments.data() + inst.base);
@@ -105,7 +106,7 @@ void ParallelEngine::ExecutableImpl::_execute(
       }
     }
 
-    if (1) {
+    if (0) {
 #pragma omp parallel
       {
         size_t ti = omp_get_thread_num();

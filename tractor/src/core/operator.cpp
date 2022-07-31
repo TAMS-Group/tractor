@@ -10,10 +10,9 @@ namespace tractor {
 
 struct OperatorRegistry {
   std::unordered_map<std::string, const Operator *> name_map;
-  std::unordered_map<std::type_index, OperatorModeMap *> group_map;
+  std::unordered_map<OpGroup, OperatorModeMap *> group_map;
   std::unordered_map<
-      std::type_index,
-      std::unordered_map<std::type_index, std::unordered_set<const Operator *>>>
+      OpMode, std::unordered_map<OpType, std::unordered_set<const Operator *>>>
       op_map;
   static OperatorRegistry *instance() {
     static OperatorRegistry *instance = new OperatorRegistry();
@@ -21,8 +20,8 @@ struct OperatorRegistry {
   }
 };
 
-Operator::Operator(const std::string &name, const std::type_info &mode,
-                   const std::type_info &op, const std::type_info &group)
+Operator::Operator(const std::string &name, const OpMode &mode,
+                   const OpType &op, const OpGroup &group)
     : _name(name), _op(op), _mode(mode) {
   // std::cout << name << " " << mode.name() << " " << group.name() <<
   // std::endl;
@@ -40,7 +39,7 @@ Operator::Operator(const std::string &name, const std::type_info &mode,
 Operator::~Operator() {}
 
 const Operator *
-Operator::tryFind(const std::type_index &mode, const std::type_index &op,
+Operator::tryFind(const OpMode &mode, const OpType &op,
                   const std::initializer_list<std::type_index> &types) {
   auto *registry = OperatorRegistry::instance();
   auto it_mode = registry->op_map.find(mode);
@@ -81,8 +80,7 @@ Operator::tryFind(const std::type_index &mode, const std::type_index &op,
   return nullptr;
 }
 
-const Operator *Operator::tryFind(const std::type_index &mode,
-                                  const std::type_index &group) {
+const Operator *Operator::tryFind(const OpMode &mode, const OpGroup &group) {
   auto *registry = OperatorRegistry::instance();
   auto it_group = registry->group_map.find(group);
   if (it_group != registry->group_map.end()) {
@@ -111,8 +109,8 @@ std::vector<const Operator *> Operator::all() {
   return ret;
 }
 
-size_t OperatorModeMap::index(const std::type_index &type) {
-  static std::unordered_map<std::type_index, size_t> map;
+size_t OperatorModeMap::index(const OpMode &type) {
+  static std::unordered_map<OpMode, size_t> map;
   auto &i = map[type];
   if (!i) {
     i = map.size();

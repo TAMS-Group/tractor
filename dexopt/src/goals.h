@@ -4,8 +4,6 @@
 
 #include "common.h"
 
-#include <tractor/tractor.h>
-
 #include <geometric_shapes/mesh_operations.h>
 #include <moveit/collision_detection/collision_matrix.h>
 

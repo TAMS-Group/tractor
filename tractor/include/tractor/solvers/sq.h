@@ -15,7 +15,7 @@ template <class Scalar,
 class LeastSquaresSolver : public SolverBase {
   typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Vector;
   LinearSolver _linear_solver;
-  std::shared_ptr<SolverBase::RegularizedMatrixReplacement<Scalar>> _hgrad_p;
+  std::shared_ptr<RegularizedMatrixReplacement<Scalar>> _hgrad_p;
   MatrixReplacement<Scalar> _hgrad;
   Vector _line_search_left, _line_search_right;
   Vector _residuals;
@@ -293,8 +293,7 @@ protected:
 public:
   LeastSquaresSolver(const std::shared_ptr<Engine> &engine)
       : SolverBase(engine) {
-    _hgrad_p =
-        std::make_shared<SolverBase::RegularizedMatrixReplacement<Scalar>>();
+    _hgrad_p = std::make_shared<RegularizedMatrixReplacement<Scalar>>();
     _hgrad_p->setExecutable(_x_hprop);
     _hgrad_p->setMemory(_memory);
     _hgrad = MatrixReplacement<Scalar>(_hgrad_p);

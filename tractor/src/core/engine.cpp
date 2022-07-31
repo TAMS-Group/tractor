@@ -6,6 +6,31 @@
 
 namespace tractor {
 
+ArrayRef<const Program::Input> Executable::inputs() const {
+  _checkCompiled();
+  return _inputs;
+}
+
+ArrayRef<const Program::Output> Executable::outputs() const {
+  _checkCompiled();
+  return _outputs;
+}
+
+ArrayRef<const Program::Parameter> Executable::parameters() const {
+  _checkCompiled();
+  return _parameters;
+}
+
+size_t Executable::inputBufferSize() const {
+  _checkCompiled();
+  return _input_size;
+}
+
+size_t Executable::outputBufferSize() const {
+  _checkCompiled();
+  return _output_size;
+}
+
 void Executable::execute(const std::shared_ptr<Memory> &memory) const {
   _checkCompiled();
   TRACTOR_PROFILER("execute");

@@ -9,19 +9,22 @@
 
 namespace tractor {
 
-template <class T, size_t S> class alignas(32) BatchStorage {
+//#define ALIGNBATCH(T, S) alignas(min(32, sizeof(T) * S))
+#define ALIGNBATCH(T, S) alignas(sizeof(T) * S)
+
+template <class T, size_t S> class ALIGNBATCH(T, S) BatchStorage {
 public:
   T _data[S];
   inline void _check() const {
-    // for (size_t i = 0; i < S; i++) {
-    //   if (!std::isfinite(_data[i])) {
-    //     throw std::runtime_error("not finite");
-    //   }
-    // }
+    for (size_t i = 0; i < S; i++) {
+      if (!std::isfinite(_data[i])) {
+        throw std::runtime_error("not finite");
+      }
+    }
   }
 };
 
-template <size_t S> class alignas(32) BatchStorage<double, S> {
+template <size_t S> class ALIGNBATCH(double, S) BatchStorage<double, S> {
   static constexpr std::enable_if_t<S / 4 * 4 == S> *_validate_size = nullptr;
 
 public:
@@ -30,19 +33,17 @@ public:
     __m256d _simd[S / 4];
   };
   inline void _check() const {
-    /*
-  if ((((uintptr_t)(void *)this) & 31) != 0) {
-    throw std::runtime_error("alignment error " +
-                             std::to_string((uintptr_t)this));
-  }
-  */
+    if ((((uintptr_t)(void *)this) & 31) != 0) {
+      throw std::runtime_error("alignment error " +
+                               std::to_string((uintptr_t)this));
+    }
   }
 };
 
 // -----------------------------------------------------------------------------
 
 template <class T, size_t S>
-class alignas(32) Batch : public BatchStorage<T, S> {
+class ALIGNBATCH(T, S) Batch : public BatchStorage<T, S> {
 
 public:
   static constexpr size_t Size = S;
@@ -81,6 +82,13 @@ public:
     this->_check();
     return this->_data[i];
   }
+  // inline T sum() const {
+  //   T ret = T(0);
+  //   for (auto &v : this->_data) {
+  //     ret += v;
+  //   }
+  //   return ret;
+  // }
 };
 
 // -----------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 // (c) 2020-2022 Philipp Ruppel
 
-#include <tractor/tractor.h>
+//#include <tractor/tractor.h>
 
 #include "dexlearn.h"
 
@@ -11,14 +11,21 @@
 
 #include "common.h"
 #include "goals.h"
-#include "neural.h"
 #include "physics5.h"
 
 #include <moveit/move_group_interface/move_group_interface.h>
 
 #include <tf/transform_listener.h>
 
-static constexpr size_t inner_batch_size = 8;
+#include <tractor/core/batch.h>
+#include <tractor/core/var.h>
+#include <tractor/engines/parallel.h>
+#include <tractor/engines/simple.h>
+#include <tractor/robot/robotstate.h>
+#include <tractor/solvers/gd.h>
+#include <tractor/solvers/sq.h>
+
+static constexpr size_t inner_batch_size = 4;
 static constexpr size_t outer_batch_size = 1;
 
 typedef double ValueSingle;
@@ -29,6 +36,89 @@ typedef tractor::GeometryFast<ScalarSingle> GeometrySingle;
 
 typedef tractor::Var<ValueBatch> ScalarBatch;
 typedef tractor::GeometryFast<ScalarBatch> GeometryBatch;
+
+std::shared_ptr<tractor::Solver>
+makeSolver(const std::shared_ptr<tractor::Engine> &engine,
+           const std::string &solvername) {
+
+  std::shared_ptr<tractor::Solver> solver;
+
+  if (solvername == "sq") {
+    auto s = std::make_shared<tractor::LeastSquaresSolver<ValueSingle>>(engine);
+    s->_regularization = 0.1;
+    s->_max_linear_iterations = 100;
+    s->_step_scaling = 0.5;
+    s->setTimeout(1, false);
+    s->setTolerance(1e-9);
+    solver = s;
+  } else
+
+      if (solvername == "sq001") {
+    auto s = std::make_shared<tractor::LeastSquaresSolver<ValueSingle>>(engine);
+    s->_regularization = 0.01;
+    s->_max_linear_iterations = 100;
+    s->_step_scaling = 0.5;
+    s->setTimeout(1, false);
+    s->setTolerance(1e-9);
+    solver = s;
+  } else
+
+      if (solvername == "sq03") {
+    auto s = std::make_shared<tractor::LeastSquaresSolver<ValueSingle>>(engine);
+    s->_regularization = 0.3;
+    s->_max_linear_iterations = 100;
+    s->_step_scaling = 0.5;
+    s->setTimeout(1, false);
+    s->setTolerance(1e-9);
+    solver = s;
+  } else
+
+      if (solvername == "sq1") {
+    auto s = std::make_shared<tractor::LeastSquaresSolver<ValueSingle>>(engine);
+    s->_regularization = 1;
+    s->_max_linear_iterations = 100;
+    s->_step_scaling = 0.5;
+    s->setTimeout(1, false);
+    s->setTolerance(1e-9);
+    solver = s;
+  } else
+
+      if (solvername == "gd01") {
+    solver = std::make_shared<tractor::GradientDescentSolver<ValueSingle>>(
+        engine, 0.1, 0.0);
+    solver->setTimeout(1, true);
+  } else
+
+      if (solvername == "gd001") {
+    solver = std::make_shared<tractor::GradientDescentSolver<ValueSingle>>(
+        engine, 0.01, 0.0);
+    solver->setTimeout(1, true);
+  } else
+
+      if (solvername == "gd0001") {
+    solver = std::make_shared<tractor::GradientDescentSolver<ValueSingle>>(
+        engine, 0.001, 0.0);
+    solver->setTimeout(1, true);
+  } else
+
+      if (solvername == "gd00001") {
+    solver = std::make_shared<tractor::GradientDescentSolver<ValueSingle>>(
+        engine, 0.0001, 0.0);
+    solver->setTimeout(1, true);
+  } else
+
+      if (solvername == "gd000001") {
+    solver = std::make_shared<tractor::GradientDescentSolver<ValueSingle>>(
+        engine, 0.00001, 0.0);
+    solver->setTimeout(1, true);
+  } else
+
+  {
+    throw std::runtime_error("unknown solver " + solvername);
+  }
+
+  return solver;
+}
 
 int main(int argc, char **argv) {
 
@@ -154,97 +244,28 @@ int main(int argc, char **argv) {
   auto joint_names =
       robot_model->getJointModelGroup(group_robot)->getVariableNames();
 
-  std::shared_ptr<tractor::Solver> solver;
-
-  if (solvername == "sq") {
-    auto s = std::make_shared<tractor::LeastSquaresSolver<ValueSingle>>(engine);
-    s->_regularization = 0.1;
-    s->_max_linear_iterations = 100;
-    s->_step_scaling = 0.5;
-    s->setTimeout(1, false);
-    s->setTolerance(1e-9);
-    solver = s;
-  } else
-
-      if (solvername == "sq001") {
-    auto s = std::make_shared<tractor::LeastSquaresSolver<ValueSingle>>(engine);
-    s->_regularization = 0.01;
-    s->_max_linear_iterations = 100;
-    s->_step_scaling = 0.5;
-    s->setTimeout(1, false);
-    s->setTolerance(1e-9);
-    solver = s;
-  } else
-
-      if (solvername == "sq03") {
-    auto s = std::make_shared<tractor::LeastSquaresSolver<ValueSingle>>(engine);
-    s->_regularization = 0.3;
-    s->_max_linear_iterations = 100;
-    s->_step_scaling = 0.5;
-    s->setTimeout(1, false);
-    s->setTolerance(1e-9);
-    solver = s;
-  } else
-
-      if (solvername == "sq1") {
-    auto s = std::make_shared<tractor::LeastSquaresSolver<ValueSingle>>(engine);
-    s->_regularization = 1;
-    s->_max_linear_iterations = 100;
-    s->_step_scaling = 0.5;
-    s->setTimeout(1, false);
-    s->setTolerance(1e-9);
-    solver = s;
-  } else
-
-      if (solvername == "gd01") {
-    solver = std::make_shared<tractor::GradientDescentSolver<ValueSingle>>(
-        engine, 0.1, 0.0);
-    solver->setTimeout(1, true);
-  } else
-
-      if (solvername == "gd001") {
-    solver = std::make_shared<tractor::GradientDescentSolver<ValueSingle>>(
-        engine, 0.01, 0.0);
-    solver->setTimeout(1, true);
-  } else
-
-      if (solvername == "gd0001") {
-    solver = std::make_shared<tractor::GradientDescentSolver<ValueSingle>>(
-        engine, 0.001, 0.0);
-    solver->setTimeout(1, true);
-  } else
-
-      if (solvername == "gd00001") {
-    solver = std::make_shared<tractor::GradientDescentSolver<ValueSingle>>(
-        engine, 0.0001, 0.0);
-    solver->setTimeout(1, true);
-  } else
-
-      if (solvername == "gd000001") {
-    solver = std::make_shared<tractor::GradientDescentSolver<ValueSingle>>(
-        engine, 0.00001, 0.0);
-    solver->setTimeout(1, true);
-  } else
-
-  {
-    throw std::runtime_error("unknown solver " + solvername);
-  }
-
   tractor::DexLearn<ValueSingle, ValueBatch> dexlearn(
-      solver, engine, robot_model, acm2, group_robot, env, outer_batch_size);
+      engine, robot_model, acm2, group_robot, env, outer_batch_size);
 
-  auto build = [&]() { dexlearn.build([&]() { env->goals(dexlearn); }); };
+  auto build = [&]() {
+    return dexlearn.build([&]() { env->goals(dexlearn); });
+  };
+
+  auto saveWeights = [&]() {
+    if (!filename.empty()) {
+      std::cerr << "saving weights to " << filename << std::endl;
+      dexlearn.policyNetwork().saveWeights(filename);
+      std::cerr << "weights saved" << std::endl;
+    }
+  };
 
   if (command == "train") {
-
-    build();
-
+    ROS_INFO_STREAM("building solver");
+    std::shared_ptr<tractor::Solver> solver = makeSolver(engine, solvername);
+    solver->compile(build());
     ROS_INFO_STREAM("training");
-
     ros::WallTime start_time = ros::WallTime::now();
-
     std::ofstream logfile("log-" + envname + "-" + solvername + ".txt");
-
     while (true) {
       if (!ros::ok()) {
         throw std::runtime_error("aborted");
@@ -259,23 +280,21 @@ int main(int argc, char **argv) {
         std::cerr << "training finished" << std::endl;
         break;
       }
-      dexlearn.step();
+      solver->gather();
+      solver->solve();
+      solver->scatter();
       dexlearn.test(true);
-      std::cout << "loss " << dexlearn.solver()->loss() << std::endl;
-      logfile << elapsed_time.toSec() << " " << dexlearn.solver()->loss()
-              << std::endl;
+      std::cout << "loss " << solver->loss() << std::endl;
+      logfile << elapsed_time.toSec() << " " << solver->loss() << std::endl;
       visualization_publisher.publish(dexlearn.visualization());
       robot_trajectory_publisher.publish(robot_model, group_all,
                                          dexlearn.trajectory());
     }
-
     logfile.close();
+    saveWeights();
+  }
 
-    if (!filename.empty()) {
-      std::cerr << "saving weights to " << filename << std::endl;
-      dexlearn.policyNetwork().saveWeights(filename);
-      std::cerr << "weights saved" << std::endl;
-    }
+  if (command == "partrain") {
   }
 
   if (command == "test") {

@@ -26,8 +26,10 @@ include_directories(
 add_library(${PROJECT_NAME}
     src/collision/link.cpp
     src/collision/query.cpp
+    src/collision/ops.cpp
     src/collision/robot.cpp
     src/collision/shape.cpp
+    src/collision/types.cpp
     src/core/allocator.cpp
     src/core/array.cpp
     src/core/batch.cpp
@@ -37,6 +39,7 @@ add_library(${PROJECT_NAME}
     src/core/engine.cpp
     src/core/gradients.cpp
     src/core/linesearch.cpp
+    src/core/matrix.cpp
     src/core/operator.cpp
     src/core/ops.cpp
     src/core/profiler.cpp
@@ -60,6 +63,10 @@ add_library(${PROJECT_NAME}
     src/geometry/twist.cpp
     src/geometry/types.cpp
     src/geometry/vector3.cpp
+    src/neural/layer.cpp
+    src/neural/network.cpp
+    src/neural/ops.cpp
+    src/neural/synapse.cpp
     src/robot/goals.cpp
     src/robot/jointstate.cpp
     src/robot/jointtypes.cpp
@@ -76,8 +83,9 @@ add_library(${PROJECT_NAME}
     src/solvers/pgd.cpp
     src/solvers/ps.cpp
     src/solvers/sq.cpp
+    src/tensor/tensor.cpp
+    src/tensor/ops.cpp
     src/test/test.cpp
-    src/tractor.cpp
 )
 add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 

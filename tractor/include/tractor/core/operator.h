@@ -11,6 +11,69 @@
 #include <tuple>
 
 namespace tractor {
+class OpTypeBase {
+protected:
+  std::type_index _type_index = typeid(void);
+  const void *_pointer = nullptr;
+  std::tuple<std::type_index, const void *> pack() const {
+    return std::make_tuple(_type_index, _pointer);
+  }
+
+public:
+  inline OpTypeBase(const std::type_index &type_index)
+      : _type_index(type_index) {}
+  inline OpTypeBase(const void *pointer) : _pointer(pointer) {}
+  inline bool operator<(const OpTypeBase &b) const { return pack() < b.pack(); }
+  inline bool operator==(const OpTypeBase &b) const {
+    return pack() == b.pack();
+  }
+  inline bool operator!=(const OpTypeBase &b) const {
+    return pack() != b.pack();
+  }
+  size_t hash() const {
+    return std::hash<std::type_index>()(_type_index) ^
+           std::hash<const void *>()(_pointer);
+  }
+};
+
+class OpType : public OpTypeBase {
+public:
+  OpType(const std::type_index &type_index) : OpTypeBase(type_index) {}
+  OpType(const std::type_info &type_index) : OpTypeBase(type_index) {}
+  inline OpType(const void *pointer) : OpTypeBase(pointer) {}
+};
+
+class OpGroup : public OpTypeBase {
+public:
+  OpGroup(const std::type_index &type_index) : OpTypeBase(type_index) {}
+  OpGroup(const std::type_info &type_index) : OpTypeBase(type_index) {}
+  inline OpGroup(const void *pointer) : OpTypeBase(pointer) {}
+};
+
+class OpMode : public OpTypeBase {
+public:
+  OpMode(const std::type_index &type_index) : OpTypeBase(type_index) {}
+  OpMode(const std::type_info &type_index) : OpTypeBase(type_index) {}
+};
+} // namespace tractor
+
+template <> struct std::hash<tractor::OpType> {
+  std::size_t operator()(const tractor::OpType &v) const noexcept {
+    return v.hash();
+  }
+};
+template <> struct std::hash<tractor::OpGroup> {
+  std::size_t operator()(const tractor::OpGroup &v) const noexcept {
+    return v.hash();
+  }
+};
+template <> struct std::hash<tractor::OpMode> {
+  std::size_t operator()(const tractor::OpMode &v) const noexcept {
+    return v.hash();
+  }
+};
+
+namespace tractor {
 
 typedef void (*LoopFunction)(const void *base, const uintptr_t *offsets,
                              size_t iterations);
@@ -30,8 +93,8 @@ template <class Functor> class RawArgumentTuple {
   }
 
 public:
-  typedef typename std::decay<decltype(
-      *getArgumentTuple(*(Functor *)nullptr))>::type Type;
+  typedef typename std::decay<decltype(*getArgumentTuple(
+      *(Functor *)nullptr))>::type Type;
 };
 
 template <class Functor> class ArgumentValueTuple {
@@ -42,8 +105,8 @@ template <class Functor> class ArgumentValueTuple {
   }
 
 public:
-  typedef typename std::decay<decltype(
-      *getArgumentTuple(*(Functor *)nullptr))>::type Type;
+  typedef typename std::decay<decltype(*getArgumentTuple(
+      *(Functor *)nullptr))>::type Type;
 };
 
 template <class Functor> class ReturnType {
@@ -53,8 +116,9 @@ template <class Functor> class ReturnType {
   }
 
 public:
-  typedef typename std::decay<typename std::remove_pointer<decltype(
-      getReturnType(*(Functor *)nullptr))>::type>::type Type;
+  typedef
+      typename std::decay<typename std::remove_pointer<decltype(getReturnType(
+          *(Functor *)nullptr))>::type>::type Type;
 };
 
 template <class T> struct IsVar { static constexpr bool value = false; };
@@ -71,7 +135,7 @@ class OperatorModeMap {
   std::vector<const Operator *> _ops;
 
 public:
-  static size_t index(const std::type_index &type);
+  static size_t index(const OpMode &type);
   inline auto at(size_t i) const { return i < _ops.size() ? _ops[i] : nullptr; }
   void put(size_t i, const Operator *op) {
     _ops.resize(std::max(_ops.size(), i + 1), nullptr);
@@ -82,14 +146,14 @@ public:
 class Operator {
 public:
   class Argument {
-    size_t _size = 0;
+    // size_t _size = 0;
     bool _is_const = false;
     TypeInfo _type;
 
   public:
     template <class T> static Argument make() {
       Argument ret;
-      ret._size = sizeof(typename std::decay<T>::type);
+      // ret._size = sizeof(typename std::decay<T>::type);
       ret._is_const =
           std::is_convertible<const typename std::decay<T>::type &, T>::value;
       ret._type = TypeInfo::get<T>();
@@ -100,38 +164,60 @@ public:
     bool isOutput() const { return !_is_const; }
     const std::type_index &type() const { return _type.type(); }
     const TypeInfo &typeInfo() const { return _type; }
+    Argument makeReverse() const {
+      Argument ret = *this;
+      ret._is_const = !_is_const;
+      return ret;
+    }
+    Argument makeInput() const {
+      Argument ret = *this;
+      ret._is_const = true;
+      return ret;
+    }
+    Argument makeOutput() const {
+      Argument ret = *this;
+      ret._is_const = false;
+      return ret;
+    }
   };
 
 private:
   std::string _name;
-  std::type_index _mode;
-  std::type_index _op;
+  OpMode _mode;
+  OpType _op;
   const OperatorModeMap *_map = nullptr;
 
 protected:
   OperatorFunctions _functions;
   size_t _argument_count = 0;
   std::vector<Argument> _arguments;
-  static const Operator *tryFind(const std::type_index &mode,
-                                 const std::type_index &group);
-  Operator(const std::string &name, const std::type_info &mode,
-           const std::type_info &op, const std::type_info &group);
+  static const Operator *tryFind(const OpMode &mode, const OpGroup &group);
+  Operator(const std::string &name, const OpMode &mode, const OpType &op,
+           const OpGroup &group);
+  virtual ~Operator();
+  static const Operator *
+  tryFind(const OpMode &mode, const OpType &op,
+          const std::initializer_list<std::type_index> &args);
+
+  template <class Mode, class Op, class... Args>
+  static const Operator *tryFind(const Args &...args) {
+    return tryFind(OpMode(typeid(Mode *)), OpType(typeid(Op *)), {args...});
+  }
 
 public:
   Operator(const Operator &) = delete;
-  ~Operator();
   Operator &operator=(const Operator &) = delete;
-  template <class T> inline bool isMode() const { return _mode == typeid(T *); }
+  template <class T> inline bool isMode() const {
+    return _mode == OpMode(typeid(T *));
+  }
   inline const std::string &name() const { return _name; }
-  // inline LoopFunction loopFunction() const { return _loop_function; }
-  // inline OpFunction indirectFunction() const { return _indirect_function; }
   inline OperatorFunctions functions() const { return _functions; }
   inline size_t argumentCount() const { return _argument_count; }
   inline size_t argumentSize(size_t i) const { return _arguments[i].size(); }
   inline auto arguments() const { return ArrayRef<const Argument>(_arguments); }
-  inline const Argument &arg(size_t i) const { return _arguments[i]; }
+  inline const Argument &arg(size_t i) const { return _arguments.at(i); }
   template <class T> inline const Operator *tryFindVariant() const {
-    size_t index = OperatorModeMap::index(typeid(T *));
+    size_t index = OperatorModeMap::index(OpMode(typeid(T *)));
     auto *op = _map->at(index);
     return op;
   }
@@ -151,15 +237,8 @@ public:
     }
     return op;
   }
-  static const Operator *
-  tryFind(const std::type_index &mode, const std::type_index &op,
-          const std::initializer_list<std::type_index> &args);
   template <class Mode, class Op, class... Args>
-  static const Operator *tryFind(const Args &... args) {
-    return tryFind(typeid(Mode *), typeid(Op *), {args...});
-  }
-  template <class Mode, class Op, class... Args>
-  static const Operator *find(const Args &... args) {
+  static const Operator *find(const Args &...args) {
     auto *ret = tryFind<Mode, Op>(args...);
     if (!ret) {
       std::stringstream s;
@@ -172,7 +251,7 @@ public:
     }
     return ret;
   }
-  template <class Op> bool is() const { return _op == typeid(Op *); }
+  template <class Op> bool is() const { return _op == OpType(typeid(Op *)); }
   static std::vector<const Operator *> all();
 };
 
@@ -197,11 +276,10 @@ class OperatorImpl : public Operator {
             Impl::call(*(typename std::decay<Args>::type
                              *)(void *)((uint8_t *)base + offsets[Indices])...);
       }
-      static void direct(typename std::decay<Args>::type *... args, Ret *ret) {
+      static void direct(typename std::decay<Args>::type *...args, Ret *ret) {
         *ret = Impl::call(*args...);
       }
       static std::vector<Argument> arguments() {
-        // auto x = {(std::cout << typeid(Args &).name() << std::endl, 0)...};
         return {Argument::make<Args>()..., Argument::make<Ret &>()};
       }
     };
@@ -220,7 +298,7 @@ class OperatorImpl : public Operator {
             *(typename std::decay<Args>::type *)(void *)((uint8_t *)base +
                                                          offsets[Indices])...);
       }
-      static void direct(typename std::decay<Args>::type *... args) {
+      static void direct(typename std::decay<Args>::type *...args) {
         Impl::call(*args...);
       }
       static std::vector<Argument> arguments() {
@@ -243,21 +321,19 @@ class OperatorImpl : public Operator {
 
 public:
   OperatorImpl(const std::string &name)
-      : Operator(name, typeid(Mode *), typeid(Op *), typeid(Group *)) {
+      : Operator(name, OpMode(typeid(Mode *)), OpType(typeid(Op *)),
+                 OpGroup(typeid(Group *))) {
     constexpr size_t argument_count = std::tuple_size<ArgumentTuple>::value;
     _argument_count =
         argument_count + (std::is_same<Return, void>::value ? 0 : 1);
     init(std::make_index_sequence<argument_count>(), (ArgumentTuple *)nullptr);
   }
   static const Operator *instance(const char *name) {
-    // std::cout << name << std::endl;
     static const Operator *instance = [name]() {
-      auto *instance = tryFind(typeid(Mode *), typeid(Group *));
+      auto *instance =
+          tryFind(OpMode(typeid(Mode *)), OpGroup(typeid(Group *)));
       if (!instance) {
         instance = new OperatorImpl(name);
-        // std::cout << "new op " << name << std::endl;
-      } else {
-        // std::cout << "op already exists " << name << std::endl;
       }
       return instance;
     }();
@@ -270,7 +346,6 @@ public:
 template <class T> class Var;
 
 template <class T> struct OverloadSelector {
-  // template <class U> operator const U &() { return *(const U *)nullptr; }
   template <class U,
             std::enable_if_t<std::is_convertible<T, U>::value, int> Z = 0>
   operator const U &() {
@@ -293,24 +368,24 @@ template <class T> struct ArgumentConverter {
 };
 
 template <class Ret, class Op> struct Caller {
-  template <class... Args> static inline Var<Ret> call2(Args &... args) {
+  template <class... Args> static inline Var<Ret> call2(Args &...args) {
     Var<Ret> ret;
     ret.value() = Op::call(args...);
     recordOperation(Op::instance(), &args..., &ret.value());
     return std::move(ret);
   }
   template <class... ImplArgs, class... Args>
-  static inline Var<Ret> call(std::tuple<ImplArgs...> *, Args &... args) {
+  static inline Var<Ret> call(std::tuple<ImplArgs...> *, Args &...args) {
     return std::move(call2(ArgumentConverter<ImplArgs>::map(args)...));
   }
 };
 template <class Op> struct Caller<void, Op> {
-  template <class... Args> static inline void call2(Args &... args) {
+  template <class... Args> static inline void call2(Args &...args) {
     Op::call(args...);
     recordOperation(Op::instance(), &args...);
   }
   template <class... ImplArgs, class... Args>
-  static inline void call(std::tuple<ImplArgs...> *, Args &... args) {
+  static inline void call(std::tuple<ImplArgs...> *, Args &...args) {
     call2(ArgumentConverter<ImplArgs>::map(args)...);
   }
 };
@@ -382,15 +457,6 @@ template <class Op> struct Caller<void, Op> {
 
 #endif
 
-// #define TRACTOR_OP_IMPL(mode, prefix, name, args, impl, postfix)               \
-//   TRACTOR_OP_TYPED(mode, prefix, name, args, impl, float, postfix##f)          \
-//   TRACTOR_OP_TYPED(mode, prefix, name, args, impl, double, postfix##d)         \
-//   TRACTOR_OP_TYPED(mode, prefix, name, args, impl, uint64_t, postfix##i)       \
-//   TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch4f, postfix##4f)       \
-//   TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch4d, postfix##4d)       \
-//   TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch8f, postfix##8f)       \
-//   TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch8d, postfix##8d)
-
 #define TRACTOR_OP_IMPL(mode, prefix, name, args, impl, postfix)               \
   TRACTOR_OP_TYPED(mode, prefix, name, args, impl, float, postfix##f)          \
   TRACTOR_OP_TYPED(mode, prefix, name, args, impl, double, postfix##d)         \
@@ -403,13 +469,13 @@ template <class Op> struct Caller<void, Op> {
 #define TRACTOR_VAR_OP(name)                                                   \
   template <class... Args,                                                     \
             std::enable_if_t<AnyVar<Args...>::value, int> X = 0,               \
-            class Impl = typename std::decay<decltype(                         \
-                *op_##name##_overload(OverloadSelector<Args>()...))>::type,    \
+            class Impl = typename std::decay<decltype(*op_##name##_overload(   \
+                OverloadSelector<Args>()...))>::type,                          \
             class ImplArgs =                                                   \
                 typename ArgumentValueTuple<decltype(&Impl::call)>::Type,      \
             class Ret = decltype(Impl::call(OverloadSelector<Args>()...)),     \
             decltype(Impl::call(OverloadSelector<Args>()...)) *Y = nullptr>    \
-  inline auto name(Args &&... args) {                                          \
+  inline auto name(Args &&...args) {                                           \
     return Caller<Ret, Impl>::call((ImplArgs *)nullptr, args...);              \
   }
 
@@ -421,19 +487,10 @@ template <class Op> struct Caller<void, Op> {
   TRACTOR_OP_IMPL(mode, mode##_, name, args, impl, )
 
 #define TRACTOR_OP_T(postfix, name, args, impl)                                \
-  TRACTOR_OP_IMPL(compute, , name, args, impl, postfix##_)                     \
-  // TRACTOR_VAR_OP(name)
+  TRACTOR_OP_IMPL(compute, , name, args, impl, postfix##_)
 
 #define TRACTOR_D_T(mode, postfix, name, args, impl)                           \
   TRACTOR_OP_IMPL(mode, mode##_, name, args, impl, postfix##_)
-
-/*
-  #define TRACTOR_D_LOOP(mode, name, args, impl) \
-  TRACTOR_D(mode, name, args, { typedef S T; makeBatchLoop<F>(
-      [&] args impl).run(
-      a, lo, hi, da, padding, dx);
-   })
-*/
 
 #define TRACTOR_D_LOOP(mode, name, args, args2, impl)                          \
   TRACTOR_D(mode, name, args, {                                                \
@@ -445,8 +502,8 @@ template <class Op> struct Caller<void, Op> {
     makeBatchLoop(f).run args2;                                                \
   })
 
-template <class T, class Impl = typename std::decay<decltype(
-                       *op_move_overload(OverloadSelector<Var<T>>()))>::type>
+template <class T, class Impl = typename std::decay<decltype(*op_move_overload(
+                       OverloadSelector<Var<T>>()))>::type>
 inline void Recorder_move_impl(Recorder *rec, const T *from, T *to) {
   rec->op(Impl::instance(), from, to);
 }

@@ -83,34 +83,6 @@ public:
     }
   }
 
-  /*
-  template <class PContainer, class Vector>
-  void toVector(const PContainer &ports, Vector &vector) const {
-    vector.resize(ports.size());
-    size_t i = 0;
-    for (auto &port : ports) {
-      auto &v = vector[i];
-      v = at<typename std::decay<decltype(v)>::type>(port);
-      i++;
-    }
-  }
-
-  template <class PContainer, class Vector>
-  void fromVector(const PContainer &ports, Vector &vector) {
-    size_t size = 0;
-    for (const auto &port : ports) {
-      size = std::max(size, port.offset() + port.size());
-    }
-    _data.resize(std::max(_data.size(), size));
-    size_t i = 0;
-    for (auto &port : ports) {
-      auto &v = vector[i];
-      at<typename std::decay<decltype(v)>::type>(port) = v;
-      i++;
-    }
-  }
-  */
-
   template <class PContainer, class Vector>
   void toVector(const PContainer &ports, Vector &&vector) const {
     typedef typename std::decay<decltype(vector[0])>::type Scalar;
@@ -184,7 +156,6 @@ public:
   template <class Vector> void fromVectorDense(Vector &vector) {
     typedef typename std::decay<decltype(vector[0])>::type Scalar;
     _data.resize(vector.size() * sizeof(vector[0]));
-    // std::memcpy(_data.data(), vector.data(), _data.size());
     Scalar *data = (Scalar *)_data.data();
     for (size_t i = 0; i < vector.size(); i++) {
       data[i] = vector[i];

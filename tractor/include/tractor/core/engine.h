@@ -46,26 +46,11 @@ public:
   void input(const Buffer &input, const std::shared_ptr<Memory> &memory) const;
   void output(const std::shared_ptr<const Memory> &memory,
               Buffer &output) const;
-  ArrayRef<const Program::Input> inputs() const {
-    _checkCompiled();
-    return _inputs;
-  }
-  ArrayRef<const Program::Output> outputs() const {
-    _checkCompiled();
-    return _outputs;
-  }
-  ArrayRef<const Program::Parameter> parameters() const {
-    _checkCompiled();
-    return _parameters;
-  }
-  size_t inputBufferSize() const {
-    _checkCompiled();
-    return _input_size;
-  }
-  size_t outputBufferSize() const {
-    _checkCompiled();
-    return _output_size;
-  }
+  ArrayRef<const Program::Input> inputs() const;
+  ArrayRef<const Program::Output> outputs() const;
+  ArrayRef<const Program::Parameter> parameters() const;
+  size_t inputBufferSize() const;
+  size_t outputBufferSize() const;
   template <class Vector>
   void inputVector(Vector &&inputv, const std::shared_ptr<Memory> &memory) {
     _checkCompiled();
@@ -75,23 +60,16 @@ public:
   template <class Vector>
   void outputVector(const std::shared_ptr<const Memory> &memory,
                     Vector &&outputv) {
-    // std::cout << "a" << __LINE__ << std::endl;
     _checkCompiled();
-    // std::cout << "a" << __LINE__ << std::endl;
     output(memory, _temp);
-    // std::cout << "a" << __LINE__ << std::endl;
     _temp.toVector(outputs(), outputv);
-    // std::cout << "a" << __LINE__ << std::endl;
   }
   template <class Input, class Output>
   void run(Input &&input, const std::shared_ptr<Memory> &memory,
            Output &&output) {
     inputVector(input, memory);
-    // std::cout << "a" << __LINE__ << std::endl;
     execute(memory);
-    // std::cout << "a" << __LINE__ << std::endl;
     outputVector(memory, output);
-    // std::cout << "a" << __LINE__ << std::endl;
   }
   void parameterize(const Buffer &data,
                     const std::shared_ptr<Memory> &memory) const;

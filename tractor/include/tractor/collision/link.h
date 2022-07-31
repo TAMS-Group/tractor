@@ -28,35 +28,9 @@ public:
   const std::string &name() const { return _name; }
   virtual void
   addConvexPolyhedron(const std::vector<Vector3<double>> &points,
-                      const std::vector<Plane<double>> &planes) override {
-    if (points.empty() || planes.empty()) {
-      return;
-    }
-    std::vector<Vector3<Scalar>> points2;
-    for (auto &p : points) {
-      points2.emplace_back(Scalar(p.x()), Scalar(p.y()), Scalar(p.z()));
-    }
-    std::vector<Plane<Scalar>> planes2;
-    for (auto &plane : planes) {
-      planes2.emplace_back(Vector3<Scalar>(Scalar(plane.normal().x()),
-                                           Scalar(plane.normal().y()),
-                                           Scalar(plane.normal().z())),
-                           Scalar(plane.offset()));
-    }
-    _shapes.push_back(std::make_shared<ConvexPolyhedralCollisionShape<Scalar>>(
-        points2, planes2));
-  }
-  virtual void addSphere(const Vector3<double> &center,
-                         double radius) override {
-    _shapes.push_back(std::make_shared<CollisionSphereShape<Scalar>>(
-        Vector3<Scalar>(Scalar(center.x()), Scalar(center.y()),
-                        Scalar(center.z())),
-        Scalar(radius)));
-  }
-  virtual void addCylinder(double radius, double length) override {
-    _shapes.push_back(std::make_shared<CollisionCylinderShape<Scalar>>(
-        Scalar(radius), Scalar(length)));
-  }
+                      const std::vector<Plane<double>> &planes) override;
+  virtual void addSphere(const Vector3<double> &center, double radius) override;
+  virtual void addCylinder(double radius, double length) override;
 };
 
 } // namespace tractor

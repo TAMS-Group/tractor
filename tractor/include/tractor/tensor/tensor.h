@@ -2,11 +2,9 @@
 
 #pragma once
 
-#include <tractor/tractor.h>
-
-#include "ops.h"
-
-#include <random>
+#include <tractor/core/allocator.h>
+#include <tractor/core/ops.h>
+#include <tractor/core/var.h>
 
 namespace tractor {
 
@@ -129,46 +127,6 @@ std::ostream &operator<<(std::ostream &stream, const Tensor<Scalar> &tensor) {
   }
   stream << "]";
   return stream;
-}
-
-template <class ActivationScalar, class WeightScalar>
-Tensor<ActivationScalar> tensor_mul_vec_mat(const Tensor<ActivationScalar> &a,
-                                            const Tensor<WeightScalar> &b) {
-  TRACTOR_CHECK_TENSOR_DIMENSIONS(a, 1);
-  TRACTOR_CHECK_TENSOR_DIMENSIONS(b, 2);
-  if (a.size() != b.rows()) {
-    throw std::runtime_error("incompatible tensor shapes");
-  }
-  Tensor<ActivationScalar> r;
-  r.resize(b.shape()[1]);
-  size_t cols = b.shape()[1];
-  size_t rows = b.shape()[0];
-  for (size_t col = 0; col < cols; col++) {
-    size_t row = 0;
-    for (; row + 3 < rows; row += 4) {
-
-      std::array<ActivationScalar, 4> weights;
-      for (size_t i = 0; i < 4; i++) {
-        batch(b(row + i, col), weights[i]);
-      }
-
-      r(col) = dot4add(
-
-          a(row + 0), a(row + 1), a(row + 2), a(row + 3),
-
-          weights[0], weights[1], weights[2], weights[3],
-
-          r(col));
-    }
-    for (; row < rows; row++) {
-
-      ActivationScalar weight;
-      batch(b(row, col), weight);
-
-      r(col) = madd(a(row), weight, r(col));
-    }
-  }
-  return r;
 }
 
 template <class Scalar>

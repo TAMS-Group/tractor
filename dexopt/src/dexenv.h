@@ -19,13 +19,13 @@
 #include <tf_conversions/tf_eigen.h>
 #include <tf_conversions/tf_kdl.h>
 
-#include <tractor/tractor.h>
-
 #include "common.h"
 #include "dexviz.h"
 #include "goals.h"
-#include "neural.h"
 #include "physics5.h"
+
+#include <tractor/geometry/fast.h>
+#include <tractor/neural/network.h>
 
 #define TRACTOR_GOAL_STRINGIFY(n) #n
 // #define TRACTOR_GOAL(var) tractor::goal(var, 0, TRACTOR_GOAL_STRINGIFY(var))

@@ -4,8 +4,6 @@
 
 #include <ros/ros.h>
 
-#include <tractor/tractor.h>
-
 #include "common.h"
 
 namespace tractor {

@@ -26,9 +26,9 @@ template <class Geometry> struct PhysicsSimulator {
   std::shared_ptr<tractor::CollisionRobot<
       typename BatchScalar<typename Geometry::Value>::Type>>
       _collision_model;
-  std::deque<
-      ShapeCollisionPair<typename BatchScalar<typename Geometry::Value>::Type>>
-      _shape_collision_pairs;
+  // std::deque<
+  //     ShapeCollisionPair<typename BatchScalar<typename
+  //     Geometry::Value>::Type>> _shape_collision_pairs;
   typename Geometry::Scalar _time_step = typename Geometry::Value(0.01);
   size_t _iterations = 1;
 
@@ -221,15 +221,9 @@ private:
 #if 1
                     typename Geometry::Vector3 point_a, point_b, axis, local_a,
                         local_b;
-                    if (_shape_collision_pairs.size() <=
-                        collision_pair_counter) {
-                      _shape_collision_pairs.emplace_back(shape_a, shape_b);
-                    }
-                    collision_axes(
-                        pose_a, pose_b,
-                        uint64_t(
-                            &_shape_collision_pairs[collision_pair_counter]),
-                        point_a, point_b, axis, local_a, local_b);
+                    collision_axes(pose_a, pose_b, uint64_t(shape_a.get()),
+                                   uint64_t(shape_b.get()), point_a, point_b,
+                                   axis, local_a, local_b);
                     collision_pair_counter++;
                     point_a = pose_a * local_a;
                     point_b = pose_b * local_b;

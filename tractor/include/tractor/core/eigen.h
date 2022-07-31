@@ -9,11 +9,6 @@
 
 namespace tractor {
 template <class Scalar> class MatrixReplacement;
-
-// template <class T> using AlignedStdAlloc = Eigen::aligned_allocator<T>;
-// template <class T> using AlignedStdVector = std::vector<T,
-// AlignedStdAlloc<T>>;
-
 } // namespace tractor
 
 namespace Eigen {
@@ -56,20 +51,12 @@ public:
     ExecutableImpl(const std::shared_ptr<Executable> &executable,
                    const std::shared_ptr<Memory> &memory)
         : _executable(executable), _memory(memory) {}
-
     virtual Index rows() const override {
       return _executable->outputBufferSize() / sizeof(ScalarType);
     }
     virtual Index cols() const override {
       return _executable->inputBufferSize() / sizeof(ScalarType);
     }
-
-    /*
-    virtual Index rows() const override { return _executable->inputs().size(); }
-    virtual Index cols() const override {
-      return _executable->outputs().size();
-    }
-    */
     virtual void mul(const Vector &input, Vector &output) const override {
       _executable->inputVector(input, _memory);
       _executable->execute(_memory);

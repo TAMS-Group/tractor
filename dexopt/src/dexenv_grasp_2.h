@@ -61,7 +61,7 @@ struct DexEnvGrasp2 : tractor::DexEnv<ValueSingle, ValueBatch> {
 
     size_t frequencies = 4;
     tractor::Tensor<ScalarBatch> neural_input;
-    neural_input.resize(frequencies + 3);
+    neural_input.resize(frequencies);
 
     double t = frame * 1.0 / frame_count;
 

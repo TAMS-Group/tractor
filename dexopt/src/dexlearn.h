@@ -4,6 +4,10 @@
 
 #include "dexenv.h"
 
+#include <tractor/collision/ops.h>
+#include <tractor/core/solver.h>
+#include <tractor/neural/ops.h>
+
 namespace tractor {
 
 template <class ValueSingle, class ValueBatch> class DexLearn {
@@ -23,11 +27,7 @@ template <class ValueSingle, class ValueBatch> class DexLearn {
   std::vector<std::string> _joint_names;
   std::string _group_robot;
   robot_state::RobotState _robot_state;
-  std::map<std::pair<std::string, std::string>,
-           std::shared_ptr<tractor::ShapeCollisionPair<ValueSingle>>>
-      _collision_pairs;
   tractor::JointVariableOptions<GeometryBatch> _joint_variable_options;
-  std::shared_ptr<tractor::Solver> _solver;
   RobotTrajectory<GeometryBatch> _test_trajectory;
   std::vector<std::shared_ptr<MotionGoal<GeometryBatch>>> _goals;
   std::vector<const robot_model::JointModel *> _joints;
@@ -80,18 +80,11 @@ template <class ValueSingle, class ValueBatch> class DexLearn {
             auto &pose_b = _simulator->state().links().pose(link_b);
             for (auto &shape_a : _collision_robot.link(link_a)->shapes()) {
               for (auto &shape_b : _collision_robot.link(link_b)->shapes()) {
-
                 typename GeometryBatch::Vector3 point_a, point_b, axis, local_a,
                     local_b;
-                auto &collision_pair =
-                    _collision_pairs[_make_sorted_pair(link_a, link_b)];
-                if (!collision_pair) {
-                  collision_pair = std::make_shared<
-                      tractor::ShapeCollisionPair<ValueSingle>>(shape_a,
-                                                                shape_b);
-                }
-                collision_axes(pose_a, pose_b, uint64_t(collision_pair.get()),
-                               point_a, point_b, axis, local_a, local_b);
+                collision_axes(pose_a, pose_b, uint64_t(shape_a.get()),
+                               uint64_t(shape_b.get()), point_a, point_b, axis,
+                               local_a, local_b);
                 point_a = pose_a * local_a;
                 point_b = pose_b * local_b;
 
@@ -242,14 +235,13 @@ template <class ValueSingle, class ValueBatch> class DexLearn {
   }
 
 public:
-  DexLearn(const std::shared_ptr<Solver> &solver,
-           const std::shared_ptr<tractor::Engine> &engine,
+  DexLearn(const std::shared_ptr<tractor::Engine> &engine,
            const robot_model::RobotModelConstPtr &robot_model,
            collision_detection::AllowedCollisionMatrix allowed_collision_matrix,
            std::string group_robot,
            const std::shared_ptr<DexEnv<ValueSingle, ValueBatch>> &env,
            size_t outer_batch_size)
-      : _solver(solver), _engine(engine), _robot_model(robot_model), _env(env),
+      : _engine(engine), _robot_model(robot_model), _env(env),
         _collision_robot(*robot_model, false),
         _allowed_collision_matrix(allowed_collision_matrix),
         _end_effectors(env->info().end_effectors),
@@ -504,13 +496,12 @@ public:
     _goals.push_back(goal);
   }
 
-  void build(const std::function<void()> &goal_factory) {
-    tractor::Program program([&]() {
+  Program build(const std::function<void()> &goal_factory) {
+    return tractor::Program([&]() {
       goal_factory();
       makeSimulator();
       _runTraining();
     });
-    _solver->compile(program);
   }
 
   void makeSimulator() {
@@ -530,16 +521,6 @@ public:
   }
 
   size_t contactDimensions() const { return _contact_dimensions; }
-
-  auto &solver() { return _solver; }
-  auto &solver() const { return _solver; }
-
-  void step() {
-    ROS_INFO_STREAM("optimize");
-    _solver->gather();
-    _solver->solve();
-    _solver->scatter();
-  }
 
   void test(bool training = false) {
     ROS_INFO_STREAM("test");
