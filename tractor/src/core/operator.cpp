@@ -3,6 +3,7 @@
 #include <tractor/core/operator.h>
 
 #include <algorithm>
+#include <stdarg.h>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -19,6 +20,25 @@ struct OperatorRegistry {
     return instance;
   }
 };
+
+void Operator::callIndirect(void *base, uintptr_t *offsets) const {
+  std::vector<uintptr_t> args = _functions.context;
+  for (size_t i = 0; i < _arguments.size(); i++) {
+    args.push_back(offsets[i]);
+  }
+  _functions.indirect(base, args.data());
+}
+
+void Operator::invoke(const void *first, ...) const {
+  va_list va;
+  va_start(va, first);
+  std::vector<uintptr_t> args = _functions.context;
+  args.push_back((uintptr_t)first);
+  for (size_t i = 0; i < _arguments.size(); i++) {
+    args.push_back(va_arg(va, uintptr_t));
+  }
+  _functions.indirect(nullptr, args.data());
+}
 
 Operator::Operator(const std::string &name, const std::string &label,
                    const OpMode &mode, const OpType &op, const OpGroup &group)
@@ -40,7 +60,7 @@ Operator::~Operator() {}
 
 const Operator *
 Operator::tryFind(const OpMode &mode, const OpType &op,
-                  const std::initializer_list<std::type_index> &types) {
+                  const std::initializer_list<TypeInfo> &types) {
   auto *registry = OperatorRegistry::instance();
   auto it_mode = registry->op_map.find(mode);
   if (it_mode == registry->op_map.end()) {
@@ -68,7 +88,7 @@ Operator::tryFind(const OpMode &mode, const OpType &op,
       if (it_arg == op->arguments().end()) {
         break;
       }
-      if (it_arg->type() == *it_type) {
+      if (it_arg->typeInfo() == *it_type) {
         ++it_arg;
         ++it_type;
         continue;
@@ -78,6 +98,20 @@ Operator::tryFind(const OpMode &mode, const OpType &op,
     }
   }
   return nullptr;
+}
+
+const Operator *Operator::find(const OpMode &opmode, const OpType &optype,
+                               const std::initializer_list<TypeInfo> &args) {
+  auto *op = tryFind(opmode, optype, args);
+  if (!op) {
+    std::stringstream msg;
+    msg << "operator not found " << opmode.name() << " " << optype.name();
+    for (auto &arg : args) {
+      msg << " " << arg.name();
+    }
+    throw std::runtime_error(msg.str());
+  }
+  return op;
 }
 
 const Operator *Operator::tryFind(const OpMode &mode, const OpGroup &group) {

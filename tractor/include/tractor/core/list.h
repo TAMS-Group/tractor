@@ -14,7 +14,7 @@ public:
   ListOperator(const std::string &name, const std::string &label,
                const OpMode &mode, const OpGroup &group,
                const std::vector<Argument> &args,
-               void (*callback)(const void *base, const uintptr_t *offsets))
+               void (*callback)(void *base, const uintptr_t *offsets))
       : Operator(name, label, mode, this, group) {
     _arguments = args;
     _argument_count = args.size();
@@ -26,7 +26,7 @@ const Operator *
 makeListOperator(const std::string &name, const std::string &label,
                  const OpMode &mode, const OpGroup &group,
                  const std::vector<Operator::Argument> &args,
-                 void (*callback)(const void *base, const uintptr_t *offsets));
+                 void (*callback)(void *base, const uintptr_t *offsets));
 
 std::vector<Operator::Argument>
 makeForwardArgs(const ArrayRef<const Operator::Argument> &args);
@@ -34,26 +34,26 @@ makeForwardArgs(const ArrayRef<const Operator::Argument> &args);
 std::vector<Operator::Argument>
 makeReverseArgs(const ArrayRef<const Operator::Argument> &args);
 
-const Operator *makeListOperator(
-    const std::string &name, const std::string &label,
-    const std::vector<Operator::Argument> &args,
-    void (*fun_compute)(const void *base, const uintptr_t *offsets),
-    void (*fun_forward)(const void *base, const uintptr_t *offsets),
-    void (*fun_reverse)(const void *base, const uintptr_t *offsets));
+const Operator *
+makeListOperator(const std::string &name, const std::string &label,
+                 const std::vector<Operator::Argument> &args,
+                 void (*fun_compute)(void *base, const uintptr_t *offsets),
+                 void (*fun_forward)(void *base, const uintptr_t *offsets),
+                 void (*fun_reverse)(void *base, const uintptr_t *offsets));
 
 class ArgList {
-  const void *_base = nullptr;
+  void *_base = nullptr;
   const uintptr_t *_offsets = nullptr;
 
 public:
-  ArgList(const void *base, const uintptr_t *offsets)
+  ArgList(void *base, const uintptr_t *offsets)
       : _base(base), _offsets(offsets) {}
   template <class T> T &arg(size_t i) const {
     return *(T *)(void *)((uint8_t *)_base + _offsets[i]);
   }
 };
 
-template <class T> T &bindArg(const void *base, const uintptr_t **offsets) {
+template <class T> T &bindArg(void *base, const uintptr_t **offsets) {
   T *ret = (T *)(void *)((uint8_t *)(void *)base + (*offsets)[0]);
   (*offsets)++;
   return *ret;

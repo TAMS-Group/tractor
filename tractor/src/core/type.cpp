@@ -4,14 +4,43 @@
 
 #include <iostream>
 #include <map>
+#include <unordered_map>
 
 namespace tractor {
 
-static std::map<TypeInfo, TypeInfo> g_gradient_type_map;
+TypeInfo TypeInfo::make(const std::string &name, size_t size,
+                        size_t alignment) {
+  struct DataEx : Data {
+    std::string str;
+  };
+  static std::unordered_map<std::string, DataEx *> map;
+  if (!map[name]) {
+    DataEx *d = new DataEx();
+    d->str = name;
+    d->name = d->str.c_str();
+    d->size = size;
+    d->alignment = alignment;
+    map[name] = d;
+  }
+  TypeInfo ret;
+  ret._data = map[name];
+  return ret;
+}
+
+const void *TypeInfo::Data::makeId(const std::type_info &type) {
+  static std::unordered_map<std::type_index, char> id_map;
+  return &id_map[type];
+}
+
+static std::map<TypeInfo, TypeInfo> &gradientTypeMap() {
+  static std::map<TypeInfo, TypeInfo> m;
+  return m;
+}
 
 const TypeInfo &TypeInfo::gradientType(const TypeInfo &type) {
-  auto it = g_gradient_type_map.find(type);
-  if (it != g_gradient_type_map.end()) {
+  auto &m = gradientTypeMap();
+  auto it = m.find(type);
+  if (it != m.end()) {
     return it->second;
   } else {
     return type;
@@ -22,7 +51,8 @@ void TypeInfo::registerGradientType(const TypeInfo &type,
                                     const TypeInfo &gradient) {
   // std::cout << "gradient type " << type.name() << " " << gradient.name()
   //            << std::endl;
-  g_gradient_type_map[type] = gradient;
+  auto &m = gradientTypeMap();
+  m[type] = gradient;
 }
 
 } // namespace tractor

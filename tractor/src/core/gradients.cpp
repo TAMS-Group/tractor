@@ -137,7 +137,7 @@ void buildGradients(const Program &src, Program &prep, Program *_fprop,
 
             {
               auto *move_op =
-                  Operator::find<compute, op_move>(op->arg(i).type());
+                  Operator::find<compute, op_move>({op->arg(i).typeInfo()});
               sum_instructions.push_back((uintptr_t)move_op);
               sum_instructions.push_back(inst.arg(i));
 
@@ -145,8 +145,8 @@ void buildGradients(const Program &src, Program &prep, Program *_fprop,
               sum_instructions.push_back(alloc_b);
             }
             {
-              auto *add_op = Operator::find<compute, op_add>(op->arg(i).type(),
-                                                             op->arg(i).type());
+              auto *add_op = Operator::find<compute, op_add>(
+                  {op->arg(i).typeInfo(), op->arg(i).typeInfo()});
               sum_instructions.push_back((uintptr_t)add_op);
 
               // sum_instructions.push_back(memory_size + op->arg(i).size());
@@ -216,7 +216,7 @@ void buildGradients(const Program &src, Program &prep, Program *_fprop,
             if (input_set.insert(inst.arg(i)).second) {
               if (op->arg(i).isInput()) {
                 auto *zero_op =
-                    Operator::find<compute, op_zero>(op->arg(i).type());
+                    Operator::find<compute, op_zero>({op->arg(i).typeInfo()});
                 instructions.emplace_back(zero_op);
                 instructions.emplace_back(inst.arg(i));
               }
@@ -275,14 +275,14 @@ void buildGradients(const Program &src, Program &prep, Program *_fprop,
 
     if (1) {
       for (auto &port : src.constants()) {
-        auto *zero_op = Operator::find<compute, op_zero>(
-            port.typeInfo().gradientType().type());
+        auto *zero_op =
+            Operator::find<compute, op_zero>({port.typeInfo().gradientType()});
         fprop.addCode(zero_op);
         fprop.addCode(port.address() + prep.memorySize());
       }
       for (auto &port : src.parameters()) {
-        auto *zero_op = Operator::find<compute, op_zero>(
-            port.typeInfo().gradientType().type());
+        auto *zero_op =
+            Operator::find<compute, op_zero>({port.typeInfo().gradientType()});
         fprop.addCode(zero_op);
         fprop.addCode(port.address() + prep.memorySize());
       }
@@ -395,7 +395,7 @@ void buildGradients(const Program &src, Program &prep, Program *_fprop,
     packPortOffsets(accu.outputs());
     for (size_t i = 0; i < aa.size(); i++) {
       auto *add_op =
-          Operator::find<compute, op_add>(aa[i].type(), bb[i].type());
+          Operator::find<compute, op_add>({aa[i].typeInfo(), bb[i].typeInfo()});
       accu.addCode(add_op);
       accu.addCode(aa[i].address());
       accu.addCode(bb[i].address());
@@ -714,14 +714,14 @@ void buildConstraints(const Program &prog, const Program &fprop,
     auto &port_info = port_info_pair.second;
 
     {
-      auto *move_op = Operator::find<compute, op_move>(port_info.type.type());
+      auto *move_op = Operator::find<compute, op_move>({port_info.type.typeInfo()});
       proj->addCode(move_op);
       proj->addCode(port_info.input);
       proj->addCode(port_info.output);
     }
 
     {
-      auto *zero_op = Operator::find<compute, op_zero>(port_info.type.type());
+      auto *zero_op = Operator::find<compute, op_zero>({port_info.type.typeInfo()});
 
       {
         barrier_init->addCode(zero_op);
@@ -941,14 +941,14 @@ void buildConstraints(const Program &prog, const Program &fprop,
     auto &port_info = port_info_pair.second;
 
     {
-      auto *move_op = Operator::find<compute, op_move>(port_info.type.type());
+      auto *move_op = Operator::find<compute, op_move>({port_info.type});
       proj->addCode(move_op);
       proj->addCode(port_info.input);
       proj->addCode(port_info.output);
     }
 
     {
-      auto *zero_op = Operator::find<compute, op_zero>(port_info.type.type());
+      auto *zero_op = Operator::find<compute, op_zero>({port_info.type});
 
       {
         barrier_init->addCode(zero_op);

@@ -27,7 +27,7 @@ template <class T, size_t Dimensions> class TensorArg : public ArgList {
   }
 
 public:
-  TensorArg(const void *base, const uintptr_t *offsets,
+  TensorArg(void *base, const uintptr_t *offsets,
             const std::array<size_t, Dimensions> &shape)
       : ArgList(base, offsets), _shape(shape) {}
   size_t dimensions() const { return _shape.size(); }
@@ -49,7 +49,7 @@ public:
 };
 
 template <class T, size_t N>
-TensorArg<T, N> bindTensorArg(const void *base, const uintptr_t **offsets,
+TensorArg<T, N> bindTensorArg(void *base, const uintptr_t **offsets,
                               const std::array<size_t, N> &shape) {
   TensorArg<T, N> ret(base, *offsets, shape);
   (*offsets) += ret.size();
@@ -94,7 +94,7 @@ Tensor<ActivationScalar> dense_mul_vec_mat(const Tensor<ActivationScalar> &a,
 
     const Operator *op = makeListOperator(
         name, label, arguments,
-        [](const void *base, const uintptr_t *offsets) {
+        [](void *base, const uintptr_t *offsets) {
           auto rows = bindArg<uint64_t>(base, &offsets);
           auto cols = bindArg<uint64_t>(base, &offsets);
           auto a = bindTensorArg<Batch, 1>(base, &offsets, {rows});
@@ -108,7 +108,7 @@ Tensor<ActivationScalar> dense_mul_vec_mat(const Tensor<ActivationScalar> &a,
             x(col) = s;
           }
         },
-        [](const void *base, const uintptr_t *offsets) {
+        [](void *base, const uintptr_t *offsets) {
           auto rows = bindArg<uint64_t>(base, &offsets);
           auto cols = bindArg<uint64_t>(base, &offsets);
           auto a = bindTensorArg<Batch, 1>(base, &offsets, {rows});
@@ -127,7 +127,7 @@ Tensor<ActivationScalar> dense_mul_vec_mat(const Tensor<ActivationScalar> &a,
             dx(col) = s;
           }
         },
-        [](const void *base, const uintptr_t *offsets) {
+        [](void *base, const uintptr_t *offsets) {
           auto rows = bindArg<uint64_t>(base, &offsets);
           auto cols = bindArg<uint64_t>(base, &offsets);
           auto a = bindTensorArg<Batch, 1>(base, &offsets, {rows});

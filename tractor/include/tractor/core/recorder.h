@@ -132,6 +132,8 @@ public:
   void goal(const TypeInfo &type, void *var, size_t priority = 0,
             const char *name = nullptr);
 
+  void constant(const TypeInfo &type, void *var);
+
   // void input(const Program::Input &input) { _inputs.push_back(input); }
   // void output(const Program::Output &output) { _outputs.push_back(output); }
   // void goal(const Program::Goal &goal) { _goals.push_back(goal); }

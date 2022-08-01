@@ -40,6 +40,7 @@ add_library(${LIBNAME}
     src/collision/shape.cpp
     src/collision/types.cpp
     src/core/allocator.cpp
+    src/core/any.cpp
     src/core/array.cpp
     src/core/batch.cpp
     src/core/buffer.cpp
@@ -63,7 +64,6 @@ add_library(${LIBNAME}
     src/engines/loop.cpp
     src/engines/parallel.cpp
     src/engines/simple.cpp
-    src/engines/test.cpp
     src/geometry/eigen.cpp
     src/geometry/fast.cpp
     src/geometry/ops.cpp
@@ -81,7 +81,6 @@ add_library(${LIBNAME}
     src/robot/jointstate.cpp
     src/robot/jointtypes.cpp
     src/robot/linkstate.cpp
-    # src/python/python.cpp
     src/robot/robot.cpp
     src/robot/robotinfo.cpp
     src/robot/robotmodel.cpp
@@ -94,29 +93,17 @@ add_library(${LIBNAME}
     src/solvers/pgd.cpp
     src/solvers/ps.cpp
     src/solvers/sq.cpp
+    src/tensor/newtensor.cpp
     src/tensor/tensor.cpp
     src/tensor/ops.cpp
-    src/test/test.cpp
 )
 add_dependencies(${LIBNAME} ${${LIBNAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
 target_link_libraries(${LIBNAME} ${catkin_LIBRARIES} ${BULLET_LIBRARIES})
-
 install(DIRECTORY include/tractor DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
-
 install(TARGETS ${LIBNAME} LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
-
-#install(TARGETS ${PROJECT_NAME} LIBRARY DESTINATION ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_PYTHON_DESTINATION})
-
-#message(warn ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_PYTHON_DESTINATION})
-
-#set_target_properties(${PROJECT_NAME} PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_PYTHON_DESTINATION})
-
-catkin_python_setup()
-
-#pybind11_add_module(tractor)
 
 pybind_add_module(tractor
   src/python/python.cpp
 )
 target_link_libraries(tractor PRIVATE libtractor ${catkin_LIBRARIES})
+set_target_properties(tractor PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_PYTHON_DESTINATION})

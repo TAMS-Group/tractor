@@ -2,6 +2,11 @@
 
 import time
 import tractor as tr
+
+print tr
+
+print tr.DefaultEngine()
+
 import tractor.types_double as tt
 
 a = tt.Scalar(3)
@@ -14,7 +19,7 @@ def f():
     x = tr.mul(a, b)
     x = tr.add(x, tt.Scalar(0.1))
     tr.output(x)
-    
+
 prog = tr.record(f)
 
 print prog.constants

@@ -92,13 +92,13 @@ public:
         : _type(type), _address(address), _offset(offset) {}
 
     template <class T, class... Args>
-    static inline Impl make(const Args &... args) {
+    static inline Impl make(const Args &...args) {
       return Impl(TypeInfo::get<T>(), args...);
     }
 
     inline const TypeInfo &typeInfo() const { return _type; }
     inline TypeInfo &typeInfo() { return _type; }
-    inline const std::type_index &type() const { return _type.type(); }
+    // inline const std::type_index &type() const { return _type.type(); }
     inline size_t size() const { return _type.size(); }
 
     inline uintptr_t address() const { return _address; }

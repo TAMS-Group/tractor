@@ -16,15 +16,51 @@ static thread_local Recorder *g_recorder_instance = nullptr;
 void Recorder::goal(const TypeInfo &type, void *var, size_t priority,
                     const char *name) {
   _goals.emplace_back(_outputs.size(), priority);
-  output(type, var, nullptr, name);
+  uintptr_t temp = (((uintptr_t)_alloc.alloc(type)) | 0x8000000000000000ul);
+  move(type, var, (void *)temp);
+  _outputs.emplace_back(type, temp, 0, 0);
   if (name) {
     _outputs.back().name() = name;
   }
 }
 
+void Recorder::constant(const TypeInfo &type, void *var) {
+
+  size_t start = _const_data.size();
+  _const_data.resize(start + type.size());
+  std::memcpy(_const_data.data() + start, var, type.size());
+
+  uintptr_t addr = _alloc.alloc(type);
+  _constants.emplace_back(type, addr, (uintptr_t)start);
+
+  uintptr_t temp = (addr | 0x8000000000000000ul);
+  move(type, (const void *)temp, var);
+}
+
+// void Recorder::constant(const TypeInfo &type, void *var) {
+//
+//   size_t start = _const_data.size();
+//   _const_data.resize(start + type.size());
+//   std::memcpy(_const_data.data() + start, var, type.size());
+//
+//   uintptr_t addr = _alloc.alloc(type);
+//   _constants.emplace_back(type, addr, (uintptr_t)start);
+//
+//   uintptr_t temp = (addr | 0x8000000000000000ul);
+//   move(type, (const void *)temp, var);
+// }
+
+// void Recorder::goal(const TypeInfo &type, void *var, size_t priority,
+//                     const char *name) {
+//   _goals.emplace_back(_outputs.size(), priority);
+//   output(type, var, nullptr, name);
+//   if (name) {
+//     _outputs.back().name() = name;
+//   }
+// }
+
 void Recorder::move(const TypeInfo &type, const void *from, void *to) {
-  const Operator *move_op = Operator::tryFind(
-      OpMode(typeid(compute *)), OpType(typeid(op_move *)), {type.type()});
+  const Operator *move_op = Operator::find<compute, op_move>({type});
   op(move_op);
   push((uintptr_t)from);
   push((uintptr_t)to);
@@ -206,11 +242,11 @@ static void precomputeConstants(Program &program) {
       } else {
         const_op_count++;
       }
-      inst.op()->functions().indirect(memory.data(), &inst.arg(0));
+      inst.op()->callIndirect(memory.data(), &inst.arg(0));
       for (size_t iarg = 0; iarg < inst.argumentCount(); iarg++) {
         if (inst.op()->arg(iarg).isOutput()) {
-          auto *move_op =
-              Operator::find<compute, op_move>(inst.op()->arg(iarg).type());
+          auto *move_op = Operator::find<compute, op_move>(
+              {inst.op()->arg(iarg).typeInfo()});
           auto new_addr = alloc.alloc(inst.op()->arg(iarg).typeInfo());
           new_insts.push_back(move_op);
           new_insts.push_back(new_addr);

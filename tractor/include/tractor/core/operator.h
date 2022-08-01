@@ -34,6 +34,7 @@ public:
     return std::hash<std::type_index>()(_type_index) ^
            std::hash<const void *>()(_pointer);
   }
+  const char *name() const { return _type_index.name(); }
 };
 
 class OpType : public OpTypeBase {
@@ -75,12 +76,13 @@ template <> struct std::hash<tractor::OpMode> {
 
 namespace tractor {
 
-typedef void (*LoopFunction)(const void *base, const uintptr_t *offsets,
+typedef void (*LoopFunction)(void *base, const uintptr_t *offsets,
                              size_t iterations);
 
-typedef void (*OpFunction)(const void *base, const uintptr_t *offsets);
+typedef void (*OpFunction)(void *base, const uintptr_t *offsets);
 
 struct OperatorFunctions {
+  std::vector<uint64_t> context;
   LoopFunction loop = nullptr;
   OpFunction indirect = nullptr;
   const void *direct = nullptr;
@@ -159,10 +161,22 @@ public:
       ret._type = TypeInfo::get<T>();
       return ret;
     }
+    static Argument makeInput(const TypeInfo &type) {
+      Argument ret;
+      ret._type = type;
+      ret._is_const = true;
+      return ret;
+    }
+    static Argument makeOutput(const TypeInfo &type) {
+      Argument ret;
+      ret._type = type;
+      ret._is_const = false;
+      return ret;
+    }
     size_t size() const { return _type.size(); }
     bool isInput() const { return _is_const; }
     bool isOutput() const { return !_is_const; }
-    const std::type_index &type() const { return _type.type(); }
+    // const std::type_index &type() const { return _type.type(); }
     const TypeInfo &typeInfo() const { return _type; }
     Argument makeReverse() const {
       Argument ret = *this;
@@ -195,10 +209,10 @@ protected:
   Operator(const std::string &name, const std::string &label,
            const OpMode &mode, const OpType &op, const OpGroup &group);
   virtual ~Operator();
-  template <class Mode, class Op, class... Args>
-  static const Operator *tryFind(const Args &...args) {
-    return tryFind(OpMode(typeid(Mode *)), OpType(typeid(Op *)), {args...});
-  }
+  // template <class Mode, class Op, class... Args>
+  // static const Operator *tryFind(const Args &...args) {
+  //   return tryFind(OpMode(typeid(Mode *)), OpType(typeid(Op *)), {args...});
+  // }
 
 public:
   Operator(const Operator &) = delete;
@@ -208,7 +222,9 @@ public:
   }
   inline const std::string &name() const { return _name; }
   inline const std::string &label() const { return _label; }
-  inline OperatorFunctions functions() const { return _functions; }
+  inline OperatorFunctions functionPointers() const { return _functions; }
+  void callIndirect(void *base, uintptr_t *offsets) const;
+  void invoke(const void *first, ...) const;
   inline size_t argumentCount() const { return _argument_count; }
   inline size_t argumentSize(size_t i) const { return _arguments[i].size(); }
   inline auto arguments() const { return ArrayRef<const Argument>(_arguments); }
@@ -234,23 +250,32 @@ public:
     }
     return op;
   }
-  template <class Mode, class Op, class... Args>
-  static const Operator *find(const Args &...args) {
-    auto *ret = tryFind<Mode, Op>(args...);
-    if (!ret) {
-      std::stringstream s;
-      s << "operator not found: " << typeid(Mode *).name() << " "
-        << typeid(Op *).name();
-      for (auto &arg : {args...}) {
-        s << " " << arg.name();
-      }
-      throw std::runtime_error(s.str());
-    }
-    return ret;
+  // template <class Mode, class Op, class... Args>
+  // static const Operator *find(const Args &...args) {
+  //   auto *ret = tryFind<Mode, Op>(args...);
+  //   if (!ret) {
+  //     std::stringstream s;
+  //     s << "operator not found: " << typeid(Mode *).name() << " "
+  //       << typeid(Op *).name();
+  //     for (auto &arg : {args...}) {
+  //       s << " " << arg.name();
+  //     }
+  //     throw std::runtime_error(s.str());
+  //   }
+  //   return ret;
+  // }
+  static const Operator *tryFind(const OpMode &mode, const OpType &op,
+                                 const std::initializer_list<TypeInfo> &args);
+  static const Operator *find(const OpMode &mode, const OpType &op,
+                              const std::initializer_list<TypeInfo> &args);
+  template <class Mode, class Op>
+  static const Operator *tryFind(const std::initializer_list<TypeInfo> &args) {
+    return tryFind(OpMode(typeid(Mode *)), OpType(typeid(Op *)), args);
   }
-  static const Operator *
-  tryFind(const OpMode &mode, const OpType &op,
-          const std::initializer_list<std::type_index> &args);
+  template <class Mode, class Op>
+  static const Operator *find(const std::initializer_list<TypeInfo> &args) {
+    return find(OpMode(typeid(Mode *)), OpType(typeid(Op *)), args);
+  }
   template <class Op> bool is() const { return _op == OpType(typeid(Op *)); }
   static std::vector<const Operator *> all();
 };
@@ -261,7 +286,7 @@ template <class Impl, class Mode, class Op, class Group>
 class OperatorImpl : public Operator {
   template <class... Args> struct Init {
     template <class Ret, size_t... Indices> struct Looper {
-      static void loop(const void *base, const uintptr_t *offsets,
+      static void loop(void *base, const uintptr_t *offsets,
                        size_t iterations) {
         for (size_t i = 0; i < iterations; i++) {
           *(Ret *)(void *)((uint8_t *)base + offsets[sizeof...(Indices)]) =
@@ -271,7 +296,7 @@ class OperatorImpl : public Operator {
           offsets += sizeof...(Indices) + 1;
         }
       }
-      static void indirect(const void *base, const uintptr_t *offsets) {
+      static void indirect(void *base, const uintptr_t *offsets) {
         *(Ret *)(void *)((uint8_t *)base + offsets[sizeof...(Indices)]) =
             Impl::call(*(typename std::decay<Args>::type
                              *)(void *)((uint8_t *)base + offsets[Indices])...);
@@ -284,7 +309,7 @@ class OperatorImpl : public Operator {
       }
     };
     template <size_t... Indices> struct Looper<void, Indices...> {
-      static void loop(const void *base, const uintptr_t *offsets,
+      static void loop(void *base, const uintptr_t *offsets,
                        size_t iterations) {
         for (size_t i = 0; i < iterations; i++) {
           Impl::call(*(
@@ -293,7 +318,7 @@ class OperatorImpl : public Operator {
           offsets += sizeof...(Indices);
         }
       }
-      static void indirect(const void *base, const uintptr_t *offsets) {
+      static void indirect(void *base, const uintptr_t *offsets) {
         Impl::call(
             *(typename std::decay<Args>::type *)(void *)((uint8_t *)base +
                                                          offsets[Indices])...);

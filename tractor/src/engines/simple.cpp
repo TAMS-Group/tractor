@@ -11,9 +11,12 @@ void SimpleEngine::ExecutableImpl::_compile(const Program &program) {
   for (auto &instp : program.instructions()) {
     Instruction inst;
     auto *op = instp.op();
-    inst.op = op->functions().indirect;
+    inst.op = op->functionPointers().indirect;
     inst.base = _arguments.size();
     _instructions.push_back(inst);
+    for (auto &v : op->functionPointers().context) {
+      _arguments.push_back(v);
+    }
     for (auto &arg : instp.args()) {
       _arguments.push_back(arg);
     }

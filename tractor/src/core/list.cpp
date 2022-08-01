@@ -16,7 +16,7 @@ const Operator *
 makeListOperator(const std::string &name, const std::string &label,
                  const OpMode &mode, const OpGroup &group,
                  const std::vector<Operator::Argument> &args,
-                 void (*callback)(const void *base, const uintptr_t *offsets)) {
+                 void (*callback)(void *base, const uintptr_t *offsets)) {
   static std::unordered_map<std::string, std::shared_ptr<Operator>> map;
   if (map.find(name) == map.end()) {
     map[name] = std::make_shared<ListOperator>(name, label, mode, group, args,
@@ -49,12 +49,12 @@ makeReverseArgs(const ArrayRef<const Operator::Argument> &args) {
   return ret;
 }
 
-const Operator *makeListOperator(
-    const std::string &name, const std::string &label,
-    const std::vector<Operator::Argument> &args,
-    void (*fun_compute)(const void *base, const uintptr_t *offsets),
-    void (*fun_forward)(const void *base, const uintptr_t *offsets),
-    void (*fun_reverse)(const void *base, const uintptr_t *offsets)) {
+const Operator *
+makeListOperator(const std::string &name, const std::string &label,
+                 const std::vector<Operator::Argument> &args,
+                 void (*fun_compute)(void *base, const uintptr_t *offsets),
+                 void (*fun_forward)(void *base, const uintptr_t *offsets),
+                 void (*fun_reverse)(void *base, const uintptr_t *offsets)) {
   auto group = makeOpGroup(name);
   auto *ret = makeListOperator(name, label, OpMode(typeid(compute *)), group,
                                args, fun_compute);
