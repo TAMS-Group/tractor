@@ -4,6 +4,7 @@
 
 #include <tractor/core/allocator.h>
 #include <tractor/core/any.h>
+#include <tractor/core/lambda.h>
 #include <tractor/core/list.h>
 #include <tractor/core/var.h>
 
@@ -38,272 +39,143 @@ public:
   bool operator!=(const TensorShape &other) const {
     return _data != other._data;
   }
+  bool empty() const { return _data.empty(); }
 };
 
-TypeInfo makeTensorType(const TypeInfo &element, const TensorShape &shape);
-
-template <class T> class Tensor2 {
-  TensorShape _shape;
-  Any _data;
-  template <class... Indices> size_t _index(const Indices &...indices) const {
-    if (_shape.dimensions() != sizeof...(Indices)) {
-      throw std::runtime_error("incorrect number of tensor index dimensions");
-    }
-    std::array<size_t, sizeof...(Indices)> ii = {indices...};
-    size_t ret = 0;
-    for (size_t i = 0; i < sizeof...(Indices); i++) {
-      if (ii.at(i) >= _shape.at(i)) {
-        throw std::runtime_error("tensor index out of range");
-      }
-      ret *= _shape[i];
-      ret += ii[i];
-    }
-    return ret;
-  }
+class TensorOperators {
+  const Operator *_add = nullptr;
+  const Operator *_zero = nullptr;
+  const Operator *_move = nullptr;
 
 public:
-  const T *data() const { return (const T *)_data.data(); }
-  T *data() { return (T *)_data.data(); }
+  TensorOperators() {}
+  TensorOperators(const TypeInfo &element_type, const TypeInfo &tensor_type,
+                  const TensorShape &tensor_shape,
+                  void (*add)(size_t, const void *, const void *, void *));
+  const Operator *add() const { return _add; }
+  const Operator *zero() const { return _zero; }
+  const Operator *move() const { return _move; }
+};
+
+class TensorInfo {
+  const std::string _name;
+  TensorShape _shape;
+  TypeInfo _type;
+  TensorOperators _operators;
+  TensorInfo(const std::string &name, const TypeInfo &element_type,
+             const TensorShape &shape,
+             void (*add)(size_t, const void *, const void *, void *));
+  static const TensorInfo *
+  _make(const TypeInfo &element, const TensorShape &shape,
+        void (*add)(size_t, const void *, const void *, void *));
+
+public:
+  const std::string &name() const { return _name; }
   const TensorShape &shape() const { return _shape; }
+  const TypeInfo &type() const { return _type; }
+  template <class T> static const TensorInfo *make(const TensorShape &shape) {
+    return _make(TypeInfo::get<T>(), shape,
+                 [](size_t n, const void *va, const void *vb, void *vx) {
+                   const T *a = (const T *)va;
+                   const T *b = (const T *)vb;
+                   T *x = (T *)vx;
+                   for (size_t i = 0; i < n; i++) {
+                     x[i] = a[i] + b[i];
+                   }
+                 });
+  }
+  const TensorOperators &operators() const { return _operators; }
+};
+
+template <class T> class Tensor2 {
+
+  const TensorInfo *_tensor_info = nullptr;
+  Any _data;
+
+  bool _throwIfEmpty() const {
+    if (empty()) {
+      throw std::runtime_error("tensor not initialized");
+    }
+  }
+
+  // template <class... Indices> size_t _index(const Indices &...indices) const
+  // {
+  //   auto &shape = this->shape();
+  //   if (shape.dimensions() != sizeof...(Indices)) {
+  //     throw std::runtime_error("incorrect number of tensor index
+  //     dimensions");
+  //   }
+  //   std::array<size_t, sizeof...(Indices)> ii = {indices...};
+  //   size_t ret = 0;
+  //   for (size_t i = 0; i < sizeof...(Indices); i++) {
+  //     if (ii.at(i) >= shape.at(i)) {
+  //       throw std::runtime_error("tensor index out of range");
+  //     }
+  //     ret *= shape[i];
+  //     ret += ii[i];
+  //   }
+  //   return ret;
+  // }
+
+public:
+  inline bool empty() const { return _tensor_info == nullptr; }
+  const T *data() const {
+    _throwIfEmpty();
+    return (const T *)_data.data();
+  }
+  T *data() {
+    _throwIfEmpty();
+    return (T *)_data.data();
+  }
+  TensorShape shape() const {
+    if (empty()) {
+      return TensorShape();
+    } else {
+      return _tensor_info->shape();
+    }
+  }
   Tensor2() {}
   Tensor2(const TensorShape &shape) {
-    _shape = shape;
-    _data = Any(makeTensorType(TypeInfo::get<T>(), shape));
+    if (!shape.empty()) {
+      _tensor_info = TensorInfo::make<T>(shape);
+      _data = Any(type());
+    }
   }
   Tensor2(const TensorShape &shape, const T *data) {
-    _shape = shape;
-    _data = Any(makeTensorType(TypeInfo::get<T>(), shape), data);
+    if (!shape.empty()) {
+      _tensor_info = TensorInfo::make<T>(shape);
+      _data = Any(type(), data);
+    }
   }
-  template <class... Indices>
-  auto &operator()(const Indices &...indices) const {
-    return data()[_index(indices...)];
+  TypeInfo type() const {
+    if (empty()) {
+      return TypeInfo();
+    } else {
+      return _tensor_info->type();
+    }
   }
-  template <class... Indices> auto &operator()(const Indices &...indices) {
-    return data()[_index(indices...)];
-  }
-  TypeInfo type() const { return makeTensorType(TypeInfo::get<T>(), shape()); }
-};
-
-// template <class Lambda, class... Args>
-// void invokeLambda(const Lambda &lambda, void *base, const uintptr_t *offsets,
-//                   decltype(Lambda::template operator()<Args...>) *v =
-//                   nullptr) {
-//
-// }
-
-// template <class Lambda, class... Args>
-// void invokeLambda(const Lambda &lambda, void *base, const uintptr_t *offsets,
-//                   decltype(lambda()) *v = nullptr) {}
-
-template <class Functor> struct PointerOp : Operator {
-  Functor _functor;
-  /*template <size_t... Indices>
-  void init(const std::integer_sequence<size_t, Indices...> &indices) {
-    _functions.indirect = [](void *base, const uintptr_t *offsets) {
-      const PointerOp *_this = (const PointerOp *)offsets[0];
-      _this->functor((Args)(void *)((uint8_t *)base + offsets[Indices + 1])...);
-    };
-  }*/
-  // template <class..Args> struct Init3 {
-  //   static void indirect(void *base, const uintptr_t *offsets) {
-  //     const PointerOp *_this = (const PointerOp *)offsets[0];
-  //     _this->functor((Args)(void *)((uint8_t *)base + offsets[Indices +
-  //     1])...);
-  //   };
-  // };
-  // template <class F, class... Args> void __init(void (F ::*f)(Args...) const)
-  // {
-  //   _functions.indirect = &Init3<Args...>::indirect;
-  // }
-  template <class F, class... Args, size_t... Indices>
-  void __init(void (F ::*f)(Args...) const,
-              const std::integer_sequence<size_t, Indices...> &indices) {
-    _functions.indirect = [](void *base, const uintptr_t *offsets) {
-      const PointerOp *_this = (const PointerOp *)offsets[0];
-      _this->_functor(
-          (Args)(void *)((uint8_t *)base + offsets[Indices + 1])...);
-    };
-  }
-  template <class F, class... Args> void __init(void (F ::*f)(Args...) const) {
-    __init(f, std::make_index_sequence<sizeof...(Args)>());
-  }
-  // template <class... Args>
-  // void __init(const std::function<void(Args...)> &args) {
-  //   //
-  // }
-  PointerOp(const std::string &name, const std::string &label,
-            const OpMode &mode, const OpType &op, const OpGroup &group,
-            const std::vector<Operator::Argument> &args, const Functor &functor)
-      : Operator(name, label, mode, op, group), _functor(functor) {
-    std::cout << "make op " << name << std::endl;
-    _arguments = args;
-    // init(std::make_index_sequence<sizeof...(Args)>());
-    // _functions.indirect = [](void *base, const uintptr_t *offsets) {
-    //   const PointerOp *_this = (const PointerOp *)offsets[0];
-    //   invokeLambda(_this->functor, base, offsets);
-    // };
-    //__init(functor);
-    __init(&Functor::operator());
-    std::vector<uintptr_t> context;
-    context.push_back((uintptr_t)this);
-    _functions.context = context;
+  const TensorInfo &info() const {
+    if (!_tensor_info) {
+      throw std::runtime_error("tensor is empty");
+    }
+    return *_tensor_info;
   }
 };
-
-template <class Functor>
-const Operator *makePointerOp(const std::string &name, const std::string &label,
-                              const OpMode &mode, const OpType &op,
-                              const OpGroup &group,
-                              const std::vector<Operator::Argument> &args,
-                              const Functor &functor) {
-  static std::unordered_map<std::string, const Operator *> map;
-  if (!map[name]) {
-    map[name] =
-        new PointerOp<Functor>(name, label, mode, op, group, args, functor);
-  }
-  return map[name];
-}
-
-template <class Compute, class Forward, class Reverse>
-const Operator *
-makePointerOp(const std::string &name, const std::string &label,
-              const OpType &type, const std::vector<Operator::Argument> &args,
-              const Compute &fun_compute, const Forward &fun_forward,
-              const Reverse &fun_reverse) {
-
-  auto group = makeOpGroup(name);
-
-  auto *op = makePointerOp(name, label, OpMode(typeid(compute *)), type, group,
-                           args, fun_compute);
-
-  {
-    std::vector<Operator::Argument> aa;
-    for (auto &a : args)
-      aa.push_back(a.makeInput());
-    for (auto &a : args)
-      aa.push_back(a);
-    makePointerOp("forward_" + name, label, OpMode(typeid(forward *)), type,
-                  group, aa, fun_forward);
-  }
-
-  {
-    std::vector<Operator::Argument> aa;
-    for (auto &a : args)
-      aa.push_back(a.makeInput());
-    for (auto &a : args)
-      aa.push_back(a.makeReverse());
-    makePointerOp("reverse_" + name, label, OpMode(typeid(reverse *)), type,
-                  group, aa, fun_reverse);
-  }
-
-  return op;
-}
-
-template <class Compute, class Forward, class Reverse>
-const Operator *
-makePointerOp(const std::string &op_name, const std::string &type_name,
-              const std::vector<Operator::Argument> &args,
-              const Compute &fun_compute, const Forward &fun_forward,
-              const Reverse &fun_reverse) {
-
-  auto *op =
-      makePointerOp(op_name + "_" + type_name, op_name,
-                    OpMode(typeid(compute *)), makeOpType(op_name),
-                    makeOpGroup(op_name + "_" + type_name), args, fun_compute);
-
-  {
-    std::vector<Operator::Argument> aa;
-    for (auto &a : args)
-      aa.push_back(a.makeInput());
-    for (auto &a : args)
-      aa.push_back(a);
-    makePointerOp("forward_" + op_name + "_" + type_name, op_name,
-                  OpMode(typeid(forward *)), makeOpType(op_name),
-                  makeOpGroup(op_name + "_" + type_name), aa, fun_forward);
-  }
-
-  {
-    std::vector<Operator::Argument> aa;
-    for (auto &a : args)
-      aa.push_back(a.makeInput());
-    for (auto &a : args)
-      aa.push_back(a.makeReverse());
-    makePointerOp("reverse_" + op_name + "_" + type_name, op_name,
-                  OpMode(typeid(reverse *)), makeOpType(op_name),
-                  makeOpGroup(op_name + "_" + type_name), aa, fun_reverse);
-  }
-
-  return op;
-}
-
-template <class T>
-const Operator *makeTensorAddOperator(const TensorShape &shape) {
-  auto tensor_type = makeTensorType(TypeInfo::get<T>(), shape);
-  size_t size = shape.elementCount();
-  return makePointerOp(
-      "add", tensor_type.name(),
-      {
-          Operator::Argument::makeInput(tensor_type),
-          Operator::Argument::makeInput(tensor_type),
-          Operator::Argument::makeOutput(tensor_type),
-      },
-      [size](const T *a, const T *b, T *x) {
-        std::cout << " > c tensor add " << size << std::endl;
-        for (size_t i = 0; i < size; i++) {
-          x[i] = a[i] + b[i];
-        }
-      },
-      [size](const T *a, const T *b, const T *x, const T *da, const T *db,
-             T *dx) { std::cout << " > f tensor add " << size << std::endl; },
-      [size](const T *a, const T *b, const T *x, T *da, T *db, const T *dx) {
-        std::cout << " > r tensor add " << size << std::endl;
-      });
-}
 
 template <class T>
 void add(const Tensor2<T> &a, const Tensor2<T> &b, Tensor2<T> &x) {
-  auto *op = makeTensorAddOperator<T>(a.shape());
+  if (a.shape() != b.shape()) {
+    throw std::invalid_argument("tensor shape mismatch");
+  }
   x = Tensor2<T>(a.shape());
-  op->invoke(a.data(), b.data(), x.data());
+  auto *op_add = a.info().operators().add();
+  op_add->invoke(a.data(), b.data(), x.data());
   if (auto *rec = Recorder::instance()) {
-    rec->op(op);
+    rec->op(op_add);
     rec->push((uintptr_t)a.data());
     rec->push((uintptr_t)b.data());
     rec->push((uintptr_t)x.data());
   }
 }
-
-// template <class T> class TensorStorage2 {
-//   TensorShape _shape;
-//   std::vector<T> _data;
-//
-// protected:
-//   void _create(const TensorShape &shape) {
-//     _shape = shape;
-//     _data.clear();
-//     _data.resize(shape.elementCount(), 0);
-//   }
-//
-// public:
-//   const T *data() const { return _data.data(); }
-//   T *data() { return _data.data(); }
-//   const TensorShape &shape() const { return _shape; }
-// };
-//
-// template <class T> class TensorStorage2<Var<T>> {
-//   TensorShape _shape;
-//   Any _data;
-//
-// protected:
-//   void _create(const TensorShape &shape) {
-//     _shape = shape;
-//     _data = Any(makeTensorType(TypeInfo::get<T>(), shape));
-//   }
-//
-// public:
-//   const T *data() const { return _data.data(); }
-//   T *data() { return _data.data(); }
-//   const TensorShape &shape() const { return _shape; }
-// };
 
 } // namespace tractor

@@ -48,6 +48,7 @@ add_library(${LIBNAME}
     src/core/eigen.cpp
     src/core/engine.cpp
     src/core/gradients.cpp
+    src/core/lambda.cpp
     src/core/linesearch.cpp
     src/core/list.cpp
     src/core/matrix.cpp

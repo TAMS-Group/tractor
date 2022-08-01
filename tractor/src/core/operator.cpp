@@ -22,11 +22,19 @@ struct OperatorRegistry {
 };
 
 void Operator::callIndirect(void *base, uintptr_t *offsets) const {
-  std::vector<uintptr_t> args = _functions.context;
-  for (size_t i = 0; i < _arguments.size(); i++) {
-    args.push_back(offsets[i]);
+  if (_functions.context.empty()) {
+    _functions.indirect(base, offsets);
+  } else {
+    std::vector<uintptr_t> args = _functions.context;
+    for (size_t i = 0; i < _arguments.size(); i++) {
+      args.push_back(offsets[i]);
+    }
+    _functions.indirect(base, args.data());
   }
-  _functions.indirect(base, args.data());
+}
+
+void Operator::callIndirect(void **args) const {
+  callIndirect(nullptr, reinterpret_cast<uintptr_t *>(args));
 }
 
 void Operator::invoke(const void *first, ...) const {

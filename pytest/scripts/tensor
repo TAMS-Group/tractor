@@ -6,39 +6,16 @@ import tractor.types_double as tt
 import math
 import copy
 
-#print tt.Tensor([1,2,3,4,5,6,7]).value
-
-# ta = tt.Tensor([[1,2],[3,4]])
-# tb = tt.Tensor([[1,2],[3,4]])
-
-#tx = tt.Tensor([[1,2],[3,4]])
-
 ta = tt.Tensor([[1,2],[3,123]])
-print "init ta.value", ta.value
-
-#tx = tt.Tensor([[1,2],[3,4]])
-#tb = tt.Tensor([[1,2],[3,4]])
-
-
 
 def f():
     global tx
-
-    print "bla"
-
     tr.input(ta)
-
     tb = tt.Tensor([[1,2],[3,99]])
-
-    #tb = tt.Tensor([[1,2],[3,99]])
-
-    #tr.goal(tr.add(ta, tb))
-
     tx = tr.add(ta, tb)
-    tr.output(tx)
+    tr.goal(tx)
 
 prog = tr.record(f)
-
 
 print prog.constants
 print prog.inputs
@@ -64,14 +41,10 @@ executable.run(memory)
 print "tx.value", tx.value
 print ""
 
-
-
 solver = tt.LeastSquaresSolver(tr.DefaultEngine())
-#solver = tt.GradientDescentSolver(tr.DefaultEngine())
 solver.compile(prog)
-#solver.timeout = 1
 solver.tolerance = 1e-9
 solver.regularization = 0.01
-print a.value, b.value
+print ta.value
 solver.solve()
-print a.value, b.value, math.tanh(a.value) + math.tanh(b.value) + 1
+print ta.value

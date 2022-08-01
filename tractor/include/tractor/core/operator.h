@@ -224,6 +224,7 @@ public:
   inline const std::string &label() const { return _label; }
   inline OperatorFunctions functionPointers() const { return _functions; }
   void callIndirect(void *base, uintptr_t *offsets) const;
+  void callIndirect(void **args) const;
   void invoke(const void *first, ...) const;
   inline size_t argumentCount() const { return _arguments.size(); }
   inline size_t argumentSize(size_t i) const { return _arguments[i].size(); }
@@ -250,20 +251,6 @@ public:
     }
     return op;
   }
-  // template <class Mode, class Op, class... Args>
-  // static const Operator *find(const Args &...args) {
-  //   auto *ret = tryFind<Mode, Op>(args...);
-  //   if (!ret) {
-  //     std::stringstream s;
-  //     s << "operator not found: " << typeid(Mode *).name() << " "
-  //       << typeid(Op *).name();
-  //     for (auto &arg : {args...}) {
-  //       s << " " << arg.name();
-  //     }
-  //     throw std::runtime_error(s.str());
-  //   }
-  //   return ret;
-  // }
   static const Operator *tryFind(const OpMode &mode, const OpType &op,
                                  const std::initializer_list<TypeInfo> &args);
   static const Operator *find(const OpMode &mode, const OpType &op,

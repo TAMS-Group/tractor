@@ -15,6 +15,8 @@
 
 namespace tractor {
 
+namespace py = pybind11;
+
 class PyInstruction {
   std::shared_ptr<Program> _program;
   Program::InstructionIterator<Program::Instruction> _iterator;

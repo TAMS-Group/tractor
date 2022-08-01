@@ -12,7 +12,13 @@ def f():
     a = tt.Scalar(3)
     tr.input(a)
     tr.input(b)
-    tr.goal(tr.add(tr.add(tr.tanh(a), tr.tanh(b)), tt.Scalar(1)))
+    #tr.goal(tr.mul(a, 0.01))
+    #print " - add", tr.add(a, 0.1)
+    #print " - +", a + 0.1
+    #tr.goal(tr.add(a, 0.1) * tt.Scalar(0.01))
+    tr.goal(a * tt.Scalar(0.01) + 0.01)
+    tr.goal(b * tt.Scalar(0.01))
+    tr.goal(tr.tanh(a) + tr.tanh(b) - tt.Scalar(0.1))
 
 prog = tr.record(f)
 
@@ -27,14 +33,14 @@ solver = tt.LeastSquaresSolver(tr.DefaultEngine())
 solver.compile(prog)
 
 #solver.timeout = 1
-solver.tolerance = 1e-9
+solver.tolerance = 1e-12
 solver.regularization = 0.01
 
 print a.value, b.value
 
 solver.solve()
 
-print a.value, b.value, math.tanh(a.value) + math.tanh(b.value) + 1
+print a.value, b.value, math.tanh(a.value) + math.tanh(b.value) - 0.1
 
 # for i in range(100):
 #     print a.value, b.value, math.tanh(a.value) + math.tanh(b.value) + 1

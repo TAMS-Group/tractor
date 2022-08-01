@@ -16,11 +16,15 @@ def f():
     global x
     tr.input(a)
     tr.input(b)
-    x = tr.mul(a, b)
-    x = tr.add(x, tt.Scalar(0.1))
+    x = tr.mul(a, b) + tt.Scalar(0.3)
+    x += tt.Scalar(0.2)
     tr.output(x)
 
+print "a"
+
 prog = tr.record(f)
+
+print "b"
 
 print prog.constants
 print prog.inputs
@@ -31,6 +35,7 @@ engine = tr.DefaultEngine()
 memory = engine.createMemory()
 executable = engine.compile(prog)
 
+print "x"
 print x.value
 
 a.value = 2

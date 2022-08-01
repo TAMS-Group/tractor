@@ -5,9 +5,45 @@
 #include <tractor/core/ops.h>
 #include <tractor/core/recorder.h>
 
+#include <stdarg.h>
+
 namespace tractor {
 
-const TypeInfo &Any::type() const { return _type; }
+Any operator+(const Any &a, const Any &b) { return Any::call<op_add>(a, b); }
+Any operator-(const Any &a, const Any &b) { return Any::call<op_sub>(a, b); }
+Any operator*(const Any &a, const Any &b) { return Any::call<op_mul>(a, b); }
+Any operator/(const Any &a, const Any &b) { return Any::call<op_div>(a, b); }
+
+Any Any::_call(const Operator *op, size_t n, ...) {
+  va_list va;
+  va_start(va, n);
+  Any ret;
+  std::vector<void *> args;
+  for (size_t i = 0; i < n; i++) {
+    args.push_back(va_arg(va, Any *)->data());
+  }
+  if (args.size() < op->argumentCount()) {
+    ret = Any(op->arg(args.size()).typeInfo());
+    args.push_back(ret.data());
+  }
+  if (args.size() != op->argumentCount()) {
+    throw std::runtime_error("function signature mismatch");
+  }
+  op->callIndirect(args.data());
+  if (auto *rec = Recorder::instance()) {
+    rec->op(op);
+    for (auto &a : args) {
+      rec->push((uintptr_t)a);
+    }
+  }
+  return ret;
+}
+
+void Any::_check() const {
+  if (empty()) {
+    throw std::runtime_error("variable is null");
+  }
+}
 
 Any::Any(const TypeInfo &type) {
   _type = type;
@@ -29,18 +65,21 @@ Any::Any(const TypeInfo &type, const void *data) {
 Any::Any(const Any &other) {
   _type = other._type;
   _data = other._data;
-  _copy(_type, other._data.data(), _data.data());
+  if (!other.empty()) {
+    _copy(_type, other._data.data(), _data.data());
+  }
 }
 
 Any &Any::operator=(const Any &other) {
   _type = other._type;
   _data = other._data;
-  _copy(_type, other._data.data(), _data.data());
+  if (!other.empty()) {
+    _copy(_type, other._data.data(), _data.data());
+  }
   return *this;
 }
 
 void Any::_copy(const TypeInfo &type, const void *from, void *to) {
-  // std::cout << "begin move" << std::endl;
   const Operator *move_op = Operator::find(OpMode(typeid(compute *)),
                                            OpType(typeid(op_move *)), {type});
   std::memcpy(to, from, type.size());
@@ -49,7 +88,6 @@ void Any::_copy(const TypeInfo &type, const void *from, void *to) {
     rec->push((uintptr_t)from);
     rec->push((uintptr_t)to);
   }
-  // std::cout << "end move" << std::endl;
 }
 
 } // namespace tractor
