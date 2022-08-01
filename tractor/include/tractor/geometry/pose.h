@@ -40,16 +40,23 @@ public:
     ret.translation() = ret.orientation() * -_translation;
     return ret;
   }
+  // std::string str() const {
+  //   std::stringstream ss;
+  //   ss << "Pose(" << translation() << "," << orientation() << ")";
+  //   return ss.str();
+  // }
 };
+
+template <class T> std::ostream &operator<<(std::ostream &s, const Pose<T> &p) {
+  return s << "[" << p.translation() << "," << p.orientation() << "]";
+  // return s << "Pose(" << pose.translation() << "," << pose.orientation() <<
+  // ")";
+}
 
 template <class T, size_t S>
 inline Pose<T> indexBatch(const Pose<Batch<T, S>> &pose, size_t i) {
   return Pose<T>(indexBatch(pose.translation(), i),
                  indexBatch(pose.orientation(), i));
-}
-
-template <class T> auto &operator<<(std::ostream &stream, const Pose<T> &p) {
-  return stream << "[ " << p.translation() << " " << p.orientation() << " ]";
 }
 
 template <class T> Pose<T> operator*(const Pose<T> &a, const Pose<T> &b) {
@@ -64,7 +71,7 @@ template <class T> Vector3<T> operator*(const Pose<T> &a, const Vector3<T> &b) {
 }
 
 template <class T>
-Pose<T> fg_angle_axis_pose(const T &angle, const Vector3<T> &axis) {
+Pose<T> angle_axis_pose(const T &angle, const Vector3<T> &axis) {
   Pose<T> ret;
   ret.translation().setZero();
   auto &quat = ret.orientation();
@@ -78,8 +85,8 @@ Pose<T> fg_angle_axis_pose(const T &angle, const Vector3<T> &axis) {
 }
 
 template <class T>
-Pose<T> fg_pose_angle_axis_pose(const Pose<T> &parent, const T &angle,
-                                const Vector3<T> &axis) {
+Pose<T> pose_angle_axis_pose(const Pose<T> &parent, const T &angle,
+                             const Vector3<T> &axis) {
 
   Quaternion<T> quat;
   T s = std::sin(angle * T(0.5));
@@ -95,31 +102,29 @@ Pose<T> fg_pose_angle_axis_pose(const Pose<T> &parent, const T &angle,
   return ret;
 }
 
-template <class T> Vector3<T> fg_pose_translation(const Pose<T> &pose) {
+template <class T> Vector3<T> pose_translation(const Pose<T> &pose) {
   return pose.translation();
 }
 
-template <class T> Quaternion<T> fg_pose_orientation(const Pose<T> &pose) {
+template <class T> Quaternion<T> pose_orientation(const Pose<T> &pose) {
   return pose.orientation();
 }
 
-template <class T> Pose<T> fg_translation_pose(const Vector3<T> &translation) {
+template <class T> Pose<T> translation_pose(const Vector3<T> &translation) {
   Pose<T> pose;
   pose.translation() = translation;
   pose.orientation().setIdentity();
   return pose;
 }
 
-template <class T>
-Twist<T> fg_translation_twist(const Vector3<T> &translation) {
+template <class T> Twist<T> translation_twist(const Vector3<T> &translation) {
   Twist<T> twist;
   twist.translation() = translation;
   twist.rotation().setZero();
   return twist;
 }
 
-template <class T>
-Pose<T> fg_orientation_pose(const Quaternion<T> &orientation) {
+template <class T> Pose<T> orientation_pose(const Quaternion<T> &orientation) {
   Pose<T> pose;
   pose.orientation() = orientation;
   pose.translation().setZero();
@@ -127,8 +132,7 @@ Pose<T> fg_orientation_pose(const Quaternion<T> &orientation) {
 }
 
 template <class T>
-Pose<T> fg_pose_translate(const Pose<T> &parent,
-                          const Vector3<T> &translation) {
+Pose<T> pose_translate(const Pose<T> &parent, const Vector3<T> &translation) {
   Pose<T> pose;
   pose.orientation() = parent.orientation();
   pose.translation() =
@@ -136,12 +140,11 @@ Pose<T> fg_pose_translate(const Pose<T> &parent,
   return pose;
 }
 
-template <class T>
-Twist<T> fg_pose_residual(const Pose<T> &a, const Pose<T> &b) {
+template <class T> Twist<T> pose_residual(const Pose<T> &a, const Pose<T> &b) {
   Twist<T> x;
 
   // x.translation() = a.translation() - b.translation();
-  // x.rotation() = fg_quat_residual(a.orientation().inverse() *
+  // x.rotation() = quat_residual(a.orientation().inverse() *
   // b.orientation());
 
   // residual * a = b
@@ -149,7 +152,7 @@ Twist<T> fg_pose_residual(const Pose<T> &a, const Pose<T> &b) {
   // a^-1 * residual^-1 = b^-1
   // residual  = a * b^-1
   x.translation() = b.translation() - a.translation();
-  x.rotation() = -fg_quat_residual(a.orientation() * b.orientation().inverse());
+  x.rotation() = -quat_residual(a.orientation() * b.orientation().inverse());
 
   return x;
 }

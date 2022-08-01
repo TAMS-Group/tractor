@@ -16,15 +16,14 @@ TRACTOR_VAR_OP(cross)
 
 // ---------------------------------------------------------
 
-TRACTOR_OP_T(fg_mat3, move, (const Matrix3<T> &v), { return Matrix3<T>(v); })
-TRACTOR_D_T(prepare, fg_mat3, move, (const Matrix3<T> &a, const Matrix3<T> &x),
-            {})
-TRACTOR_D_T(forward, fg_mat3, move, (const Matrix3<T> &da, Matrix3<T> &dx),
+TRACTOR_OP_T(mat3, move, (const Matrix3<T> &v), { return Matrix3<T>(v); })
+TRACTOR_D_T(prepare, mat3, move, (const Matrix3<T> &a, const Matrix3<T> &x), {})
+TRACTOR_D_T(forward, mat3, move, (const Matrix3<T> &da, Matrix3<T> &dx),
             { dx = da; })
-TRACTOR_D_T(reverse, fg_mat3, move, (Matrix3<T> & da, const Matrix3<T> &dx),
+TRACTOR_D_T(reverse, mat3, move, (Matrix3<T> & da, const Matrix3<T> &dx),
             { da = dx; })
 
-TRACTOR_OP_T(fg_mat3_vec3, mul, (const Matrix3<T> &a, const Vector3<T> &b), {
+TRACTOR_OP_T(mat3_vec3, mul, (const Matrix3<T> &a, const Vector3<T> &b), {
   // return a * b;
   Vector3<T> x = Vector3<T>::Zero();
   for (size_t row = 0; row < 3; row++) {
@@ -34,7 +33,7 @@ TRACTOR_OP_T(fg_mat3_vec3, mul, (const Matrix3<T> &a, const Vector3<T> &b), {
   }
   return x;
 })
-TRACTOR_D_T(forward, fg_mat3_vec3, mul,
+TRACTOR_D_T(forward, mat3_vec3, mul,
             (const Matrix3<T> &pa, const Vector3<T> &pb, const Matrix3<T> &px,
              const Matrix3<T> &da, const Vector3<T> &db, Vector3<T> &dx),
             {
@@ -47,7 +46,7 @@ TRACTOR_D_T(forward, fg_mat3_vec3, mul,
                 }
               }
             })
-TRACTOR_D_T(reverse, fg_mat3_vec3, mul,
+TRACTOR_D_T(reverse, mat3_vec3, mul,
             (const Matrix3<T> &pa, const Vector3<T> &pb, const Matrix3<T> &px,
              Matrix3<T> &da, Vector3<T> &db, const Vector3<T> &dx),
             {
@@ -61,83 +60,81 @@ TRACTOR_D_T(reverse, fg_mat3_vec3, mul,
               }
             })
 
-TRACTOR_OP_T(fg_mat3, add, (const Matrix3<T> &a, const Matrix3<T> &b),
+TRACTOR_OP_T(mat3, add, (const Matrix3<T> &a, const Matrix3<T> &b),
              { return a + b; })
-TRACTOR_D_T(prepare, fg_mat3, add,
+TRACTOR_D_T(prepare, mat3, add,
             (const Matrix3<T> &a, const Matrix3<T> &b, const Matrix3<T> &x), {})
-TRACTOR_D_T(forward, fg_mat3, add,
+TRACTOR_D_T(forward, mat3, add,
             (const Matrix3<T> &da, const Matrix3<T> &db, Matrix3<T> &dx),
             { dx = da + db; })
-TRACTOR_D_T(reverse, fg_mat3, add,
+TRACTOR_D_T(reverse, mat3, add,
             (Matrix3<T> & da, Matrix3<T> &db, const Matrix3<T> &dx), {
               da = dx;
               db = dx;
             })
 
-TRACTOR_OP_T(fg_mat3, zero, (Matrix3<T> & x), { x.setZero(); })
-TRACTOR_D_T(prepare, fg_mat3, zero, (const Matrix3<T> &x), {})
-TRACTOR_D_T(forward, fg_mat3, zero, (Matrix3<T> & dx), { dx.setZero(); })
-TRACTOR_D_T(reverse, fg_mat3, zero, (const Matrix3<T> &dx), {})
+TRACTOR_OP_T(mat3, zero, (Matrix3<T> & x), { x.setZero(); })
+TRACTOR_D_T(prepare, mat3, zero, (const Matrix3<T> &x), {})
+TRACTOR_D_T(forward, mat3, zero, (Matrix3<T> & dx), { dx.setZero(); })
+TRACTOR_D_T(reverse, mat3, zero, (const Matrix3<T> &dx), {})
 
 // ---------------------------------------------------------
 
-TRACTOR_OP_T(fg_vec3, minus, (const Vector3<T> &a), { return -a; })
-TRACTOR_D_T(prepare, fg_vec3, minus, (const Vector3<T> &a, const Vector3<T> &x),
+TRACTOR_OP_T(vec3, minus, (const Vector3<T> &a), { return -a; })
+TRACTOR_D_T(prepare, vec3, minus, (const Vector3<T> &a, const Vector3<T> &x),
             {})
-TRACTOR_D_T(forward, fg_vec3, minus, (const Vector3<T> &da, Vector3<T> &dx),
+TRACTOR_D_T(forward, vec3, minus, (const Vector3<T> &da, Vector3<T> &dx),
             { dx = -da; })
-TRACTOR_D_T(reverse, fg_vec3, minus, (Vector3<T> & da, const Vector3<T> &dx),
+TRACTOR_D_T(reverse, vec3, minus, (Vector3<T> & da, const Vector3<T> &dx),
             { da = -dx; })
 
-TRACTOR_OP_T(fg_vec3, zero, (Vector3<T> & x), { x.setZero(); })
-TRACTOR_D_T(prepare, fg_vec3, zero, (const Vector3<T> &x), {})
-TRACTOR_D_T(forward, fg_vec3, zero, (Vector3<T> & dx), { dx.setZero(); })
-TRACTOR_D_T(reverse, fg_vec3, zero, (const Vector3<T> &dx), {})
+TRACTOR_OP_T(vec3, zero, (Vector3<T> & x), { x.setZero(); })
+TRACTOR_D_T(prepare, vec3, zero, (const Vector3<T> &x), {})
+TRACTOR_D_T(forward, vec3, zero, (Vector3<T> & dx), { dx.setZero(); })
+TRACTOR_D_T(reverse, vec3, zero, (const Vector3<T> &dx), {})
 
-TRACTOR_OP_T(fg_vec3, move, (const Vector3<T> &v), { return Vector3<T>(v); })
-TRACTOR_D_T(prepare, fg_vec3, move, (const Vector3<T> &a, const Vector3<T> &x),
-            {})
-TRACTOR_D_T(forward, fg_vec3, move, (const Vector3<T> &da, Vector3<T> &dx),
+TRACTOR_OP_T(vec3, move, (const Vector3<T> &v), { return Vector3<T>(v); })
+TRACTOR_D_T(prepare, vec3, move, (const Vector3<T> &a, const Vector3<T> &x), {})
+TRACTOR_D_T(forward, vec3, move, (const Vector3<T> &da, Vector3<T> &dx),
             { dx = da; })
-TRACTOR_D_T(reverse, fg_vec3, move, (Vector3<T> & da, const Vector3<T> &dx),
+TRACTOR_D_T(reverse, vec3, move, (Vector3<T> & da, const Vector3<T> &dx),
             { da = dx; })
 
-TRACTOR_OP_T(fg_vec3, add, (const Vector3<T> &a, const Vector3<T> &b),
+TRACTOR_OP_T(vec3, add, (const Vector3<T> &a, const Vector3<T> &b),
              { return a + b; })
-TRACTOR_D_T(prepare, fg_vec3, add,
+TRACTOR_D_T(prepare, vec3, add,
             (const Vector3<T> &a, const Vector3<T> &b, const Vector3<T> &x), {})
-TRACTOR_D_T(forward, fg_vec3, add,
+TRACTOR_D_T(forward, vec3, add,
             (const Vector3<T> &da, const Vector3<T> &db, Vector3<T> &dx),
             { dx = da + db; })
-TRACTOR_D_T(reverse, fg_vec3, add,
+TRACTOR_D_T(reverse, vec3, add,
             (Vector3<T> & da, Vector3<T> &db, const Vector3<T> &dx), {
               da = dx;
               db = dx;
             })
 
-TRACTOR_OP_T(fg_vec3, sub, (const Vector3<T> &a, const Vector3<T> &b),
+TRACTOR_OP_T(vec3, sub, (const Vector3<T> &a, const Vector3<T> &b),
              { return a - b; })
-TRACTOR_D_T(prepare, fg_vec3, sub,
+TRACTOR_D_T(prepare, vec3, sub,
             (const Vector3<T> &a, const Vector3<T> &b, const Vector3<T> &x), {})
-TRACTOR_D_T(forward, fg_vec3, sub,
+TRACTOR_D_T(forward, vec3, sub,
             (const Vector3<T> &da, const Vector3<T> &db, Vector3<T> &dx),
             { dx = da - db; })
-TRACTOR_D_T(reverse, fg_vec3, sub,
+TRACTOR_D_T(reverse, vec3, sub,
             (Vector3<T> & da, Vector3<T> &db, const Vector3<T> &dx), {
               da = dx;
               db = -dx;
             })
 
-TRACTOR_OP_T(fg_vec3_s, mul, (const Vector3<T> &a, const T &b),
-             { return a * b; })
-TRACTOR_D_T(prepare, fg_vec3_s, mul,
+TRACTOR_OP_T(vec3_s, mul, (const Vector3<T> &a, const T &b), { return a * b; })
+TRACTOR_D_T(prepare, vec3_s, mul,
             (const Vector3<T> &a, const T &b, const Vector3<T> &x,
              Vector3<T> &va, T &vb),
             {
               va = a;
               vb = b;
             })
-TRACTOR_D_T(forward, fg_vec3_s, mul,
+TRACTOR_D_T(forward, vec3_s, mul,
             (const Vector3<T> &va, const T &vb, const Vector3<T> &da,
              const T &db, Vector3<T> &dx),
             {
@@ -146,7 +143,7 @@ TRACTOR_D_T(forward, fg_vec3_s, mul,
               dx.x() = da.y() * vb + db * va.y();
               dx.x() = da.z() * vb + db * va.z();*/
             })
-TRACTOR_D_T(reverse, fg_vec3_s, mul,
+TRACTOR_D_T(reverse, vec3_s, mul,
             (const Vector3<T> &va, const T &vb, Vector3<T> &da, T &db,
              const Vector3<T> &dx),
             {
@@ -154,20 +151,19 @@ TRACTOR_D_T(reverse, fg_vec3_s, mul,
               db = dx.x() * va.x() + dx.y() * va.y() + dx.z() * va.z();
             })
 
-TRACTOR_OP_T(fg_s_vec3, mul, (const T &a, const Vector3<T> &b),
-             { return a * b; })
-TRACTOR_D_T(prepare, fg_s_vec3, mul,
+TRACTOR_OP_T(s_vec3, mul, (const T &a, const Vector3<T> &b), { return a * b; })
+TRACTOR_D_T(prepare, s_vec3, mul,
             (const T &a, const Vector3<T> &b, const Vector3<T> &x, T &va,
              Vector3<T> &vb),
             {
               va = a;
               vb = b;
             })
-TRACTOR_D_T(forward, fg_s_vec3, mul,
+TRACTOR_D_T(forward, s_vec3, mul,
             (const T &va, const Vector3<T> &vb, const T &da,
              const Vector3<T> &db, Vector3<T> &dx),
             { dx = da * vb + va * db; })
-TRACTOR_D_T(reverse, fg_s_vec3, mul,
+TRACTOR_D_T(reverse, s_vec3, mul,
             (const T &va, const Vector3<T> &vb, T &da, Vector3<T> &db,
              const Vector3<T> &dx),
             {
@@ -178,16 +174,16 @@ TRACTOR_D_T(reverse, fg_s_vec3, mul,
 //    | da.x da.y da.z db.x db.y db.z
 // ---+------------------------------
 // dx | vb.x vb.y vb.z va.x va.y va.z
-TRACTOR_OP_T(fg_vec3, dot, (const Vector3<T> &a, const Vector3<T> &b),
+TRACTOR_OP_T(vec3, dot, (const Vector3<T> &a, const Vector3<T> &b),
              { return dot(a, b); })
-TRACTOR_D_T(prepare, fg_vec3, dot,
+TRACTOR_D_T(prepare, vec3, dot,
             (const Vector3<T> &a, const Vector3<T> &b, const T &x,
              Vector3<T> &va, Vector3<T> &vb),
             {
               va = a;
               vb = b;
             })
-TRACTOR_D_T(forward, fg_vec3, dot,
+TRACTOR_D_T(forward, vec3, dot,
             (const Vector3<T> &va, const Vector3<T> &vb, const Vector3<T> &da,
              const Vector3<T> &db, T &dx),
             {
@@ -195,7 +191,7 @@ TRACTOR_D_T(forward, fg_vec3, dot,
               //       (da.x() * vb.x() + da.y() * vb.y() + da.z() * vb.z());
               dx = dot(va, db) + dot(da, vb);
             })
-TRACTOR_D_T(reverse, fg_vec3, dot,
+TRACTOR_D_T(reverse, vec3, dot,
             (const Vector3<T> &va, const Vector3<T> &vb, Vector3<T> &da,
              Vector3<T> &db, const T &dx),
             {
@@ -214,16 +210,16 @@ TRACTOR_D_T(reverse, fg_vec3, dot,
 // dx.x |   0   +vb.z  -vb.y  |   0   -va.z  +va.y
 // dx.y | -vb.z   0     vb.x  |  va.z   0    -va.x
 // dx.z |  vb.y -vb.x    0    | -va.y  va.x   0
-TRACTOR_OP_T(fg_vec3, cross, (const Vector3<T> &a, const Vector3<T> &b),
+TRACTOR_OP_T(vec3, cross, (const Vector3<T> &a, const Vector3<T> &b),
              { return cross(a, b); })
-TRACTOR_D_T(prepare, fg_vec3, cross,
+TRACTOR_D_T(prepare, vec3, cross,
             (const Vector3<T> &a, const Vector3<T> &b, const Vector3<T> &x,
              Vector3<T> &va, Vector3<T> &vb),
             {
               va = a;
               vb = b;
             })
-TRACTOR_D_T(forward, fg_vec3, cross,
+TRACTOR_D_T(forward, vec3, cross,
             (const Vector3<T> &va, const Vector3<T> &vb, const Vector3<T> &da,
              const Vector3<T> &db, Vector3<T> &dx),
             {
@@ -234,7 +230,7 @@ TRACTOR_D_T(forward, fg_vec3, cross,
               dx.z() = (da.x() * vb.y() - da.y() * vb.x()) +
                        (va.x() * db.y() - va.y() * db.x());
             })
-TRACTOR_D_T(reverse, fg_vec3, cross,
+TRACTOR_D_T(reverse, vec3, cross,
             (const Vector3<T> &va, const Vector3<T> &vb, Vector3<T> &da,
              Vector3<T> &db, const Vector3<T> &dx),
             {
@@ -246,34 +242,33 @@ TRACTOR_D_T(reverse, fg_vec3, cross,
               db.z() = va.y() * dx.x() - va.x() * dx.y();
             })
 
-TRACTOR_OP(fg_vec3_unpack, (const Vector3<T> &v, T &x, T &y, T &z),
-           { fg_vec3_unpack(v, x, y, z); })
-TRACTOR_D(prepare, fg_vec3_unpack,
+TRACTOR_OP(vec3_unpack, (const Vector3<T> &v, T &x, T &y, T &z),
+           { vec3_unpack(v, x, y, z); })
+TRACTOR_D(prepare, vec3_unpack,
           (const Vector3<T> &v, const T &x, const T &y, const T &z), {})
-TRACTOR_D(forward, fg_vec3_unpack, (const Vector3<T> &dv, T &dx, T &dy, T &dz),
-          {
-            dx = dv.x();
-            dy = dv.y();
-            dz = dv.z();
-          })
-TRACTOR_D(reverse, fg_vec3_unpack,
+TRACTOR_D(forward, vec3_unpack, (const Vector3<T> &dv, T &dx, T &dy, T &dz), {
+  dx = dv.x();
+  dy = dv.y();
+  dz = dv.z();
+})
+TRACTOR_D(reverse, vec3_unpack,
           (Vector3<T> & dv, const T &dx, const T &dy, const T &dz), {
             dv.x() = dx;
             dv.y() = dy;
             dv.z() = dz;
           })
 
-TRACTOR_OP(fg_vec3_pack, (const T &x, const T &y, const T &z, Vector3<T> &vec),
-           { fg_vec3_pack(x, y, z, vec); })
-TRACTOR_D(prepare, fg_vec3_pack,
+TRACTOR_OP(vec3_pack, (const T &x, const T &y, const T &z, Vector3<T> &vec),
+           { vec3_pack(x, y, z, vec); })
+TRACTOR_D(prepare, vec3_pack,
           (const T &x, const T &y, const T &z, const Vector3<T> &v), {})
-TRACTOR_D(forward, fg_vec3_pack,
+TRACTOR_D(forward, vec3_pack,
           (const T &x, const T &y, const T &z, Vector3<T> &v), {
             v.x() = x;
             v.y() = y;
             v.z() = z;
           })
-TRACTOR_D(reverse, fg_vec3_pack, (T & x, T &y, T &z, const Vector3<T> &v), {
+TRACTOR_D(reverse, vec3_pack, (T & x, T &y, T &z, const Vector3<T> &v), {
   x = v.x();
   y = v.y();
   z = v.z();
@@ -282,25 +277,24 @@ TRACTOR_D(reverse, fg_vec3_pack, (T & x, T &y, T &z, const Vector3<T> &v), {
 /*
 template <class Scalar> void goal(const Var<Vector3<Scalar>> &v) {
   Var<Scalar> x, y, z;
-  fg_vec3_unpack(v, x, y, z);
+  vec3_unpack(v, x, y, z);
   goal(x);
   goal(y);
   goal(z);
 }
 */
 
-TRACTOR_OP_T(fg_quat, zero, (Quaternion<T> & x), { x.setZero(); })
-TRACTOR_D_T(prepare, fg_quat, zero, (const Quaternion<T> &x), {})
-TRACTOR_D_T(forward, fg_quat, zero, (Quaternion<T> & dx), { dx.setZero(); })
-TRACTOR_D_T(reverse, fg_quat, zero, (const Quaternion<T> &dx), {})
+TRACTOR_OP_T(quat, zero, (Quaternion<T> & x), { x.setZero(); })
+TRACTOR_D_T(prepare, quat, zero, (const Quaternion<T> &x), {})
+TRACTOR_D_T(forward, quat, zero, (Quaternion<T> & dx), { dx.setZero(); })
+TRACTOR_D_T(reverse, quat, zero, (const Quaternion<T> &dx), {})
 
-TRACTOR_OP_T(fg_quat, move, (const Quaternion<T> &v),
-             { return Quaternion<T>(v); })
-TRACTOR_D_T(prepare, fg_quat, move,
+TRACTOR_OP_T(quat, move, (const Quaternion<T> &v), { return Quaternion<T>(v); })
+TRACTOR_D_T(prepare, quat, move,
             (const Quaternion<T> &a, const Quaternion<T> &x), {})
-TRACTOR_D_T(forward, fg_quat, move, (const Vector3<T> &da, Vector3<T> &dx),
+TRACTOR_D_T(forward, quat, move, (const Vector3<T> &da, Vector3<T> &dx),
             { dx = da; })
-TRACTOR_D_T(reverse, fg_quat, move, (Vector3<T> & da, const Vector3<T> &dx),
+TRACTOR_D_T(reverse, quat, move, (Vector3<T> & da, const Vector3<T> &dx),
             { da = dx; })
 
 TRACTOR_GRADIENT_TYPE_TEMPLATE(Quaternion<T>, Vector3<T>);
@@ -310,16 +304,16 @@ TRACTOR_GRADIENT_TYPE_TEMPLATE(Quaternion<T>, Vector3<T>);
 // dx.x |   0     vb.z  -vb.y
 // dx.y | -vb.z    0     vb.x
 // dx.z |  vb.y  -vb.x    0
-TRACTOR_OP_T(fg_quat_vec3, mul, (const Quaternion<T> &a, const Vector3<T> &b),
+TRACTOR_OP_T(quat_vec3, mul, (const Quaternion<T> &a, const Vector3<T> &b),
              { return a * b; })
-TRACTOR_D_T(prepare, fg_quat_vec3, mul,
+TRACTOR_D_T(prepare, quat_vec3, mul,
             (const Quaternion<T> &a, const Vector3<T> &b, const Vector3<T> &x,
              Quaternion<T> &va, Vector3<T> &vb),
             {
               va = a;
               vb = b;
             })
-TRACTOR_D_T(forward, fg_quat_vec3, mul,
+TRACTOR_D_T(forward, quat_vec3, mul,
             (const Quaternion<T> &va, const Vector3<T> &vb,
              const Vector3<T> &da, const Vector3<T> &db, Vector3<T> &dx),
             {
@@ -332,7 +326,7 @@ TRACTOR_D_T(forward, fg_quat_vec3, mul,
                               a.x() * b.y() - a.y() * b.x()  //
                               */
             })
-TRACTOR_D_T(reverse, fg_quat_vec3, mul,
+TRACTOR_D_T(reverse, quat_vec3, mul,
             (const Quaternion<T> &va, const Vector3<T> &vb, Vector3<T> &da,
              Vector3<T> &db, const Vector3<T> &dx),
             {
@@ -341,16 +335,16 @@ TRACTOR_D_T(reverse, fg_quat_vec3, mul,
             })
 
 /*
-TRACTOR_OP_T(fg_quat, mul, (const Quaternion<T> &a, const Quaternion<T> &b),
+TRACTOR_OP_T(quat, mul, (const Quaternion<T> &a, const Quaternion<T> &b),
              { return a * b; })
-TRACTOR_D_T(prepare, fg_quat, mul,
+TRACTOR_D_T(prepare, quat, mul,
             (const Quaternion<T> &a, const Quaternion<T> &b, const Quaternion<T>
 &x, Quaternion<T> &va, Quaternion<T> &vb),
             {
               va = a;
               vb = b;
             })
-TRACTOR_D_T(forward, fg_quat, mul,
+TRACTOR_D_T(forward, quat, mul,
             (const Quaternion<T> &va, const Quaternion<T> &vb, const Vector3<T>
 &da, const Vector3<T> &db, Vector3<T> &dx),
             {
@@ -358,7 +352,7 @@ TRACTOR_D_T(forward, fg_quat, mul,
               //       (Quaternion<T>(da.x(), da.y(), da.z(), 1.0) * vb).vec();
               dx = va * db + da;
             })
-TRACTOR_D_T(reverse, fg_quat, mul,
+TRACTOR_D_T(reverse, quat, mul,
             (const Quaternion<T> &va, const Quaternion<T> &vb, Vector3<T> &da,
 Vector3<T> &db, const Vector3<T> &dx),
             {
@@ -370,17 +364,17 @@ Vector3<T> &db, const Vector3<T> &dx),
             })
 */
 
-TRACTOR_OP_T(fg_quat, mul, (const Quaternion<T> &a, const Quaternion<T> &b),
+TRACTOR_OP_T(quat, mul, (const Quaternion<T> &a, const Quaternion<T> &b),
              { return a * b; })
-TRACTOR_D_T(prepare, fg_quat, mul,
+TRACTOR_D_T(prepare, quat, mul,
             (const Quaternion<T> &a, const Quaternion<T> &b,
              const Quaternion<T> &x, Quaternion<T> &va),
             { va = a; })
-TRACTOR_D_T(forward, fg_quat, mul,
+TRACTOR_D_T(forward, quat, mul,
             (const Quaternion<T> &va, const Vector3<T> &da,
              const Vector3<T> &db, Vector3<T> &dx),
             { dx = va * db + da; })
-TRACTOR_D_T(reverse, fg_quat, mul,
+TRACTOR_D_T(reverse, quat, mul,
             (const Quaternion<T> &va, Vector3<T> &da, Vector3<T> &db,
              const Vector3<T> &dx),
             {
@@ -388,51 +382,50 @@ TRACTOR_D_T(reverse, fg_quat, mul,
               db = va.inverse() * dx;
             })
 
-template <class T> auto fg_quat_inverse(const Quaternion<T> &a) {
+template <class T> auto quat_inverse(const Quaternion<T> &a) {
   return a.inverse();
 }
-TRACTOR_OP(fg_quat_inverse, (const Quaternion<T> &a),
-           { return fg_quat_inverse(a); })
-TRACTOR_D(prepare, fg_quat_inverse,
+TRACTOR_OP(quat_inverse, (const Quaternion<T> &a), { return quat_inverse(a); })
+TRACTOR_D(prepare, quat_inverse,
           (const Quaternion<T> &a, const Quaternion<T> &x), {})
-TRACTOR_D(forward, fg_quat_inverse, (const Vector3<T> &a, Vector3<T> &x),
+TRACTOR_D(forward, quat_inverse, (const Vector3<T> &a, Vector3<T> &x),
           { x = -a; })
-TRACTOR_D(reverse, fg_quat_inverse, (Vector3<T> & a, const Vector3<T> &x),
+TRACTOR_D(reverse, quat_inverse, (Vector3<T> & a, const Vector3<T> &x),
           { a = -x; })
 
-TRACTOR_OP(fg_quat_unpack, (const Quaternion<T> &q, T &x, T &y, T &z, T &w),
-           { fg_quat_unpack(q, x, y, z, w); })
+TRACTOR_OP(quat_unpack, (const Quaternion<T> &q, T &x, T &y, T &z, T &w),
+           { quat_unpack(q, x, y, z, w); })
 
-TRACTOR_OP(fg_quat_pack,
+TRACTOR_OP(quat_pack,
            (const T &x, const T &y, const T &z, const T &w, Quaternion<T> &vec),
-           { fg_quat_pack(x, y, z, w, vec); })
+           { quat_pack(x, y, z, w, vec); })
 
-// TRACTOR_OP(fg_quat_residual, (const Quaternion<T> &a), { return a.vec() *
+// TRACTOR_OP(quat_residual, (const Quaternion<T> &a), { return a.vec() *
 // T(2);
 // })
-TRACTOR_OP(fg_quat_residual, (const Quaternion<T> &a),
-           { return fg_quat_residual(a); })
-TRACTOR_D(prepare, fg_quat_residual,
-          (const Quaternion<T> &a, const Vector3<T> &x), {})
-TRACTOR_D(forward, fg_quat_residual, (const Vector3<T> &a, Vector3<T> &x),
+TRACTOR_OP(quat_residual, (const Quaternion<T> &a),
+           { return quat_residual(a); })
+TRACTOR_D(prepare, quat_residual, (const Quaternion<T> &a, const Vector3<T> &x),
+          {})
+TRACTOR_D(forward, quat_residual, (const Vector3<T> &a, Vector3<T> &x),
           { x = a; })
-TRACTOR_D(reverse, fg_quat_residual, (Vector3<T> & a, const Vector3<T> &x),
+TRACTOR_D(reverse, quat_residual, (Vector3<T> & a, const Vector3<T> &x),
           { a = x; })
 
-TRACTOR_OP(fg_angle_axis_quat, (const T &angle, const Vector3<T> &axis),
-           { return fg_angle_axis_quat(angle, axis); })
-TRACTOR_D(prepare, fg_angle_axis_quat,
+TRACTOR_OP(angle_axis_quat, (const T &angle, const Vector3<T> &axis),
+           { return angle_axis_quat(angle, axis); })
+TRACTOR_D(prepare, angle_axis_quat,
           (const T &angle, const Vector3<T> &axis, const Quaternion<T> &rot,
            T &v_angle, Vector3<T> &v_axis),
           {
             v_angle = angle;
             v_axis = axis;
           })
-TRACTOR_D(forward, fg_angle_axis_quat,
+TRACTOR_D(forward, angle_axis_quat,
           (const T &v_angle, const Vector3<T> &v_axis, const T &d_angle,
            const Vector3<T> &d_axis, Vector3<T> &d_rot),
           { d_rot = v_axis * d_angle + d_axis * v_angle; })
-TRACTOR_D(reverse, fg_angle_axis_quat,
+TRACTOR_D(reverse, angle_axis_quat,
           (const T &v_angle, const Vector3<T> &v_axis, T &d_angle,
            Vector3<T> &d_axis, const Vector3<T> &d_rot),
           {
@@ -444,57 +437,56 @@ TRACTOR_D(reverse, fg_angle_axis_quat,
 
 TRACTOR_GRADIENT_TYPE_TEMPLATE(Pose<T>, Twist<T>);
 
-TRACTOR_OP_T(fg_pose, zero, (Pose<T> & x), { x.setZero(); })
-TRACTOR_D_T(prepare, fg_pose, zero, (const Pose<T> &x), {})
-TRACTOR_D_T(forward, fg_pose, zero, (Pose<T> & dx), { dx.setZero(); })
-TRACTOR_D_T(reverse, fg_pose, zero, (const Pose<T> &dx), {})
+TRACTOR_OP_T(pose, zero, (Pose<T> & x), { x.setZero(); })
+TRACTOR_D_T(prepare, pose, zero, (const Pose<T> &x), {})
+TRACTOR_D_T(forward, pose, zero, (Pose<T> & dx), { dx.setZero(); })
+TRACTOR_D_T(reverse, pose, zero, (const Pose<T> &dx), {})
 
-TRACTOR_OP_T(fg_twist, zero, (Twist<T> & x), { x.setZero(); })
-TRACTOR_D_T(prepare, fg_twist, zero, (const Twist<T> &x), {})
-TRACTOR_D_T(forward, fg_twist, zero, (Twist<T> & dx), { dx.setZero(); })
-TRACTOR_D_T(reverse, fg_twist, zero, (const Twist<T> &dx), {})
+TRACTOR_OP_T(twist, zero, (Twist<T> & x), { x.setZero(); })
+TRACTOR_D_T(prepare, twist, zero, (const Twist<T> &x), {})
+TRACTOR_D_T(forward, twist, zero, (Twist<T> & dx), { dx.setZero(); })
+TRACTOR_D_T(reverse, twist, zero, (const Twist<T> &dx), {})
 
-TRACTOR_OP_T(fg_pose, move, (const Pose<T> &v), { return Pose<T>(v); })
-TRACTOR_D_T(prepare, fg_pose, move, (const Pose<T> &a, const Pose<T> &x), {})
-TRACTOR_D_T(forward, fg_pose, move, (const Twist<T> &da, Twist<T> &dx),
+TRACTOR_OP_T(pose, move, (const Pose<T> &v), { return Pose<T>(v); })
+TRACTOR_D_T(prepare, pose, move, (const Pose<T> &a, const Pose<T> &x), {})
+TRACTOR_D_T(forward, pose, move, (const Twist<T> &da, Twist<T> &dx),
             { dx = da; })
-TRACTOR_D_T(reverse, fg_pose, move, (Twist<T> & da, const Twist<T> &dx),
+TRACTOR_D_T(reverse, pose, move, (Twist<T> & da, const Twist<T> &dx),
             { da = dx; })
 
-TRACTOR_OP_T(fg_twist, move, (const Twist<T> &v), { return Twist<T>(v); })
-TRACTOR_D_T(prepare, fg_twist, move, (const Twist<T> &a, const Twist<T> &x), {})
-TRACTOR_D_T(forward, fg_twist, move, (const Twist<T> &da, Twist<T> &dx),
+TRACTOR_OP_T(twist, move, (const Twist<T> &v), { return Twist<T>(v); })
+TRACTOR_D_T(prepare, twist, move, (const Twist<T> &a, const Twist<T> &x), {})
+TRACTOR_D_T(forward, twist, move, (const Twist<T> &da, Twist<T> &dx),
             { dx = da; })
-TRACTOR_D_T(reverse, fg_twist, move, (Twist<T> & da, const Twist<T> &dx),
+TRACTOR_D_T(reverse, twist, move, (Twist<T> & da, const Twist<T> &dx),
             { da = dx; })
 
-TRACTOR_OP_T(fg_twist, add, (const Twist<T> &a, const Twist<T> &b),
+TRACTOR_OP_T(twist, add, (const Twist<T> &a, const Twist<T> &b),
              { return a + b; })
-TRACTOR_D_T(prepare, fg_twist, add,
+TRACTOR_D_T(prepare, twist, add,
             (const Twist<T> &a, const Twist<T> &b, const Twist<T> &x), {})
-TRACTOR_D_T(forward, fg_twist, add,
+TRACTOR_D_T(forward, twist, add,
             (const Twist<T> &da, const Twist<T> &db, Twist<T> &dx),
             { dx = da + db; })
-TRACTOR_D_T(reverse, fg_twist, add,
+TRACTOR_D_T(reverse, twist, add,
             (Twist<T> & da, Twist<T> &db, const Twist<T> &dx), {
               da = dx;
               db = dx;
             })
 
-TRACTOR_OP_T(fg_twist_s, mul, (const Twist<T> &a, const T &b),
-             { return a * b; })
-TRACTOR_D_T(prepare, fg_twist_s, mul,
+TRACTOR_OP_T(twist_s, mul, (const Twist<T> &a, const T &b), { return a * b; })
+TRACTOR_D_T(prepare, twist_s, mul,
             (const Twist<T> &a, const T &b, const Twist<T> &x, Twist<T> &va,
              T &vb),
             {
               va = a;
               vb = b;
             })
-TRACTOR_D_T(forward, fg_twist_s, mul,
+TRACTOR_D_T(forward, twist_s, mul,
             (const Twist<T> &va, const T &vb, const Twist<T> &da, const T &db,
              Twist<T> &dx),
             { dx = da * vb + va * db; })
-TRACTOR_D_T(reverse, fg_twist_s, mul,
+TRACTOR_D_T(reverse, twist_s, mul,
             (const Twist<T> &va, const T &vb, Twist<T> &da, T &db,
              const Twist<T> &dx),
             {
@@ -503,14 +495,14 @@ TRACTOR_D_T(reverse, fg_twist_s, mul,
                    dot(dx.rotation(), va.rotation());
             })
 
-TRACTOR_OP_T(fg_twist, sub, (const Twist<T> &a, const Twist<T> &b),
+TRACTOR_OP_T(twist, sub, (const Twist<T> &a, const Twist<T> &b),
              { return a - b; })
-TRACTOR_D_T(prepare, fg_twist, sub,
+TRACTOR_D_T(prepare, twist, sub,
             (const Twist<T> &a, const Twist<T> &b, const Twist<T> &x), {})
-TRACTOR_D_T(forward, fg_twist, sub,
+TRACTOR_D_T(forward, twist, sub,
             (const Twist<T> &da, const Twist<T> &db, Twist<T> &dx),
             { dx = da - db; })
-TRACTOR_D_T(reverse, fg_twist, sub,
+TRACTOR_D_T(reverse, twist, sub,
             (Twist<T> & da, Twist<T> &db, const Twist<T> &dx), {
               da = dx;
               db.translation() = -dx.translation();
@@ -522,9 +514,8 @@ template <class T> struct PoseMulState {
   Vector3<T> arbt;
   Quaternion<T> arinv;
 };
-TRACTOR_OP_T(fg_pose, mul, (const Pose<T> &a, const Pose<T> &b),
-             { return a * b; })
-TRACTOR_D_T(prepare, fg_pose, mul,
+TRACTOR_OP_T(pose, mul, (const Pose<T> &a, const Pose<T> &b), { return a * b; })
+TRACTOR_D_T(prepare, pose, mul,
             (const Pose<T> &a, const Pose<T> &b, const Pose<T> &x,
              PoseMulState<T> &v),
             {
@@ -535,11 +526,10 @@ TRACTOR_D_T(prepare, fg_pose, mul,
               v.arbt = a.orientation() * b.translation();
               v.arinv = a.orientation().inverse();
             })
-TRACTOR_D_T(forward, fg_pose, mul,
+TRACTOR_D_T(forward, pose, mul,
             (const PoseMulState<T> &v, const Twist<T> &da, const Twist<T> &db,
              Twist<T> &dx),
             {
-
               // xt = at + ar * bt
               // dxt = dat + v.ar * dbt + cross(dar, v.ar * v.bt);
               dx.translation() = da.translation() + v.ar * db.translation() +
@@ -548,11 +538,10 @@ TRACTOR_D_T(forward, fg_pose, mul,
               // xr = ar * br
               dx.rotation() = v.ar * db.rotation() + da.rotation();
             })
-TRACTOR_D_T(reverse, fg_pose, mul,
+TRACTOR_D_T(reverse, pose, mul,
             (const PoseMulState<T> &v, Twist<T> &da, Twist<T> &db,
              const Twist<T> &dx),
             {
-
               // xt = at + ar * bt
 
               // dat = dxt;
@@ -570,7 +559,6 @@ TRACTOR_D_T(reverse, fg_pose, mul,
 
               da.rotation() = da.rotation() + dx.rotation();
               db.rotation() = v.arinv * dx.rotation();
-
             })
 
 template <class T> struct PoseVec3MulState {
@@ -578,9 +566,9 @@ template <class T> struct PoseVec3MulState {
   Vector3<T> arbt;
   Quaternion<T> arinv;
 };
-TRACTOR_OP_T(fg_pose_vec3, mul, (const Pose<T> &a, const Vector3<T> &b),
+TRACTOR_OP_T(pose_vec3, mul, (const Pose<T> &a, const Vector3<T> &b),
              { return a * b; })
-TRACTOR_D_T(prepare, fg_pose_vec3, mul,
+TRACTOR_D_T(prepare, pose_vec3, mul,
             (const Pose<T> &a, const Vector3<T> &b, const Vector3<T> &x,
              PoseVec3MulState<T> &v),
             {
@@ -588,13 +576,13 @@ TRACTOR_D_T(prepare, fg_pose_vec3, mul,
               v.arbt = a.orientation() * b;
               v.arinv = a.orientation().inverse();
             })
-TRACTOR_D_T(forward, fg_pose_vec3, mul,
+TRACTOR_D_T(forward, pose_vec3, mul,
             (const PoseVec3MulState<T> &v, const Twist<T> &da,
              const Vector3<T> &db, Vector3<T> &dx),
             {
               dx = da.translation() + v.ar * db + cross(da.rotation(), v.arbt);
             })
-TRACTOR_D_T(reverse, fg_pose_vec3, mul,
+TRACTOR_D_T(reverse, pose_vec3, mul,
             (const PoseVec3MulState<T> &v, Twist<T> &da, Vector3<T> &db,
              const Vector3<T> &dx),
             {
@@ -607,23 +595,23 @@ template <class T> struct FGAngleAxisPoseState {
   T angle;
   Vector3<T> axis;
 };
-TRACTOR_OP(fg_angle_axis_pose, (const T &angle, const Vector3<T> &axis),
-           { return fg_angle_axis_pose(angle, axis); })
-TRACTOR_D(prepare, fg_angle_axis_pose,
+TRACTOR_OP(angle_axis_pose, (const T &angle, const Vector3<T> &axis),
+           { return angle_axis_pose(angle, axis); })
+TRACTOR_D(prepare, angle_axis_pose,
           (const T &angle, const Vector3<T> &axis, const Pose<T> &pose,
            FGAngleAxisPoseState<T> &v),
           {
             v.angle = angle;
             v.axis = axis;
           })
-TRACTOR_D(forward, fg_angle_axis_pose,
+TRACTOR_D(forward, angle_axis_pose,
           (const FGAngleAxisPoseState<T> &v, const T &d_angle,
            const Vector3<T> &d_axis, Twist<T> &d_pose),
           {
             d_pose.translation().setZero();
             d_pose.rotation() = v.axis * d_angle + d_axis * v.angle;
           })
-TRACTOR_D(reverse, fg_angle_axis_pose,
+TRACTOR_D(reverse, angle_axis_pose,
           (const FGAngleAxisPoseState<T> &v, T &d_angle, Vector3<T> &d_axis,
            const Twist<T> &d_pose),
           {
@@ -639,10 +627,10 @@ template <class T> struct PoseAngleAxisPoseState {
   T angle;
   Vector3<T> axis;
 };
-TRACTOR_OP(fg_pose_angle_axis_pose,
+TRACTOR_OP(pose_angle_axis_pose,
            (const Pose<T> &parent, const T &angle, const Vector3<T> &axis),
-           { return fg_pose_angle_axis_pose(parent, angle, axis); })
-TRACTOR_D(prepare, fg_pose_angle_axis_pose,
+           { return pose_angle_axis_pose(parent, angle, axis); })
+TRACTOR_D(prepare, pose_angle_axis_pose,
           (const Pose<T> &parent, const T &angle, const Vector3<T> &axis,
            const Pose<T> &pose, PoseAngleAxisPoseState<T> &v),
           {
@@ -653,11 +641,10 @@ TRACTOR_D(prepare, fg_pose_angle_axis_pose,
             v.angle = angle;
             v.axis = axis;
           })
-TRACTOR_D(forward, fg_pose_angle_axis_pose,
+TRACTOR_D(forward, pose_angle_axis_pose,
           (const PoseAngleAxisPoseState<T> &v, const Twist<T> &d_parent,
            const T &d_angle, const Vector3<T> &d_axis, Twist<T> &d_pose),
           {
-
             // d_pose.translation() = d_parent.translation();
             // d_pose.rotation() = d_parent.rotation() +
             //                    (v.parent.orientation() * v.axis) * d_angle +
@@ -677,11 +664,10 @@ TRACTOR_D(forward, fg_pose_angle_axis_pose,
                                 (v.parent_orientation_axis) * d_angle +
                                 (v.parent_orientation * d_axis) * v.angle;
           })
-TRACTOR_D(reverse, fg_pose_angle_axis_pose,
+TRACTOR_D(reverse, pose_angle_axis_pose,
           (const PoseAngleAxisPoseState<T> &v, Twist<T> &d_parent, T &d_angle,
            Vector3<T> &d_axis, const Twist<T> &d_pose),
           {
-
             // d_parent.translation() = d_pose.translation();
             // d_parent.rotation() = d_pose.rotation();
             // d_angle = dot(v.parent.orientation().inverse() *
@@ -698,73 +684,73 @@ TRACTOR_D(reverse, fg_pose_angle_axis_pose,
                 (v.parent_orientation_inverse * d_pose.rotation()) * v.angle;
           })
 
-TRACTOR_OP(fg_pose_translation, (const Pose<T> &pose),
-           { return fg_pose_translation(pose); })
-TRACTOR_D(prepare, fg_pose_translation,
+TRACTOR_OP(pose_translation, (const Pose<T> &pose),
+           { return pose_translation(pose); })
+TRACTOR_D(prepare, pose_translation,
           (const Pose<T> &pose, const Vector3<T> &vec), {})
-TRACTOR_D(forward, fg_pose_translation,
+TRACTOR_D(forward, pose_translation,
           (const Twist<T> &twist, Vector3<T> &translation),
           { translation = twist.translation(); })
-TRACTOR_D(reverse, fg_pose_translation,
+TRACTOR_D(reverse, pose_translation,
           (Twist<T> & twist, const Vector3<T> &translation), {
             twist.translation() = translation;
             twist.rotation().setZero();
           })
 
-TRACTOR_OP(fg_pose_orientation, (const Pose<T> &pose),
-           { return fg_pose_orientation(pose); })
-TRACTOR_D(prepare, fg_pose_orientation,
+TRACTOR_OP(pose_orientation, (const Pose<T> &pose),
+           { return pose_orientation(pose); })
+TRACTOR_D(prepare, pose_orientation,
           (const Pose<T> &pose, const Quaternion<T> &orientation), {})
-TRACTOR_D(forward, fg_pose_orientation,
+TRACTOR_D(forward, pose_orientation,
           (const Twist<T> &twist, Vector3<T> &rotation),
           { rotation = twist.rotation(); })
-TRACTOR_D(reverse, fg_pose_orientation,
+TRACTOR_D(reverse, pose_orientation,
           (Twist<T> & twist, const Vector3<T> &rotation), {
             twist.rotation() = rotation;
             twist.translation().setZero();
           })
 
-TRACTOR_OP(fg_translation_pose, (const Vector3<T> &translation),
-           { return fg_translation_pose(translation); })
-TRACTOR_D(prepare, fg_translation_pose,
+TRACTOR_OP(translation_pose, (const Vector3<T> &translation),
+           { return translation_pose(translation); })
+TRACTOR_D(prepare, translation_pose,
           (const Vector3<T> &translation, const Pose<T> &pose), {})
-TRACTOR_D(forward, fg_translation_pose,
+TRACTOR_D(forward, translation_pose,
           (const Vector3<T> &translation, Twist<T> &twist), {
             twist.translation() = translation;
             twist.rotation().setZero();
           })
-TRACTOR_D(reverse, fg_translation_pose,
+TRACTOR_D(reverse, translation_pose,
           (Vector3<T> & translation, const Twist<T> &twist),
           { translation = twist.translation(); })
 
-TRACTOR_OP(fg_translation_twist, (const Vector3<T> &translation),
-           { return fg_translation_twist(translation); })
-TRACTOR_D(prepare, fg_translation_twist,
+TRACTOR_OP(translation_twist, (const Vector3<T> &translation),
+           { return translation_twist(translation); })
+TRACTOR_D(prepare, translation_twist,
           (const Vector3<T> &translation, const Twist<T> &pose), {})
-TRACTOR_D(forward, fg_translation_twist,
+TRACTOR_D(forward, translation_twist,
           (const Vector3<T> &translation, Twist<T> &twist), {
             twist.translation() = translation;
             twist.rotation().setZero();
           })
-TRACTOR_D(reverse, fg_translation_twist,
+TRACTOR_D(reverse, translation_twist,
           (Vector3<T> & translation, const Twist<T> &twist),
           { translation = twist.translation(); })
 
-TRACTOR_OP(fg_make_twist,
+TRACTOR_OP(make_twist,
            (const Vector3<T> &translation, const Vector3<T> &rotation),
-           { return fg_make_twist(translation, rotation); })
-TRACTOR_D(prepare, fg_make_twist,
+           { return make_twist(translation, rotation); })
+TRACTOR_D(prepare, make_twist,
           (const Vector3<T> &translation, const Vector3<T> &rotation,
            const Twist<T> &twist),
           {})
-TRACTOR_D(forward, fg_make_twist,
+TRACTOR_D(forward, make_twist,
           (const Vector3<T> &translation, const Vector3<T> &rotation,
            Twist<T> &twist),
           {
             twist.translation() = translation;
             twist.rotation() = rotation;
           })
-TRACTOR_D(reverse, fg_make_twist,
+TRACTOR_D(reverse, make_twist,
           (Vector3<T> & translation, Vector3<T> &rotation,
            const Twist<T> &twist),
           {
@@ -772,27 +758,27 @@ TRACTOR_D(reverse, fg_make_twist,
             rotation = twist.rotation();
           })
 
-TRACTOR_OP(fg_orientation_pose, (const Quaternion<T> &orientation),
-           { return fg_orientation_pose(orientation); })
-TRACTOR_D(prepare, fg_orientation_pose,
+TRACTOR_OP(orientation_pose, (const Quaternion<T> &orientation),
+           { return orientation_pose(orientation); })
+TRACTOR_D(prepare, orientation_pose,
           (const Quaternion<T> &orientation, const Pose<T> &pose), {})
-TRACTOR_D(forward, fg_orientation_pose,
+TRACTOR_D(forward, orientation_pose,
           (const Vector3<T> &rotation, Twist<T> &twist), {
             twist.rotation() = rotation;
             twist.translation().setZero();
           })
-TRACTOR_D(reverse, fg_orientation_pose,
+TRACTOR_D(reverse, orientation_pose,
           (Vector3<T> & rotation, const Twist<T> &twist),
           { rotation = twist.rotation(); })
 
-TRACTOR_OP(fg_pose_translate,
+TRACTOR_OP(pose_translate,
            (const Pose<T> &parent, const Vector3<T> &translation),
-           { return fg_pose_translate(parent, translation); })
-TRACTOR_D(prepare, fg_pose_translate,
+           { return pose_translate(parent, translation); })
+TRACTOR_D(prepare, pose_translate,
           (const Pose<T> &parent, const Vector3<T> &translation,
            const Pose<T> &pose, Quaternion<T> &parent_orientation),
           { parent_orientation = parent.orientation(); })
-TRACTOR_D(forward, fg_pose_translate,
+TRACTOR_D(forward, pose_translate,
           (const Quaternion<T> &parent_orientation, const Twist<T> &parent,
            const Vector3<T> &translation, Twist<T> &twist),
           {
@@ -800,7 +786,7 @@ TRACTOR_D(forward, fg_pose_translate,
             twist.translation() =
                 parent.translation() + parent_orientation * translation;
           })
-TRACTOR_D(reverse, fg_pose_translate,
+TRACTOR_D(reverse, pose_translate,
           (const Quaternion<T> &parent_orientation, Twist<T> &parent,
            Vector3<T> &translation, const Twist<T> &twist),
           {
@@ -812,16 +798,16 @@ template <class T> struct PoseResidualState {
   Pose<T> a;
   Pose<T> b;
 };
-TRACTOR_OP(fg_pose_residual, (const Pose<T> &a, const Pose<T> &b),
-           { return fg_pose_residual(a, b); })
-TRACTOR_D(prepare, fg_pose_residual,
+TRACTOR_OP(pose_residual, (const Pose<T> &a, const Pose<T> &b),
+           { return pose_residual(a, b); })
+TRACTOR_D(prepare, pose_residual,
           (const Pose<T> &a, const Pose<T> &b, const Twist<T> &x,
            PoseResidualState<T> &v),
           {
             v.a = a;
             v.b = b;
           })
-TRACTOR_D(forward, fg_pose_residual,
+TRACTOR_D(forward, pose_residual,
           (const PoseResidualState<T> &v, const Twist<T> &da,
            const Twist<T> &db, Twist<T> &dx),
           {
@@ -830,7 +816,7 @@ TRACTOR_D(forward, fg_pose_residual,
             //    v.a.orientation().inverse() * db.rotation() - da.rotation();
             dx = db - da;
           })
-TRACTOR_D(reverse, fg_pose_residual,
+TRACTOR_D(reverse, pose_residual,
           (const PoseResidualState<T> &v, Twist<T> &da, Twist<T> &db,
            const Twist<T> &dx),
           {
@@ -842,7 +828,7 @@ TRACTOR_D(reverse, fg_pose_residual,
             db = dx;
           })
 
-TRACTOR_OP(fg_twist_unpack,
+TRACTOR_OP(twist_unpack,
            (const Twist<T> &v, T &tx, T &ty, T &tz, T &rx, T &ry, T &rz), {
              tx = v.translation().x();
              ty = v.translation().y();
@@ -851,11 +837,11 @@ TRACTOR_OP(fg_twist_unpack,
              ry = v.rotation().y();
              rz = v.rotation().z();
            })
-TRACTOR_D(prepare, fg_twist_unpack,
+TRACTOR_D(prepare, twist_unpack,
           (const Twist<T> &v, const T &tx, const T &ty, const T &tz,
            const T &rx, const T &ry, const T &rz),
           {})
-TRACTOR_D(forward, fg_twist_unpack,
+TRACTOR_D(forward, twist_unpack,
           (const Twist<T> &v, T &tx, T &ty, T &tz, T &rx, T &ry, T &rz), {
             tx = v.translation().x();
             ty = v.translation().y();
@@ -864,7 +850,7 @@ TRACTOR_D(forward, fg_twist_unpack,
             ry = v.rotation().y();
             rz = v.rotation().z();
           })
-TRACTOR_D(reverse, fg_twist_unpack,
+TRACTOR_D(reverse, twist_unpack,
           (Twist<T> & v, const T &tx, const T &ty, const T &tz, const T &rx,
            const T &ry, const T &rz),
           {
@@ -876,27 +862,27 @@ TRACTOR_D(reverse, fg_twist_unpack,
             v.rotation().z() = rz;
           })
 
-TRACTOR_OP(fg_twist_translation, (const Twist<T> &twist),
-           { return fg_twist_translation(twist); })
-TRACTOR_D(prepare, fg_twist_translation,
+TRACTOR_OP(twist_translation, (const Twist<T> &twist),
+           { return twist_translation(twist); })
+TRACTOR_D(prepare, twist_translation,
           (const Twist<T> &twist, const Vector3<T> &translation), {})
-TRACTOR_D(forward, fg_twist_translation,
+TRACTOR_D(forward, twist_translation,
           (const Twist<T> &twist, Vector3<T> &translation),
           { translation = twist.translation(); })
-TRACTOR_D(reverse, fg_twist_translation,
+TRACTOR_D(reverse, twist_translation,
           (Twist<T> & twist, const Vector3<T> &translation), {
             twist.translation() = translation;
             twist.rotation().setZero();
           })
 
-TRACTOR_OP(fg_twist_rotation, (const Twist<T> &twist),
-           { return fg_twist_rotation(twist); })
-TRACTOR_D(prepare, fg_twist_rotation,
+TRACTOR_OP(twist_rotation, (const Twist<T> &twist),
+           { return twist_rotation(twist); })
+TRACTOR_D(prepare, twist_rotation,
           (const Twist<T> &twist, const Vector3<T> &rotation), {})
-TRACTOR_D(forward, fg_twist_rotation,
+TRACTOR_D(forward, twist_rotation,
           (const Twist<T> &twist, Vector3<T> &rotation),
           { rotation = twist.rotation(); })
-TRACTOR_D(reverse, fg_twist_rotation,
+TRACTOR_D(reverse, twist_rotation,
           (Twist<T> & twist, const Vector3<T> &rotation), {
             twist.translation().setZero();
             twist.rotation() = rotation;
@@ -905,7 +891,7 @@ TRACTOR_D(reverse, fg_twist_rotation,
 /*
 template <class Scalar> void goal(const Var<Twist<Scalar>> &v) {
   Var<Scalar> tx, ty, tz, rx, ry, rz;
-  fg_twist_unpack(v, tx, ty, tz, rx, ry, rz);
+  twist_unpack(v, tx, ty, tz, rx, ry, rz);
   goal(tx);
   goal(ty);
   goal(tz);
@@ -933,16 +919,16 @@ template <class T> Pose<T> operator+(const Pose<T> &a, const Twist<T> &b) {
                  a.orientation());
   return ret;
 }
-TRACTOR_OP_T(fg_pose_twist, add, (const Pose<T> &a, const Twist<T> &b), {
+TRACTOR_OP_T(pose_twist, add, (const Pose<T> &a, const Twist<T> &b), {
   Pose<T> ret = a + b;
   // std::cout << "add pose twist " << ret << std::endl;
   return ret;
 })
-TRACTOR_D_T(prepare, fg_pose_twist, add,
+TRACTOR_D_T(prepare, pose_twist, add,
             (const Pose<T> &a, const Twist<T> &b, const Pose<T> &x), {})
-TRACTOR_D_T(forward, fg_pose_twist, add,
+TRACTOR_D_T(forward, pose_twist, add,
             (const Twist<T> &a, const Twist<T> &b, Twist<T> &x), { x = a + b; })
-TRACTOR_D_T(reverse, fg_pose_twist, add,
+TRACTOR_D_T(reverse, pose_twist, add,
             (Twist<T> & a, Twist<T> &b, const Twist<T> &x), {
               a = x;
               b = x;
@@ -954,16 +940,16 @@ Quaternion<T> operator+(const Quaternion<T> &a, const Vector3<T> &b) {
                                              b.z() * T(0.5), T(1.0))) *
                     a);
 }
-TRACTOR_OP_T(fg_quat_vec3, add, (const Quaternion<T> &a, const Vector3<T> &b),
+TRACTOR_OP_T(quat_vec3, add, (const Quaternion<T> &a, const Vector3<T> &b),
              { return a + b; })
-TRACTOR_D_T(prepare, fg_quat_vec3, add,
+TRACTOR_D_T(prepare, quat_vec3, add,
             (const Quaternion<T> &a, const Vector3<T> &b,
              const Quaternion<T> &x),
             {})
-TRACTOR_D_T(forward, fg_quat_vec3, add,
+TRACTOR_D_T(forward, quat_vec3, add,
             (const Vector3<T> &a, const Vector3<T> &b, Vector3<T> &x),
             { x = a + b; })
-TRACTOR_D_T(reverse, fg_quat_vec3, add,
+TRACTOR_D_T(reverse, quat_vec3, add,
             (Vector3<T> & a, Vector3<T> &b, const Vector3<T> &x), {
               a = x;
               b = x;
@@ -978,15 +964,15 @@ TRACTOR_D(reverse, gate, (const T &p, T &da, T &db, const T &dx),
           { da = dx * p; })
 
 template <class T> Pose<T> gate(const Pose<T> &a, const T &b) { return a; }
-TRACTOR_OP_T(fg_pose_gate, gate, (const Pose<T> &a, const T &b), { return a; })
-TRACTOR_D_T(prepare, fg_pose_gate, gate,
+TRACTOR_OP_T(pose_gate, gate, (const Pose<T> &a, const T &b), { return a; })
+TRACTOR_D_T(prepare, pose_gate, gate,
             (const Pose<T> &a, const T &b, const Pose<T> &x, T &p), { p = b; })
-TRACTOR_D_T(forward, fg_pose_gate, gate,
+TRACTOR_D_T(forward, pose_gate, gate,
             (const T &p, const Twist<T> &da, const T &db, Twist<T> &dx), {
               dx.translation() = da.translation() * p;
               dx.rotation() = da.rotation() * p;
             })
-TRACTOR_D_T(reverse, fg_pose_gate, gate,
+TRACTOR_D_T(reverse, pose_gate, gate,
             (const T &p, Twist<T> &da, T &db, const Twist<T> &dx), {
               da.translation() = dx.translation() * p;
               da.rotation() = dx.rotation() * p;

@@ -1,8 +1,8 @@
 project(tractor)
 
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -std=c++17 -fopenmp -O3 -mavx -U__AVX__")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register -g -std=c++17 -fopenmp -O3 -mavx -U__AVX__")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17 -fopenmp -mavx -U__AVX__")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register -std=c++17 -fopenmp -mavx -U__AVX__")
 
 find_package(Bullet REQUIRED)
 

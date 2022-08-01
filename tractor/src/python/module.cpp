@@ -32,33 +32,58 @@ void setFromPython(Any &a, const py::object &o) {
     throw std::runtime_error("not convertible");
 }
 
+template <class Type> auto makeType(py::module &m, const char *name) {
+  auto t = py::class_<Type>(m, name);
+  t.def(py::init<>());
+  m.def("parameter", [](Type &var) { parameter(var); });
+  m.def("variable", [](Type &var) { variable(var); });
+  m.def("output", [](Type &var) { output(var); });
+  m.def("goal", [](Type &var) { goal(var); });
+  t.def("__repr__", [name](const Type &v) {
+    std::stringstream ss;
+    ss << value(v);
+    return ss.str();
+  });
+  return t;
+}
+
 template <class Scalar>
 void makeTypeModule(py::module &main, const char *name) {
 
   auto m = main.def_submodule(name);
 
-  py::class_<Var<Vector3<Scalar>>>(m, "Vector3")
-      .def(py::init<>())
+  makeType<Var<Twist<Scalar>>>(m, "Twist").def(py::self + py::self);
+
+  makeType<Var<Pose<Scalar>>>(m, "Pose").def(py::self * py::self);
+
+  makeType<Var<Quaternion<Scalar>>>(m, "Quaternion")
+      .def(py::init([](const Var<Scalar> &x, const Var<Scalar> &y,
+                       const Var<Scalar> &z, const Var<Scalar> &w) {
+        Var<Quaternion<Scalar>> ret;
+        quat_pack(x, y, z, w, ret);
+        return ret;
+      }))
+      .def(py::init([](const Scalar &x, const Scalar &y, const Scalar &z,
+                       const Scalar &w) {
+        return Var<Quaternion<Scalar>>(Quaternion<Scalar>(x, y, z, w));
+      }))
+      .def(py::self * py::self)
+      .def(py::self * Var<Vector3<Scalar>>());
+
+  makeType<Var<Vector3<Scalar>>>(m, "Vector3")
       .def(py::init(
           [](const Var<Scalar> &x, const Var<Scalar> &y, const Var<Scalar> &z) {
             Var<Vector3<Scalar>> ret;
-            fg_vec3_pack(x, y, z, ret);
+            vec3_pack(x, y, z, ret);
             return ret;
           }))
       .def(py::init([](const Scalar &x, const Scalar &y, const Scalar &z) {
         return Var<Vector3<Scalar>>(Vector3<Scalar>(x, y, z));
       }))
       .def(py::self + py::self)
-      .def(py::self - py::self)
-      .def("__repr__", [](const Var<Vector3<Scalar>> &v) {
-        std::stringstream ss;
-        ss << "Vector3(" << v.value().x() << "," << v.value().y() << ","
-           << v.value().z() << ")";
-        return ss.str();
-      });
+      .def(py::self - py::self);
 
-  py::class_<Var<Scalar>>(m, "Scalar")
-      .def(py::init<>())
+  makeType<Var<Scalar>>(m, "Scalar")
       .def(py::init<Scalar>())
       .def_property(
           "value", [](const Var<Scalar> &v) { return (Scalar)v.value(); },
@@ -66,16 +91,7 @@ void makeTypeModule(py::module &main, const char *name) {
       .def(py::self + py::self)
       .def(py::self - py::self)
       .def(py::self * py::self)
-      .def(py::self / py::self)
-      .def("__repr__", [](const Var<Scalar> &v) {
-        std::stringstream ss;
-        ss << "Scalar(" << v.value() << ")";
-        return ss.str();
-      });
-  m.def("parameter", [](Var<Scalar> &var) { tractor::parameter(var); });
-  m.def("variable", [](Var<Scalar> &var) { tractor::variable(var); });
-  m.def("output", [](Var<Scalar> &var) { tractor::output(var); });
-  m.def("goal", [](Var<Scalar> &var) { tractor::goal(var); });
+      .def(py::self / py::self);
 
   py::class_<LeastSquaresSolver<Scalar>, Solver>(m, "LeastSquaresSolver")
       .def(py::init<std::shared_ptr<Engine>>())

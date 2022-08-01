@@ -66,6 +66,11 @@ public:
   inline auto &operator[](size_t i) { return _data[i]; }
   inline const Scalar *data() const { return _data; }
   inline Scalar *data() { return _data; }
+  // std::string str() const {
+  //   std::stringstream ss;
+  //   ss << "Vector3(" << x() << "," << y() << "," << z() << ")";
+  //   return ss.str();
+  // }
 };
 
 template <class T, size_t S>
@@ -74,7 +79,9 @@ inline Vector3<T> indexBatch(const Vector3<Batch<T, S>> &v, size_t i) {
 }
 
 template <class T> auto &operator<<(std::ostream &stream, const Vector3<T> &v) {
-  return stream << "[ " << v.x() << " " << v.y() << " " << v.z() << " ]";
+  return stream << "[" << v.x() << "," << v.y() << "," << v.z() << "]";
+  // return stream << "Vector3(" << v.x() << "," << v.y() << "," << v.z() <<
+  // ")";
 }
 
 template <class T> inline Vector3<T> operator-(const Vector3<T> &v) {
@@ -117,14 +124,14 @@ inline Vector3<T> cross(const Vector3<T> &a, const Vector3<T> &b) {
 }
 
 template <class T>
-inline void fg_vec3_unpack(const Vector3<T> &v, T &x, T &y, T &z) {
+inline void vec3_unpack(const Vector3<T> &v, T &x, T &y, T &z) {
   x = v.x();
   y = v.y();
   z = v.z();
 }
 
 template <class T>
-inline void fg_vec3_pack(const T &x, const T &y, const T &z, Vector3<T> &vec) {
+inline void vec3_pack(const T &x, const T &y, const T &z, Vector3<T> &vec) {
   vec = Vector3<T>(x, y, z);
 }
 

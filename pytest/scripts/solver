@@ -5,11 +5,11 @@ import tractor as tr
 import tractor.types_double as tt
 import math
 
-b = tt.Scalar(2)
+b = tt.Vector3(1,2,3)
 
 def f():
     global a
-    a = tt.Scalar(3)
+    a = tt.Vector3(2,3,4)
     tt.variable(a)
     tt.variable(b)
     #tt.goal(a * tt.Scalar(0.01) + 0.01)

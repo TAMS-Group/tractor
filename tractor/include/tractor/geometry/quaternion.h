@@ -42,6 +42,11 @@ public:
   static inline Quaternion Identity() {
     return Quaternion(Scalar(0), Scalar(0), Scalar(0), Scalar(1));
   }
+  // std::string str() const {
+  //   std::stringstream ss;
+  //   ss << "Quaternion(" << _x << "," << _y << "," << _z << "," << _w << ")";
+  //   return ss.str();
+  // }
 };
 
 template <class T, size_t S>
@@ -51,8 +56,11 @@ inline Quaternion<T> indexBatch(const Quaternion<Batch<T, S>> &v, size_t i) {
 
 template <class T>
 auto &operator<<(std::ostream &stream, const Quaternion<T> &v) {
-  return stream << "[ " << v.x() << " " << v.y() << " " << v.z() << " " << v.w()
-                << " ]";
+  return stream << "[" << v.x() << "," << v.y() << "," << v.z() << "," << v.w()
+                << "]";
+  // return stream << "Quaternion(" << v.x() << " " << v.y() << " " << v.z() <<
+  // " "
+  //               << v.w() << ")";
 }
 
 template <class T> T norm(const Quaternion<T> &q) {
@@ -124,7 +132,7 @@ inline Quaternion<T> operator*(const Quaternion<T> &p, const Quaternion<T> &q) {
 }
 
 template <class T>
-void fg_quat_unpack(const Quaternion<T> &q, T &x, T &y, T &z, T &w) {
+void quat_unpack(const Quaternion<T> &q, T &x, T &y, T &z, T &w) {
   x = q.x();
   y = q.y();
   z = q.z();
@@ -132,17 +140,17 @@ void fg_quat_unpack(const Quaternion<T> &q, T &x, T &y, T &z, T &w) {
 }
 
 template <class T>
-void fg_quat_pack(const T &x, const T &y, const T &z, const T &w,
-                  Quaternion<T> &vec) {
+void quat_pack(const T &x, const T &y, const T &z, const T &w,
+               Quaternion<T> &vec) {
   vec = Quaternion<T>(x, y, z, w);
 }
 
-template <class T> Vector3<T> fg_quat_residual(const Quaternion<T> &a) {
+template <class T> Vector3<T> quat_residual(const Quaternion<T> &a) {
   return a.vec() * T(a.w() < 0 ? -2 : 2);
 }
 
 template <class T, size_t S>
-Vector3<Batch<T, S>> fg_quat_residual(const Quaternion<Batch<T, S>> &a) {
+Vector3<Batch<T, S>> quat_residual(const Quaternion<Batch<T, S>> &a) {
   Batch<T, S> f;
   for (size_t i = 0; i < S; i++) {
     f[i] = T(a.w()[i] < 0 ? -2 : 2);
@@ -151,7 +159,7 @@ Vector3<Batch<T, S>> fg_quat_residual(const Quaternion<Batch<T, S>> &a) {
 }
 
 template <class T>
-Quaternion<T> fg_angle_axis_quat(const T &angle, const Vector3<T> &axis) {
+Quaternion<T> angle_axis_quat(const T &angle, const Vector3<T> &axis) {
   Quaternion<T> quat;
   T s = std::sin(angle * T(0.5));
   T c = std::cos(angle * T(0.5));

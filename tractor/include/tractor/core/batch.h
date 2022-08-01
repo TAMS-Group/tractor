@@ -91,6 +91,18 @@ public:
   // }
 };
 
+template <class T, size_t S>
+std::ostream &operator<<(std::ostream &s, const Batch<T, S> &batch) {
+  s << "Batch(";
+  for (size_t i = 0; i < S; i++) {
+    if (i > 0)
+      s << ",";
+    s << batch[i];
+  }
+  s << ")";
+  return s;
+}
+
 // -----------------------------------------------------------------------------
 
 template <class T, size_t S> inline auto operator-(const Batch<T, S> &v) {

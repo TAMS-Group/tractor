@@ -33,13 +33,13 @@ public:
 };
 
 template <class T> auto &operator<<(std::ostream &stream, const Matrix3<T> &v) {
-  stream << "[ ";
+  stream << "[";
   for (size_t row = 0; row < 3; row++) {
-    stream << "[ ";
+    stream << "[";
     for (size_t col = 0; col < 3; col++) {
-      stream << v(row, col) << " ";
+      stream << v(row, col) << ",";
     }
-    stream << "] ";
+    stream << "],";
   }
   stream << "]";
   return stream;

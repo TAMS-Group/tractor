@@ -32,7 +32,12 @@ void Program::record(const std::function<void()> &function) {
     RecorderImpl(Program *prog) : Recorder(prog) {}
   };
   RecorderImpl rec(this);
-  function();
+  try {
+    function();
+  } catch (const std::exception &ex) {
+    std::cout << ex.what() << std::endl;
+    throw;
+  }
   if (Recorder::instance() != &rec) {
     throw std::runtime_error("recorder not active anymore");
   }

@@ -28,6 +28,11 @@ public:
   }
   inline auto &operator[](size_t i) const { return (&_translation.x())[i]; }
   inline auto &operator[](size_t i) { return (&_translation.x())[i]; }
+  // std::string str() const {
+  //   std::stringstream ss;
+  //   ss << "Twist(" << translation() << "," << rotation() << ")";
+  //   return ss.str();
+  // }
 };
 
 template <class T, size_t S>
@@ -37,7 +42,8 @@ inline Twist<T> indexBatch(const Twist<Batch<T, S>> &pose, size_t i) {
 }
 
 template <class T> auto &operator<<(std::ostream &stream, const Twist<T> &p) {
-  return stream << "[ " << p.translation() << " " << p.rotation() << " ]";
+  return stream << "[" << p.translation() << "," << p.rotation() << "]";
+  // return stream << "Twist(" << p.translation() << "," << p.rotation() << ")";
 }
 
 template <class T> inline Twist<T> operator-(const Twist<T> &v) {
@@ -89,20 +95,19 @@ Vector3<T> operator*(const Twist<T> &a, const Vector3<T> &p) {
 }
 
 template <class T>
-inline Twist<T> fg_make_twist(const Vector3<T> &translation,
-                              const Vector3<T> &rotation) {
+inline Twist<T> make_twist(const Vector3<T> &translation,
+                           const Vector3<T> &rotation) {
   Twist<T> twist;
   twist.translation() = translation;
   twist.rotation() = rotation;
   return twist;
 }
 
-template <class T>
-inline Vector3<T> fg_twist_translation(const Twist<T> &twist) {
+template <class T> inline Vector3<T> twist_translation(const Twist<T> &twist) {
   return twist.translation();
 }
 
-template <class T> inline Vector3<T> fg_twist_rotation(const Twist<T> &twist) {
+template <class T> inline Vector3<T> twist_rotation(const Twist<T> &twist) {
   return twist.rotation();
 }
 

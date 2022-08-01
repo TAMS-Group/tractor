@@ -50,78 +50,78 @@ template <class ScalarType> struct GeometryFast : GeometryFastBase<ScalarType> {
 
   static Orientation angleAxisOrientation(const Scalar &angle,
                                           const Vector3 &axis) {
-    return fg_angle_axis_quat(angle, axis);
+    return angle_axis_quat(angle, axis);
   }
 
   static Pose angleAxisPose(const Scalar &angle, const Vector3 &axis) {
-    return fg_angle_axis_pose(angle, axis);
+    return angle_axis_pose(angle, axis);
   }
 
   static Pose angleAxisPose(const Pose &parent, const Scalar &angle,
                             const Vector3 &axis) {
     // return parent * angleAxisPose(angle, axis);
-    return fg_pose_angle_axis_pose(parent, angle, axis);
+    return pose_angle_axis_pose(parent, angle, axis);
   }
 
   static Pose identityPose() { return Pose(tractor::Pose<Value>::Identity()); }
 
   static Pose translationPose(const Vector3 &pos) {
-    return fg_translation_pose(pos);
+    return translation_pose(pos);
   }
 
   static Pose translationPose(const Pose &parent, const Vector3 &pos) {
     // return parent * translationPose(pos);
-    return fg_pose_translate(parent, pos);
+    return pose_translate(parent, pos);
   }
 
   static Pose translationPose(const Pose &parent, const Scalar &x,
                               const Scalar &y, const Scalar &z) {
     Vector3 translation;
-    fg_vec3_pack(x, y, z, translation);
-    return fg_pose_translate(parent, translation);
+    vec3_pack(x, y, z, translation);
+    return pose_translate(parent, translation);
   }
 
   static Twist translationTwist(const Vector3 &translation) {
-    return fg_translation_twist(translation);
+    return translation_twist(translation);
   }
 
   static Twist twist(const Vector3 &translation, const Vector3 &rotation) {
-    return fg_make_twist(translation, rotation);
+    return make_twist(translation, rotation);
   }
 
   static Pose orientationPose(const Orientation &orientation) {
-    return fg_orientation_pose(orientation);
+    return orientation_pose(orientation);
   }
 
   static Vector3 translation(const Pose &pose) {
-    return fg_pose_translation(pose);
+    return pose_translation(pose);
   }
 
   static Orientation orientation(const Pose &pose) {
-    return fg_pose_orientation(pose);
+    return pose_orientation(pose);
   }
 
   static Vector3 translation(const Twist &twist) {
-    return fg_twist_translation(twist);
+    return twist_translation(twist);
   }
 
   static Vector3 rotation(const Twist &twist) {
-    return fg_twist_rotation(twist);
+    return twist_rotation(twist);
   }
 
   static Vector3 pack(const Scalar &x, const Scalar &y, const Scalar &z) {
     Vector3 ret;
-    fg_vec3_pack(x, y, z, ret);
+    vec3_pack(x, y, z, ret);
     return ret;
   }
 
   static void unpack(const Vector3 &v, Scalar &x, Scalar &y, Scalar &z) {
-    fg_vec3_unpack(v, x, y, z);
+    vec3_unpack(v, x, y, z);
   }
 
   static void unpack(const Orientation &v, Scalar &x, Scalar &y, Scalar &z,
                      Scalar &w) {
-    fg_quat_unpack(v, x, y, z, w);
+    quat_unpack(v, x, y, z, w);
   }
 
   static void unpack(const Pose &pose, Scalar &px, Scalar &py, Scalar &pz,
@@ -134,21 +134,21 @@ template <class ScalarType> struct GeometryFast : GeometryFastBase<ScalarType> {
                    const Scalar &qx, const Scalar &qy, const Scalar &qz,
                    const Scalar &qw) {
     Vector3 p;
-    fg_vec3_pack(px, py, pz, p);
+    vec3_pack(px, py, pz, p);
     Orientation q;
-    fg_quat_pack(qx, qy, qz, qw, q);
+    quat_pack(qx, qy, qz, qw, q);
     return translationPose(p) * orientationPose(q);
   }
 
   static Orientation pack(const Scalar &qx, const Scalar &qy, const Scalar &qz,
                           const Scalar &qw) {
     Orientation q;
-    fg_quat_pack(qx, qy, qz, qw, q);
+    quat_pack(qx, qy, qz, qw, q);
     return q;
   }
 
   static Orientation inverse(const Orientation &q) {
-    return fg_quat_inverse(q);
+    return quat_inverse(q);
   }
 
   static Pose inverse(const Pose &pose) {
@@ -158,11 +158,11 @@ template <class ScalarType> struct GeometryFast : GeometryFastBase<ScalarType> {
   }
 
   static Vector3 residual(const Orientation &a, const Orientation &b) {
-    return fg_quat_residual(inverse(a) * b);
+    return quat_residual(inverse(a) * b);
   }
 
   static Twist residual(const Pose &a, const Pose &b) {
-    return fg_pose_residual(a, b);
+    return pose_residual(a, b);
   }
 
   template <class T, int Flags>
