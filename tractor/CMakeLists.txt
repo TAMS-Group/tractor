@@ -82,6 +82,7 @@ add_library(${LIBNAME}
     src/robot/jointstate.cpp
     src/robot/jointtypes.cpp
     src/robot/linkstate.cpp
+    src/python/registry.cpp
     src/robot/robot.cpp
     src/robot/robotinfo.cpp
     src/robot/robotmodel.cpp
@@ -104,7 +105,7 @@ install(DIRECTORY include/tractor DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATI
 install(TARGETS ${LIBNAME} LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
 
 pybind_add_module(tractor
-  src/python/python.cpp
+  src/python/module.cpp
 )
 target_link_libraries(tractor PRIVATE libtractor ${catkin_LIBRARIES})
 set_target_properties(tractor PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_PYTHON_DESTINATION})

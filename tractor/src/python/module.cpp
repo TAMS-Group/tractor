@@ -1,7 +1,7 @@
 // TAMS Hand Synergies
 // (c) 2022 Philipp Ruppel
 
-#include <tractor/python/python.h>
+#include <tractor/python/module.h>
 
 #include <tractor/core/engine.h>
 #include <tractor/core/profiler.h>
@@ -363,7 +363,14 @@ void buildMainModule(py::module &m) {
     return std::make_shared<Program>(f);
   });
 
-  m.def("test", []() { std::cout << "test" << std::endl; });
+  m.def("test", [](py::module &m) {
+    std::cout << "test" << std::endl;
+    m.def("bla", []() { std::cout << "bla" << std::endl; });
+  });
+
+  struct Test {};
+  py::class_<Test>(m, "A");
+  // py::class_<Test>(m, "B");
 
   auto profiler = m.def_submodule("profiler");
   profiler.def("start", []() { static ProfilerThread p; });
@@ -371,4 +378,7 @@ void buildMainModule(py::module &m) {
 
 } // namespace tractor
 
-PYBIND11_MODULE(tractor, m) { tractor::buildMainModule(m); }
+PYBIND11_MODULE(tractor, m) {
+  std::cout << "building module" << std::endl;
+  tractor::buildMainModule(m);
+}
