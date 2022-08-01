@@ -3,6 +3,7 @@
 
 #include <tractor/python/module.h>
 
+#include <tractor/core/constraints.h>
 #include <tractor/core/engine.h>
 #include <tractor/core/profiler.h>
 #include <tractor/core/solver.h>
@@ -22,8 +23,6 @@ py::object toPython(const Any &v) {
   throw std::runtime_error("not convertible");
 }
 
-// void canConvert(const py::object& o, )
-
 void setFromPython(Any &a, const py::object &o) {
   if (a.is<float>())
     a.value<float>() = o.cast<float>();
@@ -38,8 +37,25 @@ void makeTypeModule(py::module &main, const char *name) {
 
   auto m = main.def_submodule(name);
 
-  m.def("Scalar", []() { return Any(Var<Scalar>(0)); });
-  m.def("Scalar", [](Scalar v) { return Any(Var<Scalar>(v)); });
+  py::class_<Var<Scalar>>(m, "Scalar")
+      .def(py::init<>())
+      .def(py::init<Scalar>())
+      .def_property(
+          "value", [](const Var<Scalar> &v) { return (Scalar)v.value(); },
+          [](Var<Scalar> &v, const Scalar &p) { v.value() = p; })
+      .def(py::self + py::self)
+      .def(py::self - py::self)
+      .def(py::self * py::self)
+      .def(py::self / py::self)
+      .def("__repr__", [](const Var<Scalar> &v) {
+        std::stringstream ss;
+        ss << "Scalar(" << v.value() << ")";
+        return ss.str();
+      });
+  m.def("parameter", [](Var<Scalar> &var) { tractor::parameter(var); });
+  m.def("variable", [](Var<Scalar> &var) { tractor::variable(var); });
+  m.def("output", [](Var<Scalar> &var) { tractor::output(var); });
+  m.def("goal", [](Var<Scalar> &var) { tractor::goal(var); });
 
   py::class_<LeastSquaresSolver<Scalar>, Solver>(m, "LeastSquaresSolver")
       .def(py::init<std::shared_ptr<Engine>>())
@@ -106,7 +122,7 @@ void makeTypeModule(py::module &main, const char *name) {
     return r;
   });
 
-  main.def("input", [](Tensor2<Scalar> &var) {
+  main.def("variable", [](Tensor2<Scalar> &var) {
     if (auto *rec = Recorder::instance()) {
       rec->input(var.type(), var.data(), var.data());
     }
@@ -172,122 +188,6 @@ void buildMainModule(py::module &m) {
   py::class_<SimpleEngine, std::shared_ptr<SimpleEngine>, Engine>(
       m, "DefaultEngine")
       .def(py::init<>());
-
-  auto var_class = py::class_<Any>(m, "Var").def_property(
-      "value", [](const Any &v) { return toPython(v); },
-      [](Any &v, const py::object &p) { setFromPython(v, p); });
-
-  m.def("input", [](Any &var) {
-    if (auto *rec = Recorder::instance()) {
-      rec->input(var.type(), var.data(), var.data());
-    }
-  });
-  m.def("output", [](Any &var) {
-    if (auto *rec = Recorder::instance()) {
-      rec->output(var.type(), var.data(), var.data());
-    }
-  });
-  m.def("goal", [](Any &var) {
-    if (auto *rec = Recorder::instance()) {
-      rec->goal(var.type(), var.data());
-    }
-  });
-
-  {
-    std::map<std::string, std::function<py::object(const py::args &)>> wrappers;
-    std::map<std::string, std::vector<const Operator *>> map;
-    for (auto *op : Operator::all()) {
-      if (op->isMode<compute>()) {
-        map[op->label()].push_back(op);
-      }
-    }
-    for (auto &p : map) {
-      std::cout << p.first << std::endl;
-      auto variants = p.second;
-      auto matchVariant = [](const Operator *op, const py::args &args) {
-        if (args.size() > op->arguments().size()) {
-          return false;
-        }
-        for (size_t i = 0; i < op->argumentCount(); i++) {
-          if (op->arg(i).isInput()) {
-            if (i >= args.size()) {
-              return false;
-            }
-            try {
-              if (args[i].cast<Any &>().type() != op->arg(i).typeInfo()) {
-                return false;
-              }
-            } catch (const py::cast_error &e) {
-            }
-          }
-        }
-        return true;
-      };
-      auto findVariant = [variants, matchVariant](const py::args &args) {
-        const Operator *match = nullptr;
-        for (const Operator *op : variants) {
-          if (matchVariant(op, args)) {
-            if (match == nullptr) {
-              match = op;
-            } else {
-              throw std::invalid_argument("ambiguous call " + match->name() +
-                                          " " + op->name());
-            }
-          }
-        }
-        if (match) {
-          return match;
-        }
-        throw std::invalid_argument("no matching function overload");
-      };
-      auto wrapper = [variants,
-                      findVariant](const py::args &py_args) -> py::object {
-        const Operator *op = findVariant(py_args);
-        // std::cout << "----- call " << op->name() << std::endl;
-        std::vector<uintptr_t> arg_p;
-        std::deque<Any> any_args;
-        for (size_t i = 0; i < py_args.size(); i++) {
-          try {
-            arg_p.push_back((uintptr_t)py_args[i].cast<Any &>().data());
-          } catch (const py::cast_error &) {
-            any_args.emplace_back(op->arg(i).typeInfo());
-            arg_p.push_back((uintptr_t)any_args.back().data());
-          }
-        }
-        std::deque<Any> ret;
-        while (arg_p.size() < op->arguments().size()) {
-          if (op->arg(arg_p.size()).isInput()) {
-            throw std::invalid_argument(
-                "function expects more arguments than specified");
-          }
-          ret.emplace_back(op->arg(arg_p.size()).typeInfo());
-          arg_p.push_back((uintptr_t)ret.back().data());
-        }
-        op->callIndirect(nullptr, arg_p.data());
-        if (auto *rec = Recorder::instance()) {
-          rec->op(op);
-          for (auto &a : arg_p) {
-            rec->push(a);
-          }
-        }
-        // std::cout << "----- ready " << op->name() << std::endl;
-        if (ret.empty()) {
-          return (py::object)py::none();
-        } else if (ret.size() == 1) {
-          return py::cast(ret[0]);
-        } else {
-          return py::cast(ret);
-        }
-        throw std::invalid_argument("no matching function overload");
-      };
-      wrappers[p.first] = wrapper;
-      m.def(p.first.c_str(), wrapper);
-    }
-    var_class.def("__add__", wrappers["add"], py::is_operator());
-    var_class.def("__sub__", wrappers["sub"], py::is_operator());
-    var_class.def("__mul__", wrappers["mul"], py::is_operator());
-    var_class.def("__div__", wrappers["div"], py::is_operator());
-  }
 
   py::class_<PyInstructionList>(m, "InstructionList")
       .def("__iter__",
@@ -363,14 +263,119 @@ void buildMainModule(py::module &m) {
     return std::make_shared<Program>(f);
   });
 
-  m.def("test", [](py::module &m) {
-    std::cout << "test" << std::endl;
-    m.def("bla", []() { std::cout << "bla" << std::endl; });
-  });
+  for (auto *op : Operator::all()) {
+    op->pythonize(m);
+  }
 
-  struct Test {};
-  py::class_<Test>(m, "A");
-  // py::class_<Test>(m, "B");
+  // {
+  //   std::map<std::string, std::vector<const Operator *>> map;
+  //   for (auto *op : Operator::all()) {
+  //     if (op->isMode<compute>()) {
+  //       map[op->label()].push_back(op);
+  //     }
+  //   }
+  //   for (auto &p : map) {
+  //     std::cout << p.first << std::endl;
+  //     auto variants = p.second;
+  //     auto matchVariant = [](const Operator *op, const py::args &args) {
+  //       if (args.size() > op->arguments().size()) {
+  //         return false;
+  //       }
+  //       for (size_t i = 0; i < op->argumentCount(); i++) {
+  //         if (op->arg(i).isInput()) {
+  //           if (i >= args.size()) {
+  //             return false;
+  //           }
+  //           try {
+  //             if (args[i].cast<Any &>().type() != op->arg(i).typeInfo()) {
+  //               return false;
+  //             }
+  //           } catch (const py::cast_error &e) {
+  //           }
+  //         }
+  //       }
+  //       return true;
+  //     };
+  //     auto findVariant = [variants, matchVariant](const py::args &args) {
+  //       const Operator *match = nullptr;
+  //       for (const Operator *op : variants) {
+  //         if (matchVariant(op, args)) {
+  //           if (match == nullptr) {
+  //             match = op;
+  //           } else {
+  //             throw std::invalid_argument("ambiguous call " + match->name() +
+  //                                         " " + op->name());
+  //           }
+  //         }
+  //       }
+  //       if (match) {
+  //         return match;
+  //       }
+  //       throw std::invalid_argument("no matching function overload");
+  //     };
+  //     auto wrapper = [variants,
+  //                     findVariant](const py::args &py_args) -> py::object {
+  //       const Operator *op = findVariant(py_args);
+  //       // std::cout << "----- call " << op->name() << std::endl;
+  //       std::vector<uintptr_t> arg_p;
+  //       std::deque<Any> any_args;
+  //       for (size_t i = 0; i < py_args.size(); i++) {
+  //         try {
+  //           arg_p.push_back((uintptr_t)py_args[i].cast<Any &>().data());
+  //         } catch (const py::cast_error &) {
+  //           any_args.emplace_back(op->arg(i).typeInfo());
+  //           arg_p.push_back((uintptr_t)any_args.back().data());
+  //         }
+  //       }
+  //       std::deque<Any> ret;
+  //       while (arg_p.size() < op->arguments().size()) {
+  //         if (op->arg(arg_p.size()).isInput()) {
+  //           throw std::invalid_argument(
+  //               "function expects more arguments than specified");
+  //         }
+  //         ret.emplace_back(op->arg(arg_p.size()).typeInfo());
+  //         arg_p.push_back((uintptr_t)ret.back().data());
+  //       }
+  //       op->callIndirect(nullptr, arg_p.data());
+  //       if (auto *rec = Recorder::instance()) {
+  //         rec->op(op);
+  //         for (auto &a : arg_p) {
+  //           rec->push(a);
+  //         }
+  //       }
+  //       // std::cout << "----- ready " << op->name() << std::endl;
+  //       if (ret.empty()) {
+  //         return (py::object)py::none();
+  //       } else if (ret.size() == 1) {
+  //         return py::cast(ret[0]);
+  //       } else {
+  //         return py::cast(ret);
+  //       }
+  //       throw std::invalid_argument("no matching function overload");
+  //     };
+  //     wrappers[p.first] = wrapper;
+  //     m.def(p.first.c_str(), wrapper);
+  //   }
+  // }
+
+  // m.def("test", []() {
+  //   // std::cout << "test" << std::endl;
+  //   // m.def("bla", []() { std::cout << "bla" << std::endl; });
+  //   return py::detail::get_type_handle(typeid(Var<double>), true);
+  // });
+  //
+  // m.def("test2", [](const py::object &o) {
+  //   // return py::detail::get_type_handle(typeid(Var<double>), true) ==
+  //   //  py::type::of(o)
+  //   //       o.get_type();
+  //   auto t = py::detail::get_type_handle(typeid(Var<double>), true);
+  //   return o.is(t);
+  // });
+  //
+  // m.def("test3", [](const py::object &o) {
+  //   return py::detail::get_type_handle(typeid(Var<double>), true) ==
+  //          o.get_type();
+  // });
 
   auto profiler = m.def_submodule("profiler");
   profiler.def("start", []() { static ProfilerThread p; });

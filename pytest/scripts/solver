@@ -10,15 +10,17 @@ b = tt.Scalar(2)
 def f():
     global a
     a = tt.Scalar(3)
-    tr.input(a)
-    tr.input(b)
-    #tr.goal(tr.mul(a, 0.01))
-    #print " - add", tr.add(a, 0.1)
-    #print " - +", a + 0.1
-    #tr.goal(tr.add(a, 0.1) * tt.Scalar(0.01))
-    tr.goal(a * tt.Scalar(0.01) + 0.01)
-    tr.goal(b * tt.Scalar(0.01))
-    tr.goal(tr.tanh(a) + tr.tanh(b) - tt.Scalar(0.1))
+    tt.variable(a)
+    tt.variable(b)
+    #tt.goal(a * tt.Scalar(0.01) + 0.01)
+    tt.goal(a * tt.Scalar(0.1))
+    tt.goal(b * tt.Scalar(0.1))
+    #tt.goal(tr.tanh(a) + tr.tanh(b) - tt.Scalar(0.1))
+    tt.goal(a - tt.Scalar(0.1))
+
+#f()
+#print a
+#print b
 
 prog = tr.record(f)
 

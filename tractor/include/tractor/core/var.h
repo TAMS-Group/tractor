@@ -7,84 +7,99 @@
 
 namespace tractor {
 
-class VarBase {};
+// template <class T> Var<T>::Var() {
+//   if (auto *inst = Recorder::instance()) {
+//     inst->constant(this);
+//   }
+// }
+// template <class T> Var<T>::Var(const T &v) : _x(v) {
+//   if (auto *inst = Recorder::instance()) {
+//     inst->constant(this);
+//   }
+// }
+// template <class T> Var<T>::Var(const Var &other) {
+//   _x = other._x;
+//   if (auto *inst = Recorder::instance()) {
+//     inst->move(&other._x, &_x);
+//   }
+// }
+// template <class T> Var<T>::operator T() const { return _x; }
+// template <class T> T &Var<T>::value() { return _x; }
+// template <class T> const T &Var<T>::value() const { return _x; }
+// template <class T> Var<T>::Var(Var<T> &&other) {
+//   _x = other._x;
+//   if (auto *inst = Recorder::instance()) {
+//     inst->rewrite(&other._x, &_x);
+//   }
+// }
+// template <class T> Var<T> &Var<T>::operator=(const Var<T> &other) {
+//   _x = other._x;
+//   if (auto *inst = Recorder::instance()) {
+//     inst->move(&other._x, &_x);
+//   }
+//   return *this;
+// }
+// template <class T> Var<T> &Var<T>::operator=(Var<T> &&other) {
+//   _x = other._x;
+//   if (auto *inst = Recorder::instance()) {
+//     inst->rewrite(&other._x, &_x);
+//   }
+//   return *this;
+// }
 
-template <class T> class alignas(T) Var : public VarBase {
-  T _x = T();
-
-  // static constexpr uintptr_t ctest = 148791287391823;
-  // uintptr_t vtest = 0;
-
-public:
-  typedef T Value;
-
-  Var() {
-    // vtest = ((uintptr_t)this ^ ctest);
-    if (auto *inst = Recorder::instance()) {
-      inst->constant(this);
-    }
-  }
-
-  Var(const T &v) : _x(v) {
-    // vtest = ((uintptr_t)this ^ ctest);
-    if (auto *inst = Recorder::instance()) {
-      inst->constant(this);
-    }
-  }
-
-  Var(const Var &other) {
-    // vtest = ((uintptr_t)this ^ ctest);
-    _x = other._x;
-    if (auto *inst = Recorder::instance()) {
-      inst->move(&other._x, &_x);
-    }
-  }
-
-  explicit operator T() const { return _x; }
-
-  T &value() {
-    // if (vtest != ((uintptr_t)this ^ ctest)) {
-    //   throw std::runtime_error("var not initialized");
-    // }
-    return _x;
-  }
-
-  const T &value() const {
-    // if (vtest != ((uintptr_t)this ^ ctest)) {
-    //   throw std::runtime_error("var not initialized");
-    // }
-    return _x;
-  }
-
-  Var(Var &&other) {
-    _x = other._x;
-    if (auto *inst = Recorder::instance()) {
-      inst->rewrite(&other._x, &_x);
-    }
-  }
-
-  Var &operator=(const Var &other) {
-    _x = other._x;
-    if (auto *inst = Recorder::instance()) {
-      inst->move(&other._x, &_x);
-    }
-    return *this;
-  }
-
-  Var &operator=(Var &&other) {
-    _x = other._x;
-    if (auto *inst = Recorder::instance()) {
-      inst->rewrite(&other._x, &_x);
-    }
-    return *this;
-  }
-};
+// class VarBase {};
+//
+//  template <class T> class alignas(T) Var : public VarBase {
+//    T _x = T();
+//
+//  public:
+//    typedef T Value;
+//    Var() {
+//      if (auto *inst = Recorder::instance()) {
+//        inst->constant(this);
+//      }
+//    }
+//    Var(const T &v) : _x(v) {
+//      if (auto *inst = Recorder::instance()) {
+//        inst->constant(this);
+//      }
+//    }
+//    Var(const Var &other) {
+//      _x = other._x;
+//      if (auto *inst = Recorder::instance()) {
+//        inst->move(&other._x, &_x);
+//      }
+//    }
+//    explicit operator T() const { return _x; }
+//    T &value() { return _x; }
+//    const T &value() const { return _x; }
+//    Var(Var &&other) {
+//      _x = other._x;
+//      if (auto *inst = Recorder::instance()) {
+//        inst->rewrite(&other._x, &_x);
+//      }
+//    }
+//    Var &operator=(const Var &other) {
+//      _x = other._x;
+//      if (auto *inst = Recorder::instance()) {
+//        inst->move(&other._x, &_x);
+//      }
+//      return *this;
+//    }
+//    Var &operator=(Var &&other) {
+//      _x = other._x;
+//      if (auto *inst = Recorder::instance()) {
+//        inst->rewrite(&other._x, &_x);
+//      }
+//      return *this;
+//    }
+//  };
 
 #define VAR_OP(op, fn)                                                         \
                                                                                \
   template <class A, class B,                                                  \
-            class Ret = decltype(                                              \
-                tractor::fn(*(const A *)nullptr, *(const B *)nullptr))>        \
+            class Ret = decltype(tractor::fn(*(const A *)nullptr,              \
+                                             *(const B *)nullptr))>            \
   Ret operator op(const A &a, const B &b) {                                    \
     return std::move(tractor::fn(a, b));                                       \
   }                                                                            \

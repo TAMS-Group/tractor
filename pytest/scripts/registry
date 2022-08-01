@@ -2,6 +2,36 @@
 
 import time
 import tractor as tr
+import tractor.types_double as tt
 
-print tr.A()
-print tr.B()
+print dir(tr)
+print dir(tt)
+
+print tt.Scalar()
+print tt.Scalar(1.0)
+
+print tt.Scalar().value
+print tt.Scalar(5).value
+
+print "a"
+print tr.tanh(tt.Scalar(0.3))
+print tr.tanh(tt.Scalar(1.0))
+print tr.sin(tt.Scalar(5.0))
+
+
+
+# a = tt.Scalar(3)
+# print a.value
+# a.value = 10
+# print a.value
+#
+# print tr.test()
+# print type(tt.Scalar(5))
+#
+# print tr.test2(5)
+# print tr.test2(tt.Scalar(5))
+# print tr.test2(tt.Scalar(5).value)
+#
+# print tr.test3(5)
+# print tr.test3(tt.Scalar(5))
+# print tr.test3(tt.Scalar(5).value)

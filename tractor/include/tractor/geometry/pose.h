@@ -16,7 +16,7 @@ private:
   Quaternion<Scalar> _orientation;
 
 public:
-  inline Pose() {}
+  Pose() {}
   inline Pose(const Vector3<Scalar> &translation,
               const Quaternion<Scalar> &orientation)
       : _translation(translation), _orientation(orientation) {}

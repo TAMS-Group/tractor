@@ -2,23 +2,19 @@
 
 import time
 import tractor as tr
-
-print tr
-
-print tr.DefaultEngine()
-
 import tractor.types_double as tt
 
 a = tt.Scalar(3)
-b = tt.Scalar(2)
+print "a", a
 
 def f():
-    global x
-    tr.input(a)
-    tr.input(b)
+    global x, b
+    b = tt.Scalar(2)
+    tt.variable(a)
+    tt.variable(b)
     x = tr.mul(a, b) + tt.Scalar(0.3)
     x += tt.Scalar(0.2)
-    tr.output(x)
+    tt.output(x)
 
 print "a"
 

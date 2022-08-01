@@ -10,7 +10,73 @@
 #include <sstream>
 #include <tuple>
 
+namespace pybind11 {
+class module;
+}
+
+#ifdef TRACTOR_IMPLEMENT_OPS
+#include <pybind11/pybind11.h>
+#endif
+
 namespace tractor {
+
+class VarBase {};
+template <class T> class alignas(T) Var : public VarBase {
+  T _x = T();
+
+public:
+  typedef T Value;
+  Var();
+  Var(const T &v);
+  Var(const Var &other);
+  explicit operator T() const;
+  T &value();
+  const T &value() const;
+  Var(Var &&other);
+  Var &operator=(const Var &other);
+  Var &operator=(Var &&other);
+};
+
+template <class T> Var<T>::Var() {
+  if (auto *inst = Recorder::instance()) {
+    inst->constant(this);
+  }
+}
+template <class T> Var<T>::Var(const T &v) : _x(v) {
+  if (auto *inst = Recorder::instance()) {
+    inst->constant(this);
+  }
+}
+template <class T> Var<T>::Var(const Var &other) {
+  _x = other._x;
+  if (auto *inst = Recorder::instance()) {
+    inst->move(&other._x, &_x);
+  }
+}
+template <class T> Var<T>::operator T() const { return _x; }
+template <class T> T &Var<T>::value() { return _x; }
+template <class T> const T &Var<T>::value() const { return _x; }
+template <class T> Var<T>::Var(Var<T> &&other) {
+  _x = other._x;
+  if (auto *inst = Recorder::instance()) {
+    inst->rewrite(&other._x, &_x);
+  }
+}
+template <class T> Var<T> &Var<T>::operator=(const Var<T> &other) {
+  _x = other._x;
+  if (auto *inst = Recorder::instance()) {
+    inst->move(&other._x, &_x);
+  }
+  return *this;
+}
+template <class T> Var<T> &Var<T>::operator=(Var<T> &&other) {
+  _x = other._x;
+  if (auto *inst = Recorder::instance()) {
+    inst->rewrite(&other._x, &_x);
+  }
+  return *this;
+}
+
 class OpTypeBase {
 protected:
   std::type_index _type_index = typeid(void);
@@ -265,11 +331,40 @@ public:
   }
   template <class Op> bool is() const { return _op == OpType(typeid(Op *)); }
   static std::vector<const Operator *> all();
+  virtual void pythonize(pybind11::module &) const {}
+};
+
+template <class T> struct ArgumentConverter {
+  static inline const T &map(const Var<T> &v) { return v.value(); }
+  static inline T &map(Var<T> &v) { return v.value(); }
+};
+
+template <class Ret, class Op> struct Caller {
+  template <class... Args> static inline Var<Ret> call2(Args &...args) {
+    Var<Ret> ret;
+    ret.value() = Op::call(args...);
+    recordOperation(Op::instance(), &args..., &ret.value());
+    return std::move(ret);
+  }
+  template <class... ImplArgs, class... Args>
+  static inline Var<Ret> call(std::tuple<ImplArgs...> *, Args &...args) {
+    return std::move(call2(ArgumentConverter<ImplArgs>::map(args)...));
+  }
+};
+template <class Op> struct Caller<void, Op> {
+  template <class... Args> static inline void call2(Args &...args) {
+    Op::call(args...);
+    recordOperation(Op::instance(), &args...);
+  }
+  template <class... ImplArgs, class... Args>
+  static inline void call(std::tuple<ImplArgs...> *, Args &...args) {
+    call2(ArgumentConverter<ImplArgs>::map(args)...);
+  }
 };
 
 #ifdef TRACTOR_IMPLEMENT_OPS
 
-template <class Impl, class Mode, class Op, class Group>
+template <class Impl, class Mode, class Op, class Group, class Scalar>
 class OperatorImpl : public Operator {
   template <class... Args> struct Init {
     template <class Ret, size_t... Indices> struct Looper {
@@ -331,6 +426,62 @@ class OperatorImpl : public Operator {
   }
   typedef typename RawArgumentTuple<decltype(&Impl::call)>::Type ArgumentTuple;
 
+  // template <class T, class S>
+  // void _pythonize(const T *, const S *, pybind11::module &m) const {}
+  // void _pythonize(const compute *, const double *, pybind11::module &m) const
+  // {
+  //   m.def(label().c_str(), &Impl::call);
+  // }
+  // virtual void pythonize(pybind11::module &m) const override {
+  //   _pythonize((const Mode *)nullptr, (const Scalar *)nullptr, m);
+  // }
+  // m.def(op->label().c_str(), &Impl::call);
+
+  template <class T> struct MakeVar { typedef const Var<T> Type; };
+  template <class T> struct MakeVar<const T> { typedef const Var<T> Type; };
+  template <class T> struct MakeVar<const T &> { typedef const Var<T> Type; };
+  template <class T> struct MakeVar<T &> { typedef Var<T> Type; };
+  template <class T> struct MakeVar<T *> { typedef const Var<T *> Type; };
+  template <class Ret, class... Args> struct Pythonizer {
+    static void pythonize(const Operator *op, pybind11::module &m,
+                          Ret (*func)(Args &...)) {
+      auto impl = [op](typename MakeVar<Args>::Type &...args) {
+        Var<Ret> ret;
+        op->invoke(&args..., &ret);
+        recordOperation(op, &args..., &ret);
+        return ret;
+      };
+      m.def(op->label().c_str(), impl);
+    }
+  };
+  template <class... Args> struct Pythonizer<void, Args...> {
+    static void pythonize(const Operator *op, pybind11::module &m,
+                          void (*func)(Args &...)) {
+      auto impl = [op](typename MakeVar<Args>::Type &...args) {
+        op->invoke(&args...);
+        recordOperation(op, &args...);
+      };
+      m.def(op->label().c_str(), impl);
+    }
+  };
+  template <class Ret, class... Args>
+  static void pythonizeImpl(const Operator *op, pybind11::module &m,
+                            Ret (*func)(Args &...)) {
+    Pythonizer<Ret, Args...>::pythonize(op, m, func);
+  }
+
+  template <class X, class T, class S> struct PythonizerFilter {
+    static void pythonize(const Operator *op, pybind11::module &m) {}
+  };
+  template <class X> struct PythonizerFilter<X, compute, double> {
+    static void pythonize(const Operator *op, pybind11::module &m) {
+      pythonizeImpl(op, m, &Impl::call);
+    }
+  };
+  virtual void pythonize(pybind11::module &m) const override {
+    PythonizerFilter<int, Mode, Scalar>::pythonize(this, m);
+  }
+
 public:
   OperatorImpl(const std::string &name, const std::string &label)
       : Operator(name, label, OpMode(typeid(Mode *)), OpType(typeid(Op *)),
@@ -339,6 +490,7 @@ public:
     //_argument_count =
     //    argument_count + (std::is_same<Return, void>::value ? 0 : 1);
     init(std::make_index_sequence<argument_count>(), (ArgumentTuple *)nullptr);
+    //_makePython((const Mode *)nullptr, this);
   }
   static const Operator *instance(const char *name, const char *label) {
     static const Operator *instance = [name, label]() {
@@ -374,34 +526,6 @@ template <class T> struct OverloadSelector<Var<T>> {
   operator const T &() { return *(const T *)nullptr; }
 };
 
-template <class T> struct ArgumentConverter {
-  static inline const T &map(const Var<T> &v) { return v.value(); }
-  static inline T &map(Var<T> &v) { return v.value(); }
-};
-
-template <class Ret, class Op> struct Caller {
-  template <class... Args> static inline Var<Ret> call2(Args &...args) {
-    Var<Ret> ret;
-    ret.value() = Op::call(args...);
-    recordOperation(Op::instance(), &args..., &ret.value());
-    return std::move(ret);
-  }
-  template <class... ImplArgs, class... Args>
-  static inline Var<Ret> call(std::tuple<ImplArgs...> *, Args &...args) {
-    return std::move(call2(ArgumentConverter<ImplArgs>::map(args)...));
-  }
-};
-template <class Op> struct Caller<void, Op> {
-  template <class... Args> static inline void call2(Args &...args) {
-    Op::call(args...);
-    recordOperation(Op::instance(), &args...);
-  }
-  template <class... ImplArgs, class... Args>
-  static inline void call(std::tuple<ImplArgs...> *, Args &...args) {
-    call2(ArgumentConverter<ImplArgs>::map(args)...);
-  }
-};
-
 #define TRACTOR_STRINGIFY(x) #x
 
 #ifdef TRACTOR_IMPLEMENT_OPS
@@ -417,11 +541,11 @@ template <class Op> struct Caller<void, Op> {
                                                                                \
   struct scalar##postfix##_group;                                              \
                                                                                \
-  const Operator *op_##prefix##name##_##postfix##_inst =                       \
-      OperatorImpl<op_##prefix##name##_##postfix##_impl_1, mode, op_##name,    \
-                   std::tuple<op_##name *, scalar##postfix##_group *>>::       \
-          instance(TRACTOR_STRINGIFY(prefix##name##_##postfix),                \
-                   TRACTOR_STRINGIFY(name));                                   \
+  const Operator *op_##prefix##name##_##postfix##_inst = OperatorImpl<         \
+      op_##prefix##name##_##postfix##_impl_1, mode, op_##name,                 \
+      std::tuple<op_##name *, scalar##postfix##_group *>,                      \
+      scalar>::instance(TRACTOR_STRINGIFY(prefix##name##_##postfix),           \
+                        TRACTOR_STRINGIFY(name));                              \
                                                                                \
   struct op_##prefix##name##_##postfix##_impl_2                                \
       : op_##prefix##name##_##postfix##_impl_1 {                               \
@@ -439,6 +563,14 @@ template <class Op> struct Caller<void, Op> {
         *op_##prefix##name##_overload args;                                    \
   }                                                                            \
   using op_##prefix##name##_##postfix##_ns::op_##prefix##name##_overload;
+
+// int py_##prefix##name##_##postfix = []() {                                   \
+//   register_python_component([](pybind11::module &m) {                        \
+//     m.def(TRACTOR_STRINGIFY(name),                                           \
+//           &op_##prefix##name##_##postfix##_impl_1::call);                    \
+//   });                                                                        \
+//   return 0;                                                                  \
+// }();
 
 #else
 
@@ -514,15 +646,5 @@ template <class Op> struct Caller<void, Op> {
     };                                                                         \
     makeBatchLoop(f).run args2;                                                \
   })
-
-template <class T, class Impl = typename std::decay<decltype(*op_move_overload(
-                       OverloadSelector<Var<T>>()))>::type>
-inline void Recorder_move_impl(Recorder *rec, const T *from, T *to) {
-  rec->op(Impl::instance(), from, to);
-}
-
-template <class T> void Recorder::move(const T *from, T *to) {
-  Recorder_move_impl(this, from, to);
-}
 
 } // namespace tractor

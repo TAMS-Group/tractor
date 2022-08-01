@@ -66,7 +66,9 @@ public:
     }
   }
 
-  template <class T> inline void move(const T *from, T *to);
+  template <class T> inline void move(const T *from, T *to) {
+    move(TypeInfo::get<T>(), from, to);
+  }
 
   template <class T> inline void rewrite(const T *from, T *to) {
     if (!_instructions.empty()) {
@@ -168,11 +170,17 @@ template <class T> inline void parameter(Var<T> &p) {
   }
 }
 
+class Operator;
+
 template <class... Args>
 inline void recordOperation(const Operator *op, Args *...args) {
   if (auto inst = Recorder::instance()) {
     inst->op(op, args...);
   }
 }
+
+// template <class T> void Recorder::move(const T *from, T *to) {
+//   Recorder_move_impl(this, from, to);
+// }
 
 } // namespace tractor
