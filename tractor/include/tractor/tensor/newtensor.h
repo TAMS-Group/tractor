@@ -84,63 +84,185 @@ public:
   TypeInfo type() const { return makeTensorType(TypeInfo::get<T>(), shape()); }
 };
 
-template <class... Args> struct PointerOp : Operator {
-  std::function<void(Args...)> functor;
-  template <size_t... Indices>
+// template <class Lambda, class... Args>
+// void invokeLambda(const Lambda &lambda, void *base, const uintptr_t *offsets,
+//                   decltype(Lambda::template operator()<Args...>) *v =
+//                   nullptr) {
+//
+// }
+
+// template <class Lambda, class... Args>
+// void invokeLambda(const Lambda &lambda, void *base, const uintptr_t *offsets,
+//                   decltype(lambda()) *v = nullptr) {}
+
+template <class Functor> struct PointerOp : Operator {
+  Functor _functor;
+  /*template <size_t... Indices>
   void init(const std::integer_sequence<size_t, Indices...> &indices) {
     _functions.indirect = [](void *base, const uintptr_t *offsets) {
       const PointerOp *_this = (const PointerOp *)offsets[0];
       _this->functor((Args)(void *)((uint8_t *)base + offsets[Indices + 1])...);
     };
+  }*/
+  // template <class..Args> struct Init3 {
+  //   static void indirect(void *base, const uintptr_t *offsets) {
+  //     const PointerOp *_this = (const PointerOp *)offsets[0];
+  //     _this->functor((Args)(void *)((uint8_t *)base + offsets[Indices +
+  //     1])...);
+  //   };
+  // };
+  // template <class F, class... Args> void __init(void (F ::*f)(Args...) const)
+  // {
+  //   _functions.indirect = &Init3<Args...>::indirect;
+  // }
+  template <class F, class... Args, size_t... Indices>
+  void __init(void (F ::*f)(Args...) const,
+              const std::integer_sequence<size_t, Indices...> &indices) {
+    _functions.indirect = [](void *base, const uintptr_t *offsets) {
+      const PointerOp *_this = (const PointerOp *)offsets[0];
+      _this->_functor(
+          (Args)(void *)((uint8_t *)base + offsets[Indices + 1])...);
+    };
   }
+  template <class F, class... Args> void __init(void (F ::*f)(Args...) const) {
+    __init(f, std::make_index_sequence<sizeof...(Args)>());
+  }
+  // template <class... Args>
+  // void __init(const std::function<void(Args...)> &args) {
+  //   //
+  // }
   PointerOp(const std::string &name, const std::string &label,
             const OpMode &mode, const OpType &op, const OpGroup &group,
-            const std::vector<Operator::Argument> &args,
-            const std::function<void(Args...)> &functor)
-      : Operator(name, label, mode, op, group), functor(functor) {
+            const std::vector<Operator::Argument> &args, const Functor &functor)
+      : Operator(name, label, mode, op, group), _functor(functor) {
     std::cout << "make op " << name << std::endl;
     _arguments = args;
-    _argument_count = _arguments.size();
-    init(std::make_index_sequence<sizeof...(Args)>());
+    // init(std::make_index_sequence<sizeof...(Args)>());
+    // _functions.indirect = [](void *base, const uintptr_t *offsets) {
+    //   const PointerOp *_this = (const PointerOp *)offsets[0];
+    //   invokeLambda(_this->functor, base, offsets);
+    // };
+    //__init(functor);
+    __init(&Functor::operator());
     std::vector<uintptr_t> context;
     context.push_back((uintptr_t)this);
     _functions.context = context;
   }
 };
-template <class... Args>
+
+template <class Functor>
 const Operator *makePointerOp(const std::string &name, const std::string &label,
                               const OpMode &mode, const OpType &op,
                               const OpGroup &group,
                               const std::vector<Operator::Argument> &args,
-                              const std::function<void(Args...)> &functor) {
+                              const Functor &functor) {
   static std::unordered_map<std::string, const Operator *> map;
   if (!map[name]) {
     map[name] =
-        new PointerOp<Args...>(name, label, mode, op, group, args, functor);
+        new PointerOp<Functor>(name, label, mode, op, group, args, functor);
   }
   return map[name];
 }
 
+template <class Compute, class Forward, class Reverse>
+const Operator *
+makePointerOp(const std::string &name, const std::string &label,
+              const OpType &type, const std::vector<Operator::Argument> &args,
+              const Compute &fun_compute, const Forward &fun_forward,
+              const Reverse &fun_reverse) {
+
+  auto group = makeOpGroup(name);
+
+  auto *op = makePointerOp(name, label, OpMode(typeid(compute *)), type, group,
+                           args, fun_compute);
+
+  {
+    std::vector<Operator::Argument> aa;
+    for (auto &a : args)
+      aa.push_back(a.makeInput());
+    for (auto &a : args)
+      aa.push_back(a);
+    makePointerOp("forward_" + name, label, OpMode(typeid(forward *)), type,
+                  group, aa, fun_forward);
+  }
+
+  {
+    std::vector<Operator::Argument> aa;
+    for (auto &a : args)
+      aa.push_back(a.makeInput());
+    for (auto &a : args)
+      aa.push_back(a.makeReverse());
+    makePointerOp("reverse_" + name, label, OpMode(typeid(reverse *)), type,
+                  group, aa, fun_reverse);
+  }
+
+  return op;
+}
+
+template <class Compute, class Forward, class Reverse>
+const Operator *
+makePointerOp(const std::string &op_name, const std::string &type_name,
+              const std::vector<Operator::Argument> &args,
+              const Compute &fun_compute, const Forward &fun_forward,
+              const Reverse &fun_reverse) {
+
+  auto *op =
+      makePointerOp(op_name + "_" + type_name, op_name,
+                    OpMode(typeid(compute *)), makeOpType(op_name),
+                    makeOpGroup(op_name + "_" + type_name), args, fun_compute);
+
+  {
+    std::vector<Operator::Argument> aa;
+    for (auto &a : args)
+      aa.push_back(a.makeInput());
+    for (auto &a : args)
+      aa.push_back(a);
+    makePointerOp("forward_" + op_name + "_" + type_name, op_name,
+                  OpMode(typeid(forward *)), makeOpType(op_name),
+                  makeOpGroup(op_name + "_" + type_name), aa, fun_forward);
+  }
+
+  {
+    std::vector<Operator::Argument> aa;
+    for (auto &a : args)
+      aa.push_back(a.makeInput());
+    for (auto &a : args)
+      aa.push_back(a.makeReverse());
+    makePointerOp("reverse_" + op_name + "_" + type_name, op_name,
+                  OpMode(typeid(reverse *)), makeOpType(op_name),
+                  makeOpGroup(op_name + "_" + type_name), aa, fun_reverse);
+  }
+
+  return op;
+}
+
+template <class T>
+const Operator *makeTensorAddOperator(const TensorShape &shape) {
+  auto tensor_type = makeTensorType(TypeInfo::get<T>(), shape);
+  size_t size = shape.elementCount();
+  return makePointerOp(
+      "add", tensor_type.name(),
+      {
+          Operator::Argument::makeInput(tensor_type),
+          Operator::Argument::makeInput(tensor_type),
+          Operator::Argument::makeOutput(tensor_type),
+      },
+      [size](const T *a, const T *b, T *x) {
+        std::cout << " > c tensor add " << size << std::endl;
+        for (size_t i = 0; i < size; i++) {
+          x[i] = a[i] + b[i];
+        }
+      },
+      [size](const T *a, const T *b, const T *x, const T *da, const T *db,
+             T *dx) { std::cout << " > f tensor add " << size << std::endl; },
+      [size](const T *a, const T *b, const T *x, T *da, T *db, const T *dx) {
+        std::cout << " > r tensor add " << size << std::endl;
+      });
+}
+
 template <class T>
 void add(const Tensor2<T> &a, const Tensor2<T> &b, Tensor2<T> &x) {
-  auto tensor_type = makeTensorType(TypeInfo::get<T>(), a.shape());
-  size_t size = a.shape().elementCount();
-  auto *op =
-      makePointerOp(std::string() + "add_" + tensor_type.name(), "add",
-                    OpMode(typeid(compute *)), OpType(typeid(op_add *)),
-                    makeOpGroup(std::string() + "add_" + tensor_type.name()),
-                    {
-                        Operator::Argument::makeInput(tensor_type),
-                        Operator::Argument::makeInput(tensor_type),
-                        Operator::Argument::makeOutput(tensor_type),
-                    },
-                    std::function<void(const T *, const T *, T *)>(
-                        [size](const T *a, const T *b, T *x) {
-                          std::cout << " > tensor add " << size << std::endl;
-                          for (size_t i = 0; i < size; i++) {
-                            x[i] = a[i] + b[i];
-                          }
-                        }));
+  auto *op = makeTensorAddOperator<T>(a.shape());
   x = Tensor2<T>(a.shape());
   op->invoke(a.data(), b.data(), x.data());
   if (auto *rec = Recorder::instance()) {

@@ -102,23 +102,75 @@ TypeInfo makeTensorType(const TypeInfo &element, const TensorShape &shape) {
 
   std::cout << "make tensor move " << name << std::endl;
 
-  std::string move_op_name = std::string() + "move_" + name;
+  // std::string move_op_name = std::string() + "move_" + name;
 
-  auto group = makeOpGroup(move_op_name);
+  // auto group = makeOpGroup(move_op_name);
 
   size_t size = element.size() * shape.elementCount();
 
   makePointerOp(
-      move_op_name, "move", OpMode(typeid(compute *)),
-      OpType(typeid(op_move *)), group,
+      "move_" + name, "move", OpType(typeid(op_move *)),
       {
           Operator::Argument::makeInput(tensor_type),
           Operator::Argument::makeOutput(tensor_type),
       },
-      std::function<void(const void *, void *)>([size](const void *a, void *b) {
-        std::cout << "tensor move " << size << std::endl;
-        std::memcpy(b, a, size);
-      }));
+      [size](const void *a, void *x) {
+        std::cout << " > tensor move " << size << std::endl;
+        std::memcpy(x, a, size);
+      },
+      [size](const void *a, const void *x, const void *da, void *dx) {
+        std::cout << " > f tensor move " << size << std::endl;
+        std::memcpy(dx, da, size);
+      },
+      [size](const void *a, const void *x, void *da, const void *dx) {
+        std::cout << " > r tensor move " << size << std::endl;
+        std::memcpy(da, dx, size);
+      });
+
+  // makeTensorAddOperator(tensor_type);
+
+  makePointerOp(
+      "zero_" + name, "zero", OpType(typeid(op_zero *)),
+      {
+          Operator::Argument::makeOutput(tensor_type),
+      },
+      [size](void *x) {
+        std::cout << " > tensor zero " << size << std::endl;
+        std::memset(x, 0, size);
+      },
+      [size](const void *x, void *dx) {
+        std::cout << " > f tensor zero " << size << std::endl;
+        std::memset(dx, 0, size);
+      },
+      [size](const void *x, void *dx) {
+        std::cout << " > r tensor zero " << size << std::endl;
+      });
+
+  // makePointerOp(
+  //     move_op_name, "move", OpMode(typeid(compute *)),
+  //     OpType(typeid(op_move *)), group,
+  //     {
+  //         Operator::Argument::makeInput(tensor_type),
+  //         Operator::Argument::makeOutput(tensor_type),
+  //     },
+  //     std::function<void(const void *, void *)>([size](const void *a, void
+  //     *b) {
+  //       std::cout << "tensor move " << size << std::endl;
+  //       std::memcpy(b, a, size);
+  //     }));
+
+  // makePointerOp(
+  //     move_op_name, "move", OpMode(typeid(compute *)),
+  //     OpType(typeid(op_move *)), group,
+  //     {
+  //         Operator::Argument::makeInput(tensor_type),
+  //         Operator::Argument::makeOutput(tensor_type),
+  //     },
+  //     std::function<void(const void *, void *)>([size](const void *a, void
+  //     *b) {
+  //       std::cout << "tensor move " << size << std::endl;
+  //       std::memcpy(b, a, size);
+  //     }));
 
   // makeOp(move_op_name, "move", OpMode(typeid(compute *)),
   //        OpType(typeid(op_move *)), makeOpGroup(move_op_name),

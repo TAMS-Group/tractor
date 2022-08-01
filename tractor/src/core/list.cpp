@@ -12,6 +12,14 @@ OpGroup makeOpGroup(const std::string &name) {
   return OpGroup(map[name].get());
 }
 
+OpType makeOpType(const std::string &name) {
+  static std::unordered_map<std::string, std::shared_ptr<int>> map;
+  if (map.find(name) == map.end()) {
+    map[name] = std::make_shared<int>(1);
+  }
+  return OpType(map[name].get());
+}
+
 const Operator *
 makeListOperator(const std::string &name, const std::string &label,
                  const OpMode &mode, const OpGroup &group,

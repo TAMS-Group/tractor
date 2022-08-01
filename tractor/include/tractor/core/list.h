@@ -8,6 +8,8 @@ namespace tractor {
 
 OpGroup makeOpGroup(const std::string &name);
 
+OpType makeOpType(const std::string &name);
+
 class ListOperator : public Operator {
 
 public:
@@ -17,7 +19,7 @@ public:
                void (*callback)(void *base, const uintptr_t *offsets))
       : Operator(name, label, mode, this, group) {
     _arguments = args;
-    _argument_count = args.size();
+    //_argument_count = args.size();
     _functions.indirect = callback;
   }
 };

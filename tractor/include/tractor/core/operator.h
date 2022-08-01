@@ -203,7 +203,7 @@ private:
 
 protected:
   OperatorFunctions _functions;
-  size_t _argument_count = 0;
+  // size_t _argument_count = 0;
   std::vector<Argument> _arguments;
   static const Operator *tryFind(const OpMode &mode, const OpGroup &group);
   Operator(const std::string &name, const std::string &label,
@@ -225,7 +225,7 @@ public:
   inline OperatorFunctions functionPointers() const { return _functions; }
   void callIndirect(void *base, uintptr_t *offsets) const;
   void invoke(const void *first, ...) const;
-  inline size_t argumentCount() const { return _argument_count; }
+  inline size_t argumentCount() const { return _arguments.size(); }
   inline size_t argumentSize(size_t i) const { return _arguments[i].size(); }
   inline auto arguments() const { return ArrayRef<const Argument>(_arguments); }
   inline const Argument &arg(size_t i) const { return _arguments.at(i); }
@@ -349,8 +349,8 @@ public:
       : Operator(name, label, OpMode(typeid(Mode *)), OpType(typeid(Op *)),
                  OpGroup(typeid(Group *))) {
     constexpr size_t argument_count = std::tuple_size<ArgumentTuple>::value;
-    _argument_count =
-        argument_count + (std::is_same<Return, void>::value ? 0 : 1);
+    //_argument_count =
+    //    argument_count + (std::is_same<Return, void>::value ? 0 : 1);
     init(std::make_index_sequence<argument_count>(), (ArgumentTuple *)nullptr);
   }
   static const Operator *instance(const char *name, const char *label) {

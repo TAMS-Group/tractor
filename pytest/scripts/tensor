@@ -66,12 +66,12 @@ print ""
 
 
 
-# solver = tt.LeastSquaresSolver(tr.DefaultEngine())
-# #solver = tt.GradientDescentSolver(tr.DefaultEngine())
-# solver.compile(prog)
-# #solver.timeout = 1
-# solver.tolerance = 1e-9
-# solver.regularization = 0.01
-# print a.value, b.value
-# solver.solve()
-# print a.value, b.value, math.tanh(a.value) + math.tanh(b.value) + 1
+solver = tt.LeastSquaresSolver(tr.DefaultEngine())
+#solver = tt.GradientDescentSolver(tr.DefaultEngine())
+solver.compile(prog)
+#solver.timeout = 1
+solver.tolerance = 1e-9
+solver.regularization = 0.01
+print a.value, b.value
+solver.solve()
+print a.value, b.value, math.tanh(a.value) + math.tanh(b.value) + 1
