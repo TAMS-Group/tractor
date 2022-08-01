@@ -18,7 +18,12 @@ print tr.tanh(tt.Scalar(0.3))
 print tr.tanh(tt.Scalar(1.0))
 print tr.sin(tt.Scalar(5.0))
 
-
+v = tt.Vector3(3, 4, 5)
+print v
+tr.fg_vec3_pack(tt.Scalar(1), tt.Scalar(2), tt.Scalar(3), v)
+print v
+print tt.Vector3(tt.Scalar(1), tt.Scalar(5), tt.Scalar(3))
+print tt.Vector3(1,2,3) + tt.Vector3(2,3,4)
 
 # a = tt.Scalar(3)
 # print a.value
