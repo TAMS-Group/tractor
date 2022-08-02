@@ -9,35 +9,47 @@
 
 namespace tractor {
 
-Any operator+(const Any &a, const Any &b) { return Any::call<op_add>(a, b); }
-Any operator-(const Any &a, const Any &b) { return Any::call<op_sub>(a, b); }
-Any operator*(const Any &a, const Any &b) { return Any::call<op_mul>(a, b); }
-Any operator/(const Any &a, const Any &b) { return Any::call<op_div>(a, b); }
+// Any operator+(const Any &a, const Any &b) {
+//   return Any::call(Operator::find<compute, op_add>({a.type(), b.type()}), a,
+//   b);
+// }
+// Any operator-(const Any &a, const Any &b) {
+//   return Any::call(Operator::find<compute, op_sub>({a.type(), b.type()}), a,
+//   b);
+// }
+// Any operator*(const Any &a, const Any &b) {
+//   return Any::call(Operator::find<compute, op_mul>({a.type(), b.type()}), a,
+//   b);
+// }
+// Any operator/(const Any &a, const Any &b) {
+//   return Any::call(Operator::find<compute, op_div>({a.type(), b.type()}), a,
+//   b);
+// }
 
-Any Any::_call(const Operator *op, size_t n, ...) {
-  va_list va;
-  va_start(va, n);
-  Any ret;
-  std::vector<void *> args;
-  for (size_t i = 0; i < n; i++) {
-    args.push_back(va_arg(va, Any *)->data());
-  }
-  if (args.size() < op->argumentCount()) {
-    ret = Any(op->arg(args.size()).typeInfo());
-    args.push_back(ret.data());
-  }
-  if (args.size() != op->argumentCount()) {
-    throw std::runtime_error("function signature mismatch");
-  }
-  op->callIndirect(args.data());
-  if (auto *rec = Recorder::instance()) {
-    rec->op(op);
-    for (auto &a : args) {
-      rec->push((uintptr_t)a);
-    }
-  }
-  return ret;
-}
+// Any Any::_call(const Operator *op, size_t n, ...) {
+//   va_list va;
+//   va_start(va, n);
+//   Any ret;
+//   std::vector<void *> args;
+//   for (size_t i = 0; i < n; i++) {
+//     args.push_back(va_arg(va, Any *)->data());
+//   }
+//   if (args.size() < op->argumentCount()) {
+//     ret = Any(op->arg(args.size()).typeInfo());
+//     args.push_back(ret.data());
+//   }
+//   if (args.size() != op->argumentCount()) {
+//     throw std::runtime_error("function signature mismatch");
+//   }
+//   op->callIndirect(args.data());
+//   if (auto *rec = Recorder::instance()) {
+//     rec->op(op);
+//     for (auto &a : args) {
+//       rec->push((uintptr_t)a);
+//     }
+//   }
+//   return ret;
+// }
 
 void Any::_check() const {
   if (empty()) {

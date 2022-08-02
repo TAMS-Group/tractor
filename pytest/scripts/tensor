@@ -10,7 +10,7 @@ ta = tt.Tensor([[1,2],[3,123]])
 
 def f():
     global tx
-    tr.input(ta)
+    tr.variable(ta)
     tb = tt.Tensor([[1,2],[3,99]])
     tx = tr.add(ta, tb)
     tr.goal(tx)
@@ -48,3 +48,4 @@ solver.regularization = 0.01
 print ta.value
 solver.solve()
 print ta.value
+print str(ta.value)

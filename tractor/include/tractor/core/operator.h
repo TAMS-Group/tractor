@@ -445,23 +445,21 @@ class OperatorImpl : public Operator {
   template <class Ret, class... Args> struct Pythonizer {
     static void pythonize(const Operator *op, pybind11::module &m,
                           Ret (*func)(Args &...)) {
-      auto impl = [op](typename MakeVar<Args>::Type &...args) {
+      m.def(op->label().c_str(), [op](typename MakeVar<Args>::Type &...args) {
         Var<Ret> ret;
         op->invoke(&args..., &ret);
         recordOperation(op, &args..., &ret);
         return ret;
-      };
-      m.def(op->label().c_str(), impl);
+      });
     }
   };
   template <class... Args> struct Pythonizer<void, Args...> {
     static void pythonize(const Operator *op, pybind11::module &m,
                           void (*func)(Args &...)) {
-      auto impl = [op](typename MakeVar<Args>::Type &...args) {
+      m.def(op->label().c_str(), [op](typename MakeVar<Args>::Type &...args) {
         op->invoke(&args...);
         recordOperation(op, &args...);
-      };
-      m.def(op->label().c_str(), impl);
+      });
     }
   };
   template <class Ret, class... Args>
@@ -611,6 +609,26 @@ template <class T> struct OverloadSelector<Var<T>> {
   TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch8d, postfix##8d)       \
   TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch16d, postfix##16d)
 
+// template <class T> struct IsBatch { static constexpr bool value = false; };
+
+class BatchBase {
+public:
+  virtual ~BatchBase() {}
+  virtual const void *vdata() const = 0;
+  virtual void *vdata() = 0;
+};
+
+template <class T> class TypedBatchBase : public BatchBase {
+public:
+  virtual const T *data() const = 0;
+  virtual T *data() = 0;
+  virtual const void *vdata() const override { return data(); }
+  virtual void *vdata() override { return data(); }
+};
+
+// static void isBatchTypeHelper(const std::initializer_list<BatchBase> &args)
+// {}
+
 #define TRACTOR_VAR_OP(name)                                                   \
   template <class... Args,                                                     \
             std::enable_if_t<AnyVar<Args...>::value, int> X = 0,               \
@@ -623,6 +641,21 @@ template <class T> struct OverloadSelector<Var<T>> {
   inline auto name(Args &&...args) {                                           \
     return Caller<Ret, Impl>::call((ImplArgs *)nullptr, args...);              \
   }
+
+// template <class... Args,                                                     \
+  //           class Impl = typename std::decay<decltype(*op_##name##_overload(   \
+  //               *std::declval<Args>()->data()...))>::type>                     \
+  // inline auto name(Args &&...args) {                                           \
+  //   std::cout << "batch op" << std::endl;                                      \
+  // }
+
+// template <class... Args,                                                     \
+  //           std::enable_if_t<std::conjunction<typename IsBatch<                \
+  //               typename std::decay<Args>::type>::value...>::value>            \
+  //               Test = 0>                                                      \
+  // inline auto name(Args &...args) {                                            \
+  //   std::cout << "batch op" << std::endl;                                      \
+  // }
 
 #define TRACTOR_OP(name, args, impl)                                           \
   TRACTOR_OP_IMPL(compute, , name, args, impl, )                               \

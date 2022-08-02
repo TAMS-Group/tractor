@@ -2,6 +2,9 @@
 
 #include <tractor/tensor/newtensor.h>
 
+#include <tractor/core/lambda.h>
+#include <tractor/core/var.h>
+
 #include <unordered_map>
 
 namespace tractor {

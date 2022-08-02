@@ -8,9 +8,9 @@ import math
 q = tt.Quaternion(0,0,0,1)
 
 def f():
-    tt.variable(q)
+    tr.variable(q)
     #tt.goal(tr.mul(q, tt.Vector3(0,0,1)) - tt.Vector3(0,1,0))
-    tt.goal(q * tt.Vector3(0,0,1) - tt.Vector3(0,1,0))
+    tr.goal(q * tt.Vector3(0,0,1) - tt.Vector3(0,1,0))
 
 prog = tr.record(f)
 

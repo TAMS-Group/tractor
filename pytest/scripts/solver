@@ -5,22 +5,18 @@ import tractor as tr
 import tractor.types_double as tt
 import math
 
+print tr.__dict__.keys()
+
 b = tt.Vector3(1,2,3)
 
 def f():
     global a
     a = tt.Vector3(2,3,4)
-    tt.variable(a)
-    tt.variable(b)
-    #tt.goal(a * tt.Scalar(0.01) + 0.01)
-    tt.goal(a * tt.Scalar(0.1))
-    tt.goal(b * tt.Scalar(0.1))
-    #tt.goal(tr.tanh(a) + tr.tanh(b) - tt.Scalar(0.1))
-    tt.goal(a - tt.Scalar(0.1))
-
-#f()
-#print a
-#print b
+    tr.variable(a)
+    tr.variable(b)
+    tr.goal(a * tt.Scalar(0.1))
+    tr.goal(b * tt.Scalar(0.1))
+    tr.goal(a - tt.Vector3(0.1))
 
 prog = tr.record(f)
 
@@ -38,11 +34,11 @@ solver.compile(prog)
 solver.tolerance = 1e-12
 solver.regularization = 0.01
 
-print a.value, b.value
+print a, b
 
 solver.solve()
 
-print a.value, b.value, math.tanh(a.value) + math.tanh(b.value) - 0.1
+print a, b #, math.tanh(a.value) + math.tanh(b.value) - 0.1
 
 # for i in range(100):
 #     print a.value, b.value, math.tanh(a.value) + math.tanh(b.value) + 1

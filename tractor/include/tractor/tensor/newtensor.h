@@ -2,11 +2,8 @@
 
 #pragma once
 
-#include <tractor/core/allocator.h>
+//#include <tractor/core/allocator.h>
 #include <tractor/core/any.h>
-#include <tractor/core/lambda.h>
-#include <tractor/core/list.h>
-#include <tractor/core/var.h>
 
 namespace tractor {
 
@@ -88,48 +85,34 @@ public:
 };
 
 template <class T> class Tensor2 {
-
   const TensorInfo *_tensor_info = nullptr;
   Any _data;
-
   bool _throwIfEmpty() const {
     if (empty()) {
       throw std::runtime_error("tensor not initialized");
     }
   }
 
-  // template <class... Indices> size_t _index(const Indices &...indices) const
-  // {
-  //   auto &shape = this->shape();
-  //   if (shape.dimensions() != sizeof...(Indices)) {
-  //     throw std::runtime_error("incorrect number of tensor index
-  //     dimensions");
-  //   }
-  //   std::array<size_t, sizeof...(Indices)> ii = {indices...};
-  //   size_t ret = 0;
-  //   for (size_t i = 0; i < sizeof...(Indices); i++) {
-  //     if (ii.at(i) >= shape.at(i)) {
-  //       throw std::runtime_error("tensor index out of range");
-  //     }
-  //     ret *= shape[i];
-  //     ret += ii[i];
-  //   }
-  //   return ret;
-  // }
-
 public:
   inline bool empty() const { return _tensor_info == nullptr; }
   const T *data() const {
-    _throwIfEmpty();
-    return (const T *)_data.data();
+    if (!empty()) {
+      return (const T *)_data.data();
+    } else {
+      return nullptr;
+    }
   }
   T *data() {
-    _throwIfEmpty();
-    return (T *)_data.data();
+    if (!empty()) {
+      return (T *)_data.data();
+    } else {
+      return nullptr;
+    }
   }
-  TensorShape shape() const {
+  const TensorShape &shape() const {
     if (empty()) {
-      return TensorShape();
+      static TensorShape empty_shape;
+      return empty_shape;
     } else {
       return _tensor_info->shape();
     }
@@ -154,28 +137,23 @@ public:
       return _tensor_info->type();
     }
   }
-  const TensorInfo &info() const {
-    if (!_tensor_info) {
-      throw std::runtime_error("tensor is empty");
-    }
-    return *_tensor_info;
-  }
+  const TensorInfo *info() const { return _tensor_info; }
 };
 
-template <class T>
-void add(const Tensor2<T> &a, const Tensor2<T> &b, Tensor2<T> &x) {
-  if (a.shape() != b.shape()) {
-    throw std::invalid_argument("tensor shape mismatch");
-  }
-  x = Tensor2<T>(a.shape());
-  auto *op_add = a.info().operators().add();
-  op_add->invoke(a.data(), b.data(), x.data());
-  if (auto *rec = Recorder::instance()) {
-    rec->op(op_add);
-    rec->push((uintptr_t)a.data());
-    rec->push((uintptr_t)b.data());
-    rec->push((uintptr_t)x.data());
-  }
-}
+// template <class T>
+// void add(const Tensor2<T> &a, const Tensor2<T> &b, Tensor2<T> &x) {
+//   if (a.shape() != b.shape()) {
+//     throw std::invalid_argument("tensor shape mismatch");
+//   }
+//   x = Tensor2<T>(a.shape());
+//   auto *op_add = a.info().operators().add();
+//   op_add->invoke(a.data(), b.data(), x.data());
+//   if (auto *rec = Recorder::instance()) {
+//     rec->op(op_add);
+//     rec->push((uintptr_t)a.data());
+//     rec->push((uintptr_t)b.data());
+//     rec->push((uintptr_t)x.data());
+//   }
+// }
 
 } // namespace tractor

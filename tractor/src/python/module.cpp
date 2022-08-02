@@ -15,48 +15,50 @@
 
 namespace tractor {
 
-py::object toPython(const Any &v) {
-  if (v.is<float>())
-    return py::float_(v.value<float>());
-  if (v.is<double>())
-    return py::float_(v.value<double>());
-  throw std::runtime_error("not convertible");
-}
+template <class Type>
+static auto pythonizeType(py::module &main_module, py::module &type_module,
+                          const char *name) {
 
-void setFromPython(Any &a, const py::object &o) {
-  if (a.is<float>())
-    a.value<float>() = o.cast<float>();
-  else if (a.is<double>())
-    a.value<double>() = o.cast<double>();
-  else
-    throw std::runtime_error("not convertible");
-}
-
-template <class Type> auto makeType(py::module &m, const char *name) {
-  auto t = py::class_<Type>(m, name);
+  auto t = py::class_<Type>(type_module, name);
   t.def(py::init<>());
-  m.def("parameter", [](Type &var) { parameter(var); });
-  m.def("variable", [](Type &var) { variable(var); });
-  m.def("output", [](Type &var) { output(var); });
-  m.def("goal", [](Type &var) { goal(var); });
   t.def("__repr__", [name](const Type &v) {
     std::stringstream ss;
     ss << value(v);
     return ss.str();
   });
+
+  main_module.def("parameter", [](Type &var) { parameter(var); });
+  main_module.def("variable", [](Type &var) { variable(var); });
+  main_module.def("output", [](Type &var) { output(var); });
+  main_module.def("goal", [](Type &var) { goal(var); });
+
   return t;
 }
 
 template <class Scalar>
-void makeTypeModule(py::module &main, const char *name) {
+static void pythonizeScalar(py::module &main_module, py::module &type_module) {
+  pythonizeType<Var<Scalar>>(main_module, type_module, "Scalar")
+      .def(py::init<Scalar>())
+      .def_property(
+          "value", [](const Var<Scalar> &v) { return (Scalar)v.value(); },
+          [](Var<Scalar> &v, const Scalar &p) { v.value() = p; })
+      .def(py::self + py::self)
+      .def(py::self - py::self)
+      .def(py::self * py::self)
+      .def(py::self / py::self);
+}
 
-  auto m = main.def_submodule(name);
+template <class Scalar>
+static void pythonizeGeometry(py::module &main_module,
+                              py::module &type_module) {
 
-  makeType<Var<Twist<Scalar>>>(m, "Twist").def(py::self + py::self);
+  pythonizeType<Var<Twist<Scalar>>>(main_module, type_module, "Twist")
+      .def(py::self + py::self);
 
-  makeType<Var<Pose<Scalar>>>(m, "Pose").def(py::self * py::self);
+  pythonizeType<Var<Pose<Scalar>>>(main_module, type_module, "Pose")
+      .def(py::self * py::self);
 
-  makeType<Var<Quaternion<Scalar>>>(m, "Quaternion")
+  pythonizeType<Var<Quaternion<Scalar>>>(main_module, type_module, "Quaternion")
       .def(py::init([](const Var<Scalar> &x, const Var<Scalar> &y,
                        const Var<Scalar> &z, const Var<Scalar> &w) {
         Var<Quaternion<Scalar>> ret;
@@ -70,7 +72,7 @@ void makeTypeModule(py::module &main, const char *name) {
       .def(py::self * py::self)
       .def(py::self * Var<Vector3<Scalar>>());
 
-  makeType<Var<Vector3<Scalar>>>(m, "Vector3")
+  pythonizeType<Var<Vector3<Scalar>>>(main_module, type_module, "Vector3")
       .def(py::init(
           [](const Var<Scalar> &x, const Var<Scalar> &y, const Var<Scalar> &z) {
             Var<Vector3<Scalar>> ret;
@@ -80,29 +82,22 @@ void makeTypeModule(py::module &main, const char *name) {
       .def(py::init([](const Scalar &x, const Scalar &y, const Scalar &z) {
         return Var<Vector3<Scalar>>(Vector3<Scalar>(x, y, z));
       }))
-      .def(py::self + py::self)
-      .def(py::self - py::self);
-
-  makeType<Var<Scalar>>(m, "Scalar")
-      .def(py::init<Scalar>())
-      .def_property(
-          "value", [](const Var<Scalar> &v) { return (Scalar)v.value(); },
-          [](Var<Scalar> &v, const Scalar &p) { v.value() = p; })
+      .def(py::init([](const Var<Scalar> &v) {
+        Var<Vector3<Scalar>> ret;
+        vec3_pack(v, v, v, ret);
+        return ret;
+      }))
+      .def(py::init([](const Scalar &v) {
+        return Var<Vector3<Scalar>>(Vector3<Scalar>(v, v, v));
+      }))
       .def(py::self + py::self)
       .def(py::self - py::self)
-      .def(py::self * py::self)
-      .def(py::self / py::self);
+      .def(py::self * Var<Scalar>())
+      .def(Var<Scalar>() * py::self);
+}
 
-  py::class_<LeastSquaresSolver<Scalar>, Solver>(m, "LeastSquaresSolver")
-      .def(py::init<std::shared_ptr<Engine>>())
-      .def_readwrite("regularization",
-                     &LeastSquaresSolver<Scalar>::_regularization)
-      .def_readwrite("step_scaling", &LeastSquaresSolver<Scalar>::_step_scaling)
-      .def_readwrite("max_linear_iterations",
-                     &LeastSquaresSolver<Scalar>::_max_linear_iterations);
-
-  py::class_<GradientDescentSolver<Scalar>, Solver>(m, "GradientDescentSolver")
-      .def(py::init<std::shared_ptr<Engine>>());
+template <class Scalar>
+static void pythonizeTensor(py::module &main_module, py::module &type_module) {
 
   static auto tensor_assign = [](Tensor2<Scalar> &v,
                                  const py::array_t<Scalar> &p) {
@@ -124,7 +119,7 @@ void makeTypeModule(py::module &main, const char *name) {
     v = Tensor2<Scalar>(shape, temp.data());
   };
 
-  py::class_<Tensor2<Scalar>>(m, "Tensor")
+  py::class_<Tensor2<Scalar>>(type_module, "Tensor")
       .def(py::init<>())
       .def(py::init([](const py::array_t<Scalar> &a) {
         Tensor2<Scalar> ret;
@@ -136,6 +131,18 @@ void makeTypeModule(py::module &main, const char *name) {
              Tensor2<Scalar> r = v;
              return r;
            })
+      .def_property_readonly("shape",
+                             [](const Tensor2<Scalar> &t) {
+                               const auto &s = t.shape();
+                               py::tuple ret = py::tuple(s.dimensions());
+                               for (size_t i = 0; i < s.dimensions(); i++) {
+                                 ret[i] = s[i];
+                               }
+                               return ret;
+                             })
+      .def_property_readonly(
+          "dimensions",
+          [](const Tensor2<Scalar> &t) { return t.shape().dimensions(); })
       .def_property(
           "value",
           [](const Tensor2<Scalar> &v) {
@@ -152,30 +159,124 @@ void makeTypeModule(py::module &main, const char *name) {
           },
           tensor_assign);
 
-  m.def("add", [](const Tensor2<Scalar> &a, const Tensor2<Scalar> &b) {
-    Tensor2<Scalar> r(a.shape());
-    add(a, b, r);
-    return r;
-  });
+  // main_module.def("add",
+  //                 [](const Tensor2<Scalar> &a, const Tensor2<Scalar> &b) {
+  //                   Tensor2<Scalar> r(a.shape());
+  //                   add(a, b, r);
+  //                   return r;
+  //                 });
 
-  m.def("variable", [](Tensor2<Scalar> &var) {
+  main_module.def("variable", [](Tensor2<Scalar> &var) {
     if (auto *rec = Recorder::instance()) {
       rec->input(var.type(), var.data(), var.data());
     }
   });
-  m.def("output", [](Tensor2<Scalar> &var) {
+
+  main_module.def("output", [](Tensor2<Scalar> &var) {
     if (auto *rec = Recorder::instance()) {
       rec->output(var.type(), var.data(), var.data());
     }
   });
-  m.def("goal", [](Tensor2<Scalar> &var) {
+
+  main_module.def("goal", [](Tensor2<Scalar> &var) {
     if (auto *rec = Recorder::instance()) {
       rec->goal(var.type(), var.data());
     }
   });
 }
 
-void buildMainModule(py::module &m) {
+template <class Scalar>
+static void pythonizeSolvers(py::module &main_module, py::module &type_module) {
+  py::class_<LeastSquaresSolver<Scalar>, Solver>(type_module,
+                                                 "LeastSquaresSolver")
+      .def(py::init<std::shared_ptr<Engine>>())
+      .def_readwrite("regularization",
+                     &LeastSquaresSolver<Scalar>::_regularization)
+      .def_readwrite("step_scaling", &LeastSquaresSolver<Scalar>::_step_scaling)
+      .def_readwrite("max_linear_iterations",
+                     &LeastSquaresSolver<Scalar>::_max_linear_iterations);
+
+  py::class_<GradientDescentSolver<Scalar>, Solver>(type_module,
+                                                    "GradientDescentSolver")
+      .def(py::init<std::shared_ptr<Engine>>());
+}
+
+template <class Scalar>
+static void pythonizeTemplates(py::module &main_module, const char *name) {
+  auto type_module = main_module.def_submodule(name);
+  pythonizeScalar<Scalar>(main_module, type_module);
+  pythonizeGeometry<Scalar>(main_module, type_module);
+  pythonizeTensor<Scalar>(main_module, type_module);
+  pythonizeSolvers<Scalar>(main_module, type_module);
+}
+
+template <class... Args> static void checkAllTensor(const Tensor2<Args> &...) {}
+
+/*
+bool areTensorShapesEqual(const std::initializer_list<TensorShape> &shapes) {
+  if (shapes.empty()) {
+    return true;
+  }
+  TensorShape first = shapes.front();
+  for (auto &s : shapes) {
+    if (s != first) {
+      return false;
+    }
+  }
+  return true;
+}
+*/
+
+void emitTensorOpImpl(
+    const Operator *op,
+    const std::initializer_list<const TensorInfo *> &tensor_infos,
+    const std::initializer_list<void *> &tensor_data) {
+  std::cout << "tensor op " << op->label() << " " << op->name() << std::endl;
+}
+
+template <class Impl, class... Args> void runTensorOpImpl(Args &&...args) {
+  emitTensorOpImpl(Impl::instance(), {args.info()...},
+                   {(void *)args.data()...});
+}
+
+template <class Impl, class Ret> struct TensorOpCaller {
+  template <class... Args> static Tensor2<Ret> call(Args &&...args) {
+    const TensorShape &shape = (..., args).shape();
+    Tensor2<Ret> ret(shape);
+    runTensorOpImpl<Impl>(args..., ret);
+    return ret;
+  }
+};
+template <class Impl> struct TensorOpCaller<Impl, void> {
+  template <class... Args> static void call(Args &&...args) {
+    runTensorOpImpl<Impl>(args...);
+  }
+};
+
+#define TEST_BATCH(name)                                                       \
+  template <class... Args,                                                     \
+            class TensorCheck =                                                \
+                decltype(checkAllTensor(std::declval<Args>()...)),             \
+            class Impl = typename std::decay<decltype(*op_##name##_overload(   \
+                *std::declval<Args>().data()...))>::type,                      \
+            class Ret = typename std::decay<decltype(Impl::call(               \
+                *std::declval<Args>().data()...))>::type>                      \
+  inline auto name(Args &&...args) {                                           \
+    return TensorOpCaller<Impl, Ret>::call(args...);                           \
+  }
+TEST_BATCH(sub)
+TEST_BATCH(tanh)
+TEST_BATCH(zero)
+
+static void pythonizeMain(py::module &m) {
+
+  Tensor2<double> a;
+  Tensor2<double> b;
+  sub(a, b);
+  tanh(a);
+  tanh(1.0);
+  zero(a);
+  exit(0);
 
   py::class_<Solver>(m, "Solver")
       .def("compile", [](Solver &solver,
@@ -196,8 +297,8 @@ void buildMainModule(py::module &m) {
           "timeout", [](const Solver &solver) { return solver.timeout(); },
           [](Solver &solver, const double &v) { solver.setTimeout(v, false); });
 
-  makeTypeModule<float>(m, "types_float");
-  makeTypeModule<double>(m, "types_double");
+  pythonizeTemplates<float>(m, "types_float");
+  pythonizeTemplates<double>(m, "types_double");
 
   py::class_<Memory, std::shared_ptr<Memory>>(m, "Memory");
 
@@ -311,5 +412,5 @@ void buildMainModule(py::module &m) {
 
 PYBIND11_MODULE(tractor, m) {
   std::cout << "building module" << std::endl;
-  tractor::buildMainModule(m);
+  tractor::pythonizeMain(m);
 }
