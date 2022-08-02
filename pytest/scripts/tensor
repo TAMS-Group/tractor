@@ -8,20 +8,22 @@ import copy
 
 ta = tt.Tensor([[1,2],[3,123]])
 
+print ta.value
+print (ta + ta).value
+
+print ( tt.Tensor([[1,2],[3,123]]) + tt.Tensor([[4,4],[3,3]]) ).value
+
 def f():
     global tx
     tr.variable(ta)
     tb = tt.Tensor([[1,2],[3,99]])
     tx = tr.add(ta, tb)
-    tr.goal(tx)
-
+    tr.output(tx)
 prog = tr.record(f)
-
 print prog.constants
 print prog.inputs
 print prog.instructions
 print prog.outputs
-
 engine = tr.DefaultEngine()
 memory = engine.createMemory()
 executable = engine.compile(prog)
@@ -36,10 +38,23 @@ executable.run(memory)
 print "tx.value", tx.value
 print ""
 
-ta.value = [[1,2],[3,4]]
+ta.value = [[9,2],[3,4]]
 executable.run(memory)
 print "tx.value", tx.value
 print ""
+
+def f():
+    global tx
+    tr.variable(ta)
+    tb = tt.Tensor([[1,2],[3,99]])
+    tx = tr.add(ta, tb)
+    tr.goal(tx)
+prog = tr.record(f)
+print prog.constants
+print prog.inputs
+print prog.instructions
+print prog.outputs
+executable = engine.compile(prog)
 
 solver = tt.LeastSquaresSolver(tr.DefaultEngine())
 solver.compile(prog)

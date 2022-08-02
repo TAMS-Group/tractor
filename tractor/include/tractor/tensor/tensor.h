@@ -7,6 +7,8 @@
 
 namespace tractor {
 
+class Operator;
+
 template <class Scalar> class Tensor {
   std::vector<size_t> _shape;
   AlignedStdVector<Scalar> _data;

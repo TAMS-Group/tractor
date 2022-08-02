@@ -20,15 +20,33 @@ OpType makeOpType(const std::string &name) {
   return OpType(map[name].get());
 }
 
+class ListOperator : public Operator {
+  std::function<void(void *, const uintptr_t *)> _fun;
+
+public:
+  ListOperator(const std::string &name, const std::string &label,
+               const OpMode &mode, const OpType &type, const OpGroup &group,
+               const std::vector<Argument> &args,
+               const std::function<void(void *, const uintptr_t *)> &fun)
+      : Operator(name, label, mode, type, group), _fun(fun) {
+    _arguments = args;
+    _functions.indirect = [](void *base, const uintptr_t *offsets) {
+      const ListOperator *_this = (const ListOperator *)offsets[0];
+      _this->_fun(base, offsets + 1);
+    };
+    _functions.context.push_back((uintptr_t)this);
+  }
+};
+
 const Operator *
 makeListOperator(const std::string &name, const std::string &label,
-                 const OpMode &mode, const OpGroup &group,
+                 const OpMode &mode, const OpType &type, const OpGroup &group,
                  const std::vector<Operator::Argument> &args,
-                 void (*callback)(void *base, const uintptr_t *offsets)) {
+                 const std::function<void(void *, const uintptr_t *)> &fun) {
   static std::unordered_map<std::string, std::shared_ptr<Operator>> map;
   if (map.find(name) == map.end()) {
-    map[name] = std::make_shared<ListOperator>(name, label, mode, group, args,
-                                               callback);
+    map[name] = std::make_shared<ListOperator>(name, label, mode, type, group,
+                                               args, fun);
   }
   return map[name].get();
 }
@@ -57,20 +75,22 @@ makeReverseArgs(const ArrayRef<const Operator::Argument> &args) {
   return ret;
 }
 
-const Operator *
-makeListOperator(const std::string &name, const std::string &label,
-                 const std::vector<Operator::Argument> &args,
-                 void (*fun_compute)(void *base, const uintptr_t *offsets),
-                 void (*fun_forward)(void *base, const uintptr_t *offsets),
-                 void (*fun_reverse)(void *base, const uintptr_t *offsets)) {
-  auto group = makeOpGroup(name);
-  auto *ret = makeListOperator(name, label, OpMode(typeid(compute *)), group,
-                               args, fun_compute);
-  makeListOperator("forward_" + name, label, OpMode(typeid(forward *)), group,
-                   makeForwardArgs(args), fun_forward);
-  makeListOperator("reverse_" + name, label, OpMode(typeid(reverse *)), group,
-                   makeReverseArgs(args), fun_reverse);
-  return ret;
-}
+// const Operator *makeListOperator(
+//     const std::string &name, const std::string &label,
+//     const std::vector<Operator::Argument> &args,
+//     const std::function<void(void *, const uintptr_t *)> &fun_compute,
+//     const std::function<void(void *, const uintptr_t *)> &fun_forward,
+//     const std::function<void(void *, const uintptr_t *)> &fun_reverse) {
+//   auto group = makeOpGroup(name);
+//   auto *ret = makeListOperator(name, label, OpMode(typeid(compute *)), group,
+//                                args, fun_compute);
+//   makeListOperator("forward_" + name, label, OpMode(typeid(forward *)),
+//   group,
+//                    makeForwardArgs(args), fun_forward);
+//   makeListOperator("reverse_" + name, label, OpMode(typeid(reverse *)),
+//   group,
+//                    makeReverseArgs(args), fun_reverse);
+//   return ret;
+// }
 
 } // namespace tractor

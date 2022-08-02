@@ -157,7 +157,11 @@ static void pythonizeTensor(py::module &main_module, py::module &type_module) {
             }
             return ret;
           },
-          tensor_assign);
+          tensor_assign)
+      .def(py::self + py::self)
+      .def(py::self - py::self)
+      .def(py::self * py::self)
+      .def(py::self / py::self);
 
   // main_module.def("add",
   //                 [](const Tensor2<Scalar> &a, const Tensor2<Scalar> &b) {
@@ -212,71 +216,15 @@ static void pythonizeTemplates(py::module &main_module, const char *name) {
 
 template <class... Args> static void checkAllTensor(const Tensor2<Args> &...) {}
 
-/*
-bool areTensorShapesEqual(const std::initializer_list<TensorShape> &shapes) {
-  if (shapes.empty()) {
-    return true;
-  }
-  TensorShape first = shapes.front();
-  for (auto &s : shapes) {
-    if (s != first) {
-      return false;
-    }
-  }
-  return true;
-}
-*/
-
-void emitTensorOpImpl(
-    const Operator *op,
-    const std::initializer_list<const TensorInfo *> &tensor_infos,
-    const std::initializer_list<void *> &tensor_data) {
-  std::cout << "tensor op " << op->label() << " " << op->name() << std::endl;
-}
-
-template <class Impl, class... Args> void runTensorOpImpl(Args &&...args) {
-  emitTensorOpImpl(Impl::instance(), {args.info()...},
-                   {(void *)args.data()...});
-}
-
-template <class Impl, class Ret> struct TensorOpCaller {
-  template <class... Args> static Tensor2<Ret> call(Args &&...args) {
-    const TensorShape &shape = (..., args).shape();
-    Tensor2<Ret> ret(shape);
-    runTensorOpImpl<Impl>(args..., ret);
-    return ret;
-  }
-};
-template <class Impl> struct TensorOpCaller<Impl, void> {
-  template <class... Args> static void call(Args &&...args) {
-    runTensorOpImpl<Impl>(args...);
-  }
-};
-
-#define TEST_BATCH(name)                                                       \
-  template <class... Args,                                                     \
-            class TensorCheck =                                                \
-                decltype(checkAllTensor(std::declval<Args>()...)),             \
-            class Impl = typename std::decay<decltype(*op_##name##_overload(   \
-                *std::declval<Args>().data()...))>::type,                      \
-            class Ret = typename std::decay<decltype(Impl::call(               \
-                *std::declval<Args>().data()...))>::type>                      \
-  inline auto name(Args &&...args) {                                           \
-    return TensorOpCaller<Impl, Ret>::call(args...);                           \
-  }
-TEST_BATCH(sub)
-TEST_BATCH(tanh)
-TEST_BATCH(zero)
-
 static void pythonizeMain(py::module &m) {
 
-  Tensor2<double> a;
-  Tensor2<double> b;
-  sub(a, b);
-  tanh(a);
-  tanh(1.0);
-  zero(a);
-  exit(0);
+  // Tensor2<double> a(TensorShape(2, 3));
+  // Tensor2<double> b(TensorShape(3, 3));
+  // std::cout << sub(a, b).shape() << std::endl;
+  // tanh(a);
+  // tanh(1.0);
+  // zero(a);
+  // exit(0);
 
   py::class_<Solver>(m, "Solver")
       .def("compile", [](Solver &solver,
@@ -408,9 +356,14 @@ static void pythonizeMain(py::module &m) {
   profiler.def("start", []() { static ProfilerThread p; });
 }
 
-} // namespace tractor
-
-PYBIND11_MODULE(tractor, m) {
+void initTractorPython(pybind11::module &m) {
   std::cout << "building module" << std::endl;
   tractor::pythonizeMain(m);
 }
+
+} // namespace tractor
+
+// PYBIND11_MODULE(tractor, m) {
+//   std::cout << "building module" << std::endl;
+//   tractor::pythonizeMain(m);
+// }

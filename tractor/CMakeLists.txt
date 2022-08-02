@@ -2,7 +2,7 @@ project(tractor)
 
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register -g -std=c++17 -fopenmp -O3 -mavx -U__AVX__")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register -std=c++17 -fopenmp -mavx -U__AVX__")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register -std=c++17 -fopenmp -O0 -mavx -U__AVX__")
 
 find_package(Bullet REQUIRED)
 
@@ -60,6 +60,7 @@ add_library(${LIBNAME}
     src/core/program.cpp
     src/core/recorder.cpp
     src/core/solver.cpp
+    src/core/tensor.cpp
     src/core/type.cpp
     src/core/var.cpp
     src/engines/base.cpp
@@ -100,14 +101,16 @@ add_library(${LIBNAME}
     src/tensor/newtensor.cpp
     src/tensor/tensor.cpp
     src/tensor/ops.cpp
+
+    src/python/module.cpp
 )
 add_dependencies(${LIBNAME} ${${LIBNAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${LIBNAME} ${catkin_LIBRARIES} ${BULLET_LIBRARIES})
 install(DIRECTORY include/tractor DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
 install(TARGETS ${LIBNAME} LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
 
-pybind_add_module(tractor
-  src/python/module.cpp
+pybind_add_module(tractor MODULE
+  src/python/main.cpp
 )
 target_link_libraries(tractor PRIVATE libtractor ${catkin_LIBRARIES})
 set_target_properties(tractor PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_PYTHON_DESTINATION})

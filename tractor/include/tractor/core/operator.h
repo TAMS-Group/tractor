@@ -4,6 +4,7 @@
 
 #include <tractor/core/batch.h>
 #include <tractor/core/recorder.h>
+#include <tractor/core/tensor.h>
 
 #include <cmath>
 #include <memory>
@@ -76,6 +77,11 @@ template <class T> Var<T> &Var<T>::operator=(Var<T> &&other) {
   }
   return *this;
 }
+template <class T> struct MakeVar { typedef const Var<T> Type; };
+template <class T> struct MakeVar<const T> { typedef const Var<T> Type; };
+template <class T> struct MakeVar<const T &> { typedef const Var<T> Type; };
+template <class T> struct MakeVar<T &> { typedef Var<T> Type; };
+template <class T> struct MakeVar<T *> { typedef const Var<T *> Type; };
 
 class OpTypeBase {
 protected:
@@ -150,6 +156,7 @@ typedef void (*OpFunction)(void *base, const uintptr_t *offsets);
 struct OperatorFunctions {
   std::vector<uint64_t> context;
   LoopFunction loop = nullptr;
+  LoopFunction iterate = nullptr;
   OpFunction indirect = nullptr;
   const void *direct = nullptr;
 };
@@ -310,13 +317,7 @@ public:
     return op;
   }
   static const Operator *tryFind(const std::string &name);
-  static const Operator *find(const std::string &name) {
-    auto *op = tryFind(name);
-    if (!op) {
-      throw std::runtime_error(std::string() + "operator not found: " + name);
-    }
-    return op;
-  }
+  static const Operator *find(const std::string &name);
   static const Operator *tryFind(const OpMode &mode, const OpType &op,
                                  const std::initializer_list<TypeInfo> &args);
   static const Operator *find(const OpMode &mode, const OpType &op,
@@ -329,6 +330,8 @@ public:
   static const Operator *find(const std::initializer_list<TypeInfo> &args) {
     return find(OpMode(typeid(Mode *)), OpType(typeid(Op *)), args);
   }
+  const OpType &opType() const { return _op; }
+  const OpMode &opMode() const { return _mode; }
   template <class Op> bool is() const { return _op == OpType(typeid(Op *)); }
   static std::vector<const Operator *> all();
   virtual void pythonize(pybind11::module &) const {}
@@ -378,6 +381,15 @@ class OperatorImpl : public Operator {
           offsets += sizeof...(Indices) + 1;
         }
       }
+      static void iterate(void *base, const uintptr_t *offsets,
+                          size_t iterations) {
+        for (size_t i = 0; i < iterations; i++) {
+          ((Ret *)(void *)((uint8_t *)base + offsets[sizeof...(Indices)]))[i] =
+              Impl::call(
+                  ((typename std::decay<Args>::type
+                        *)(void *)((uint8_t *)base + offsets[Indices]))[i]...);
+        }
+      }
       static void indirect(void *base, const uintptr_t *offsets) {
         *(Ret *)(void *)((uint8_t *)base + offsets[sizeof...(Indices)]) =
             Impl::call(*(typename std::decay<Args>::type
@@ -400,6 +412,14 @@ class OperatorImpl : public Operator {
           offsets += sizeof...(Indices);
         }
       }
+      static void iterate(void *base, const uintptr_t *offsets,
+                          size_t iterations) {
+        for (size_t i = 0; i < iterations; i++) {
+          Impl::call(
+              ((typename std::decay<Args>::type
+                    *)(void *)((uint8_t *)base + offsets[Indices]))[i]...);
+        }
+      }
       static void indirect(void *base, const uintptr_t *offsets) {
         Impl::call(
             *(typename std::decay<Args>::type *)(void *)((uint8_t *)base +
@@ -420,28 +440,13 @@ class OperatorImpl : public Operator {
     typedef Init<Args...> _Init;
     typedef typename _Init::template Looper<Return, Indices...> _Loop;
     _functions.loop = &_Loop::loop;
+    _functions.iterate = &_Loop::iterate;
     _functions.indirect = &_Loop::indirect;
     _functions.direct = reinterpret_cast<const void *>(&_Loop::direct);
     _arguments = _Loop::arguments();
   }
   typedef typename RawArgumentTuple<decltype(&Impl::call)>::Type ArgumentTuple;
 
-  // template <class T, class S>
-  // void _pythonize(const T *, const S *, pybind11::module &m) const {}
-  // void _pythonize(const compute *, const double *, pybind11::module &m) const
-  // {
-  //   m.def(label().c_str(), &Impl::call);
-  // }
-  // virtual void pythonize(pybind11::module &m) const override {
-  //   _pythonize((const Mode *)nullptr, (const Scalar *)nullptr, m);
-  // }
-  // m.def(op->label().c_str(), &Impl::call);
-
-  template <class T> struct MakeVar { typedef const Var<T> Type; };
-  template <class T> struct MakeVar<const T> { typedef const Var<T> Type; };
-  template <class T> struct MakeVar<const T &> { typedef const Var<T> Type; };
-  template <class T> struct MakeVar<T &> { typedef Var<T> Type; };
-  template <class T> struct MakeVar<T *> { typedef const Var<T *> Type; };
   template <class Ret, class... Args> struct Pythonizer {
     static void pythonize(const Operator *op, pybind11::module &m,
                           Ret (*func)(Args &...)) {
@@ -466,6 +471,9 @@ class OperatorImpl : public Operator {
   static void pythonizeImpl(const Operator *op, pybind11::module &m,
                             Ret (*func)(Args &...)) {
     Pythonizer<Ret, Args...>::pythonize(op, m, func);
+    m.def(op->label().c_str(), [op](typename MakeTensor<Args>::Type &...args) {
+      return TensorOpCaller<Ret>::call(op, args...);
+    });
   }
 
   template <class X, class T, class S> struct PythonizerFilter {
@@ -485,10 +493,7 @@ public:
       : Operator(name, label, OpMode(typeid(Mode *)), OpType(typeid(Op *)),
                  OpGroup(typeid(Group *))) {
     constexpr size_t argument_count = std::tuple_size<ArgumentTuple>::value;
-    //_argument_count =
-    //    argument_count + (std::is_same<Return, void>::value ? 0 : 1);
     init(std::make_index_sequence<argument_count>(), (ArgumentTuple *)nullptr);
-    //_makePython((const Mode *)nullptr, this);
   }
   static const Operator *instance(const char *name, const char *label) {
     static const Operator *instance = [name, label]() {
@@ -562,14 +567,6 @@ template <class T> struct OverloadSelector<Var<T>> {
   }                                                                            \
   using op_##prefix##name##_##postfix##_ns::op_##prefix##name##_overload;
 
-// int py_##prefix##name##_##postfix = []() {                                   \
-//   register_python_component([](pybind11::module &m) {                        \
-//     m.def(TRACTOR_STRINGIFY(name),                                           \
-//           &op_##prefix##name##_##postfix##_impl_1::call);                    \
-//   });                                                                        \
-//   return 0;                                                                  \
-// }();
-
 #else
 
 #define TRACTOR_OP_TYPED(mode, prefix, name, args, impl, scalar, postfix)      \
@@ -640,22 +637,18 @@ public:
             decltype(Impl::call(OverloadSelector<Args>()...)) *Y = nullptr>    \
   inline auto name(Args &&...args) {                                           \
     return Caller<Ret, Impl>::call((ImplArgs *)nullptr, args...);              \
+  }                                                                            \
+                                                                               \
+  template <class... Args,                                                     \
+            class TensorCheck =                                                \
+                decltype(checkAllTensor(std::declval<Args>()...)),             \
+            class Impl = typename std::decay<decltype(*op_##name##_overload(   \
+                *std::declval<Args>().data()...))>::type,                      \
+            class Ret = typename std::decay<decltype(Impl::call(               \
+                *std::declval<Args>().data()...))>::type>                      \
+  inline auto name(Args &&...args) {                                           \
+    return TensorOpCaller<Ret>::call(Impl::instance(), args...);               \
   }
-
-// template <class... Args,                                                     \
-  //           class Impl = typename std::decay<decltype(*op_##name##_overload(   \
-  //               *std::declval<Args>()->data()...))>::type>                     \
-  // inline auto name(Args &&...args) {                                           \
-  //   std::cout << "batch op" << std::endl;                                      \
-  // }
-
-// template <class... Args,                                                     \
-  //           std::enable_if_t<std::conjunction<typename IsBatch<                \
-  //               typename std::decay<Args>::type>::value...>::value>            \
-  //               Test = 0>                                                      \
-  // inline auto name(Args &...args) {                                            \
-  //   std::cout << "batch op" << std::endl;                                      \
-  // }
 
 #define TRACTOR_OP(name, args, impl)                                           \
   TRACTOR_OP_IMPL(compute, , name, args, impl, )                               \

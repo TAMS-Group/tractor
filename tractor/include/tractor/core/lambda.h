@@ -28,9 +28,7 @@ template <class Functor> struct PointerOp : Operator {
     std::cout << "make op " << name << std::endl;
     _arguments = args;
     __init(&Functor::operator());
-    std::vector<uintptr_t> context;
-    context.push_back((uintptr_t)this);
-    _functions.context = context;
+    _functions.context.push_back((uintptr_t)this);
   }
 };
 

@@ -21,6 +21,14 @@ struct OperatorRegistry {
   }
 };
 
+const Operator *Operator::find(const std::string &name) {
+  auto *op = tryFind(name);
+  if (!op) {
+    throw std::runtime_error(std::string() + "operator not found: " + name);
+  }
+  return op;
+}
+
 void Operator::callIndirect(void *base, uintptr_t *offsets) const {
   if (_functions.context.empty()) {
     _functions.indirect(base, offsets);
@@ -113,9 +121,10 @@ const Operator *Operator::find(const OpMode &opmode, const OpType &optype,
   auto *op = tryFind(opmode, optype, args);
   if (!op) {
     std::stringstream msg;
-    msg << "operator not found " << opmode.name() << " " << optype.name();
+    msg << "operator not found mode:" << opmode.name()
+        << " type:" << optype.name();
     for (auto &arg : args) {
-      msg << " " << arg.name();
+      msg << " arg:" << arg.name();
     }
     throw std::runtime_error(msg.str());
   }

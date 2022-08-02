@@ -37,5 +37,9 @@ print x.value
 a.value = 2
 b.value = 7
 executable.run(memory)
+print x.value
 
+a.value = 1
+b.value = 7
+executable.run(memory)
 print x.value
