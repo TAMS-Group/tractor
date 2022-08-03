@@ -7,6 +7,7 @@
 #include <tractor/collision/ops.h>
 #include <tractor/core/solver.h>
 #include <tractor/neural/ops.h>
+#include <tractor/tensor/ops.h>
 
 namespace tractor {
 
@@ -50,7 +51,7 @@ template <class ValueSingle, class ValueBatch> class DexLearn {
   size_t _start = 1;
   size_t _outer_batch_size = 1;
 
-  tractor::NeuralNetwork<ScalarBatch> _policy_net;
+  tractor::NeuralNetwork<ValueBatch> _policy_net;
 
   collision_detection::AllowedCollisionMatrix _allowed_collision_matrix;
 
@@ -260,7 +261,7 @@ public:
 
   void evaluateContact(const std::string &end_effector_name,
                        const std::string &object_name,
-                       const tractor::Tensor<ScalarBatch> &contact_parameters,
+                       const ScalarBatch *contact_parameters,
                        size_t end_effector_index) {
 
     ROS_INFO_STREAM("contact " << end_effector_name << " " << object_name);
@@ -418,15 +419,19 @@ public:
     _simulator->applyForce(1, contact_point_1, contact_force);
   }
 
-  void applyContacts(const Tensor<ScalarBatch> &policy_output) {
+  void applyContacts(const std::vector<ScalarBatch> &policy_output) {
     ROS_INFO_STREAM("apply contacts");
     for (size_t end_effector_index = 0;
          end_effector_index < _end_effectors.size(); end_effector_index++) {
       auto &end_effector_name = _end_effectors[end_effector_index];
-      tractor::Tensor<ScalarBatch> contact_parameters = policy_output.range(
-          _joint_names.size() + end_effector_index * _contact_dimensions,
-          _contact_dimensions);
-      evaluateContact(end_effector_name, "object", contact_parameters,
+      if (_joint_names.size() + end_effector_index * _contact_dimensions +
+              _contact_dimensions >
+          policy_output.size()) {
+        throw std::runtime_error("policy output too short");
+      }
+      evaluateContact(end_effector_name, "object",
+                      policy_output.data() + _joint_names.size() +
+                          end_effector_index * _contact_dimensions,
                       end_effector_index);
     }
   }
@@ -447,18 +452,21 @@ public:
       _simulator->step();
       trajectory->state(frame_index) = _simulator->state();
       _applyJointLimitPenalties();
-      auto policy_output = runPolicyNetwork(mode, frame_index);
-      _env->controlRobot(*this, policy_output);
-      applyContacts(policy_output);
+      auto policy_output_vector = runPolicyNetwork(mode, frame_index);
+      _env->controlRobot(*this, policy_output_vector);
+      applyContacts(policy_output_vector);
       _applyCollisionPenalties();
     }
   }
 
-  auto runPolicyNetwork(const LayerMode &mode, size_t frame) {
+  const std::vector<ScalarBatch> runPolicyNetwork(const LayerMode &mode,
+                                                  size_t frame) {
     auto input =
-        _env->makePolicyInput(_simulator, _joint_names, frame, _frames);
+        _env->makePolicyInputTensor(_simulator, _joint_names, frame, _frames);
     auto output = _policy_net.predict(input, mode);
-    return output;
+    std::vector<ScalarBatch> ret;
+    unpack(output, ret);
+    return ret;
   }
 
   auto &robotJointGroup() const { return _group_robot; }

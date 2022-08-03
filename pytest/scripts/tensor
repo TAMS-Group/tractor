@@ -6,6 +6,181 @@ import tractor.types_double as tt
 import math
 import copy
 
+
+
+
+#
+# inputs = tt.Tensor([1,2,3])
+# weights = tt.Tensor([[1,2],[2,3],[3,4]])
+#
+# print "inputs", inputs.shape, inputs.value
+# print "weights", weights.value
+# print "outputs", tr.dense_mul_vec_mat(inputs, weights).value
+#
+# def f():
+#     global outputs
+#     print ""
+#     print "f()"
+#     tr.parameter(inputs)
+#     print "inputs", inputs.value
+#     tr.variable(weights)
+#     print "weights", weights.value
+#     outputs = tr.dense_mul_vec_mat(inputs, weights) - tt.Tensor([1,5])
+#     print "outputs", outputs.value
+#     tr.output(outputs)
+#     print ""
+#
+# prog = tr.record(f)
+#
+# print "inputs", inputs.shape, inputs.value
+# print "weights", weights.value
+# print "outputs", outputs.value
+#
+# print ""
+# print prog.constants
+# print prog.inputs
+# print prog.instructions
+# print prog.outputs
+# print ""
+#
+# engine = tr.DefaultEngine()
+# memory = engine.createMemory()
+# executable = engine.compile(prog)
+#
+# print "inputs", inputs.shape, inputs.value
+# print "weights", weights.value
+# print "outputs", outputs.value
+#
+# print "run"
+# executable.run(memory)
+#
+# print "inputs", inputs.shape, inputs.value
+# print "weights", weights.value
+# print "outputs", outputs.value
+#
+# exit(0)
+#
+# weights.value = [[2,2],[2,3],[3,100]]
+#
+# print "inputs", inputs.shape, inputs.value
+# print "weights", weights.value
+# print "outputs", outputs.value
+#
+# print "run"
+# executable.run(memory)
+#
+# print "inputs", inputs.shape, inputs.value
+# print "weights", weights.value
+# print "outputs", outputs.value
+#
+# time.sleep(1000)
+#
+#
+
+
+
+
+
+
+
+
+
+
+
+
+inputs = tt.Tensor([1,2,3])
+weights = tt.Tensor([[1,2],[2,3],[3,4]])
+
+print "inputs", inputs.shape, inputs.value
+print "weights", weights.value
+print "outputs", tr.dense_mul_vec_mat(inputs, weights).value
+
+def f():
+    print ""
+    print "f()"
+    x = tt.Tensor([1,2,3])
+    print x.shape
+    tr.variable(weights)
+    tr.goal(tr.dense_mul_vec_mat(x, weights) - tt.Tensor([1,5]))
+    print ""
+
+prog = tr.record(f)
+
+print ""
+print prog.constants
+print prog.inputs
+print prog.instructions
+print prog.outputs
+print ""
+
+solver = tt.LeastSquaresSolver(tr.DefaultEngine())
+solver.compile(prog)
+solver.tolerance = 1e-9
+solver.regularization = 0.01
+
+print "inputs", inputs.value
+print "weights", weights.value
+print "outputs", tr.dense_mul_vec_mat(inputs, weights).value
+
+solver.solve()
+
+print "inputs", inputs.value
+print "weights", weights.value
+print "outputs", tr.dense_mul_vec_mat(inputs, weights).value
+
+exit(0)
+
+
+
+
+
+
+
+t = tt.Tensor([1,2,3])
+
+a = tt.Scalar(5)
+b = tt.Scalar(9)
+
+def f():
+    tr.variable(t)
+    tr.variable(a)
+    tr.variable(b)
+    tr.goal(t + tt.Tensor([a,b,a]))
+
+prog = tr.record(f)
+
+solver = tt.LeastSquaresSolver(tr.DefaultEngine())
+solver.compile(prog)
+solver.tolerance = 1e-9
+solver.regularization = 0.01
+
+print a, b, t.value
+
+solver.solve()
+
+print a, b, t.value
+
+exit(0)
+
+
+
+# #ta = tt.pack_tensor([1,2,3])
+#
+# #ta = tt.Tensor([1,2,3])
+# ta = tt.Tensor([tt.Scalar(1), tt.Scalar(2), tt.Scalar(5)])
+# ta += tt.Tensor([tt.Scalar(3), tt.Scalar(2), tt.Scalar(5)])
+# print ta.value
+# print ta.shape
+#
+# l = tr.unpack(ta)
+# print l
+#
+# exit(0)
+
+
+
+
+
 ta = tt.Tensor([[1,2],[3,123]])
 
 print ta.value

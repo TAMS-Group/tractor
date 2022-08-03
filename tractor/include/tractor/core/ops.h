@@ -5,7 +5,6 @@
 #include <tractor/core/operator.h>
 
 #include <limits>
-#include <random>
 
 namespace tractor {
 
@@ -152,18 +151,9 @@ TRACTOR_D(prepare, sqrt, (const T &a, const T &x, T &p), { p = T(0.5) / x; })
 TRACTOR_D(forward, sqrt, (const T &p, const T &da, T &dx), { dx = p * da; })
 TRACTOR_D(reverse, sqrt, (const T &p, T &da, const T &dx), { da = p * dx; })
 
-template <class T> inline void batchBackprop(T &da, const T &dx) { da = dx; }
-template <class T, size_t S>
-inline void batchBackprop(T &da, const Batch<T, S> &dx) {
-  T rs = T(0);
-  for (size_t i = 0; i < S; i++) {
-    rs += dx[i];
-  }
-  da = rs;
-}
 TRACTOR_OP(batch, (const S &a, T &x), { x = T(a); })
 TRACTOR_D(prepare, batch, (const S &a, const T &x), {})
 TRACTOR_D(forward, batch, (const S &da, T &dx), { dx = T(da); })
-TRACTOR_D(reverse, batch, (S & da, const T &dx), { batchBackprop(da, dx); })
+TRACTOR_D(reverse, batch, (S & da, const T &dx), { batch_sum(dx, da); })
 
 } // namespace tractor

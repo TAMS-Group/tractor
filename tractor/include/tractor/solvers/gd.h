@@ -11,8 +11,12 @@ namespace tractor {
 // Steepest gradient-descent with box constraints
 template <class Scalar> class GradientDescentSolver : public SolverBase {
   typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Vector;
+
+public:
   static constexpr Scalar _default_learning_rate = Scalar(0.01);
   Scalar _learning_rate = _default_learning_rate;
+
+private:
   Vector _pl, _gl, _velocity, _residuals, _v_fprop;
   Vector _line_search_left, _line_search_right;
   Scalar _momentum = Scalar(0);

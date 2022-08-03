@@ -2,8 +2,8 @@
 
 #pragma once
 
-//#include <tractor/core/allocator.h>
 #include <tractor/core/any.h>
+#include <tractor/core/recorder.h>
 
 namespace tractor {
 
@@ -12,9 +12,10 @@ class TensorShape {
 
 public:
   TensorShape() {}
-  TensorShape(const std::vector<size_t> &s) : _data(s) {}
+  explicit TensorShape(const std::initializer_list<size_t> &s) : _data(s) {}
+  explicit TensorShape(const std::vector<size_t> &s) : _data(s) {}
   template <class... Args>
-  TensorShape(const Args &&...args) : _data({args...}) {}
+  explicit TensorShape(size_t s, Args &&...args) : _data({s, args...}) {}
   size_t dimensions() const { return _data.size(); }
   size_t operator[](size_t i) const { return _data[i]; }
   size_t at(size_t i) const { return _data[i]; }
@@ -79,7 +80,7 @@ public:
   const TensorOperators &operators() const { return _operators; }
 };
 
-template <class T> class Tensor2 {
+template <class T> class Tensor {
   const TensorInfo *_tensor_info = nullptr;
   Any _data;
   bool _throwIfEmpty() const {
@@ -112,14 +113,14 @@ public:
       return _tensor_info->shape();
     }
   }
-  Tensor2() {}
-  Tensor2(const TensorShape &shape) {
+  Tensor() {}
+  Tensor(const TensorShape &shape) {
     if (!shape.empty()) {
       _tensor_info = TensorInfo::make<T>(shape);
       _data = Any(type());
     }
   }
-  Tensor2(const TensorShape &shape, const T *data) {
+  Tensor(const TensorShape &shape, const T *data) {
     if (!shape.empty()) {
       _tensor_info = TensorInfo::make<T>(shape);
       _data = Any(type(), data);
@@ -133,6 +134,7 @@ public:
     }
   }
   const TensorInfo *info() const { return _tensor_info; }
+  size_t sizeInBytes() const { return shape().elementCount() * sizeof(T); }
 };
 
 void emitTensorOpImpl(
@@ -147,9 +149,9 @@ void runTensorOpImpl(const Operator *op, Args &&...args) {
 
 template <class Ret> struct TensorOpCaller {
   template <class... Args>
-  static Tensor2<Ret> call(const Operator *op, Args &&...args) {
+  static Tensor<Ret> call(const Operator *op, Args &&...args) {
     const TensorShape &shape = (..., args).shape();
-    Tensor2<Ret> ret(shape);
+    Tensor<Ret> ret(shape);
     runTensorOpImpl(op, args..., ret);
     return ret;
   }
@@ -161,14 +163,36 @@ template <> struct TensorOpCaller<void> {
   }
 };
 
-template <class T> struct MakeTensor { typedef const Tensor2<T> Type; };
-template <class T> struct MakeTensor<const T> {
-  typedef const Tensor2<T> Type;
-};
+template <class... Args>
+static void checkAllTensorStatic(const Tensor<Args> &...) {}
+
+template <class T> struct MakeTensor { typedef const Tensor<T> Type; };
+template <class T> struct MakeTensor<const T> { typedef const Tensor<T> Type; };
 template <class T> struct MakeTensor<const T &> {
-  typedef const Tensor2<T> Type;
+  typedef const Tensor<T> Type;
 };
-template <class T> struct MakeTensor<T &> { typedef Tensor2<T> Type; };
-template <class T> struct MakeTensor<T *> { typedef const Tensor2<T *> Type; };
+template <class T> struct MakeTensor<T &> { typedef Tensor<T> Type; };
+template <class T> struct MakeTensor<T *> { typedef const Tensor<T *> Type; };
+
+template <class T> void variable(Tensor<T> &tensor) {
+  if (auto *rec = Recorder::instance()) {
+    rec->input(tensor.type(), tensor.data(), tensor.data());
+  }
+}
+template <class T> void parameter(Tensor<T> &tensor) {
+  if (auto *rec = Recorder::instance()) {
+    rec->parameter(tensor.type(), tensor.data(), tensor.data());
+  }
+}
+template <class T> void output(Tensor<T> &tensor) {
+  if (auto *rec = Recorder::instance()) {
+    rec->output(tensor.type(), tensor.data(), tensor.data());
+  }
+}
+template <class T> void goal(const Tensor<T> &tensor) {
+  if (auto *rec = Recorder::instance()) {
+    rec->goal(tensor.type(), tensor.data(), 0, "");
+  }
+}
 
 } // namespace tractor

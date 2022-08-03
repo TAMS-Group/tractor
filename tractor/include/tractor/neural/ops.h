@@ -2,150 +2,197 @@
 
 #pragma once
 
+#include <tractor/core/factory.h>
+#include <tractor/core/lambda.h>
 #include <tractor/core/operator.h>
+
+#include <random>
 
 namespace tractor {
 
-template <class T, size_t S> struct DenseArg {
-  std::array<T, S> values;
-  template <class... Args> inline void set(const Args &...vv) {
-    values = std::array<T, S>({vv...});
-  }
-  auto &operator[](size_t i) { return values[i]; }
-  auto &operator[](size_t i) const { return values[i]; }
-};
-template <class A, class B, size_t N> struct DenseLin {
-  DenseArg<A, N> a;
-  DenseArg<B, N> b;
-};
+template <class Activation, class Weight>
+Tensor<Activation> dense_mul_vec_mat(const Tensor<Activation> &activations,
+                                     const Tensor<Weight> &weights) {
 
-template <class T> inline T dense_batch_sum(const T &v) { return v; }
-template <class T, size_t S> inline T dense_batch_sum(const Batch<T, S> &v) {
-  T ret = 0;
+  if (activations.shape().dimensions() != 1) {
+    throw std::runtime_error(
+        "invalid number of dimensions for dense_mul_vec_mat");
+  }
+
+  if (weights.shape().dimensions() != 2) {
+    throw std::runtime_error(
+        "invalid number of dimensions for dense_mul_vec_mat");
+  }
+
+  if (activations.shape()[0] != weights.shape()[0]) {
+    throw std::runtime_error(
+        "incompatible tensor shapes for dense_mul_vec_mat");
+  }
+
+  Tensor<Activation> output(TensorShape(weights.shape()[1]));
+
+  static Factory<const TensorInfo *, const Operator *> factory{
+      [](const TensorInfo *weights_info) {
+        auto act_type = TypeInfo::get<Activation>();
+        size_t rows = weights_info->shape()[0];
+        size_t cols = weights_info->shape()[1];
+        std::vector<Operator::Argument> args = {
+            Operator::Argument::makeInput(
+                TensorInfo::make(act_type, TensorShape(rows))->type()),
+            Operator::Argument::makeInput(weights_info->type()),
+            Operator::Argument::makeOutput(
+                TensorInfo::make(act_type, TensorShape(cols))->type()),
+        };
+        for (auto &a : args) {
+          std::cout << "tensor mul arg " << a.typeInfo().name() << std::endl;
+        }
+        const Operator *op = makePointerOp(
+            "dense_mul_vec_mat",
+            std::string() + TypeInfo::get<Activation>().name() + "_" +
+                weights_info->name(),
+            args,
+            [rows, cols](const Activation *a, const Weight *b, Activation *x) {
+              for (size_t col = 0; col < cols; col++) {
+                Activation v = Activation(0);
+                for (size_t row = 0; row < rows; row++) {
+                  v += a[row] * Activation(b[row * cols + col]);
+                }
+                x[col] = v;
+              }
+            },
+            [rows, cols](const Activation *a, const Weight *b, Activation *x,
+                         const Activation *da, const Weight *db,
+                         Activation *dx) {
+              for (size_t col = 0; col < cols; col++) {
+                Activation dv = Activation(0);
+                for (size_t row = 0; row < rows; row++) {
+                  dv += da[row] * Activation(b[row * cols + col]) +
+                        a[row] * Activation(db[row * cols + col]);
+                }
+                dx[col] = dv;
+              }
+            },
+            [rows, cols](const Activation *a, const Weight *b, Activation *x,
+                         Activation *da, Weight *db, const Activation *dx) {
+              for (size_t row = 0; row < rows; row++) {
+                Activation dv = Activation(0);
+                for (size_t col = 0; col < cols; col++) {
+                  dv += dx[col] * Activation(b[row * cols + col]);
+                }
+                da[row] = dv;
+              }
+              for (size_t row = 0; row < rows; row++) {
+                for (size_t col = 0; col < cols; col++) {
+                  batch_sum(dx[col] * a[row], db[row * cols + col]);
+                }
+              }
+            });
+        return op;
+      }};
+
+  auto *op = factory[weights.info()];
+
+  std::array<void *, 3> args = {
+      (void *)activations.data(),
+      (void *)weights.data(),
+      (void *)output.data(),
+  };
+  callAndRecord(op, args.data());
+
+  return output;
+}
+
+// ------------------------------------------
+
+template <class T> T add_random_normal(const T &a, const T &s) {
+  static thread_local std::mt19937 rng{std::mt19937::result_type(rand())};
+  std::normal_distribution<double> dist;
+  return a + T(dist(rng)) * s;
+}
+template <class T, size_t S>
+Batch<T, S> add_random_normal(const Batch<T, S> &a, const T &s) {
+  Batch<T, S> ret;
   for (size_t i = 0; i < S; i++) {
-    ret += v[i];
+    ret[i] = add_random_normal(a[i], s);
   }
   return ret;
 }
+TRACTOR_OP(add_random_normal, (const T &a, const S &s),
+           { return add_random_normal(a, s); })
+TRACTOR_D(prepare, add_random_normal, (const T &a, const S &s, const T &x), {})
+TRACTOR_D(forward, add_random_normal, (const T &da, const S &ds, T &dx),
+          { dx = da; })
+TRACTOR_D(reverse, add_random_normal, (T & da, S &ds, const T &dx), {
+  da = dx;
+  ds = S(0);
+})
 
-// template <class T, class S, size_t N>
-// inline void dense_compute(const std::array<T, N> &a, const std::array<S, N>
-// &b,
-//                           const T &add, T &x) {
-//   x = add;
-//   for (size_t i = 0; i < N; i++) {
-//     x += a[i] * T(b[i]);
-//   }
-// }
-
-template <class T, class S> inline T dense_compute_ab(const T &a, const S &b) {
-  return a * T(b);
-}
-template <class T, class S, class... Args>
-inline T dense_compute_ab(const T &a, const S &b, const Args &...args) {
-  return a * T(b) + dense_compute_ab(args...);
-}
-
-template <class T, class S, size_t N>
-inline void dense_forward(const DenseLin<T, S, N> &p, const std::array<T, N> &a,
-                          const std::array<S, N> &b, const T &add, T &x) {
-  x = add;
-  for (size_t i = 0; i < N; i++) {
-    x += a[i] * T(p.b[i]) + p.a[i] * T(b[i]);
-  }
-}
-
-template <class T, class S, size_t N>
-inline void dense_reverse(const DenseLin<T, S, N> &p, size_t i, const T &x,
-                          T &a, S &b) {
-  a = x * T(p.b[i]);
-  b = dense_batch_sum(x * p.a[i]);
-}
-template <class T, class S, size_t N, class... Args>
-inline void dense_reverse(const DenseLin<T, S, N> &p, size_t i, const T &x,
-                          T &a, S &b, Args &...args) {
-  a = x * T(p.b[i]);
-  b = dense_batch_sum(x * p.a[i]);
-  dense_reverse(p, i + 1, x, args...);
-}
-
-#define DENSE4ARGS(m)                                                          \
-  m T &a0, m T &a1, m T &a2, m T &a3, m S &b0, m S &b1, m S &b2, m S &b3
-
-TRACTOR_OP(dense4, (DENSE4ARGS(const), const T &add),
-           { return dense_compute_ab(a0, b0, a1, b1, a2, b2, a3, b3) + add; })
-TRACTOR_D(prepare, dense4,
-          (DENSE4ARGS(const), const T &add, const T &x, DenseLin<T, S, 4> &p), {
-            p.a.set(a0, a1, a2, a3);
-            p.b.set(b0, b1, b2, b3);
-          })
-TRACTOR_D(forward, dense4,
-          (const DenseLin<T, S, 4> &p, DENSE4ARGS(const), const T &add, T &x), {
-            dense_forward(p, {a0, a1, a2, a3}, {b0, b1, b2, b3}, add, x);
-          })
-TRACTOR_D(reverse, dense4,
-          (const DenseLin<T, S, 4> &p, DENSE4ARGS(), T &add, const T &x), {
-            dense_reverse(p, 0, x, a0, b0, a1, b1, a2, b2, a3, b3);
-            add = x;
-          })
-
-// template <class T, class S, size_t N>
-// inline void dense_reverse(const DenseLin<T, S, N> &p,
-//                           const std::array<T *, N> &a,
-//                           const std::array<S *, N> &b, T &add, const T &x) {
-//   for (size_t i = 0; i < N; i++) {
-//     *a[i] = x * T(p.b[i]);
-//     *b[i] = dense_batch_sum(x * p.a[i]);
-//   }
-//   add = x;
-// }
-
-// TRACTOR_D(
-//     reverse, dense4,
-//     (const DenseLin<T, S, 4> &p, DENSE4ARGS(), T &add, const T &x), {
-//       dense_reverse(p, {&a0, &a1, &a2, &a3}, {&b0, &b1, &b2, &b3}, add, x);
-//     })
-
-// a0 = x * T(p.b[0]);
-// a1 = x * T(p.b[1]);
-// a2 = x * T(p.b[2]);
-// a3 = x * T(p.b[3]);
-// b0 = dense_batch_sum(x * p.a[0]);
-// b1 = dense_batch_sum(x * p.a[1]);
-// b2 = dense_batch_sum(x * p.a[2]);
-// b3 = dense_batch_sum(x * p.a[3]);
-// add = x;
-
-// TRACTOR_OP(dense4,
-//            (const T &a0, const T &a1, const T &a2, const T &a3, const S &b0,
-//             const S &b1, const S &b2, const S &b3, const T &add),
-//            {
-//              // return T(0);
-//              return a0 * T(b0) + a1 * T(b1) + a2 * T(b2) + a3 * T(b3) + add;
-//            })
-
-// TRACTOR_OP(dense4, (DENSE4ARGS(const), const T &add), {
-//   return batch(a0, 4) * b0 + batch(a1, 4) * b1 + batch(a2) * b2 +
-//          batch(a3) * b3 + add;
-// })
-/*
-TRACTOR_D(reverse, dense4,
-          (const DenseLin<S, T, 4> &p, DENSE4ARGS(), T &add, const T &x), {
-            // a0 = x * p.b[0];
-            // a1 = x * p.b[1];
-            // a2 = x * p.b[2];
-            // a3 = x * p.b[3];
-            b0 = x * p.a[0];
-            b1 = x * p.a[1];
-            b2 = x * p.a[2];
-            b3 = x * p.a[3];
-            add = x;
-          })
-*/
 // ------------------------------------------
 
-template <class T> auto relu(const T &a) { return std::max(T(0), a); }
-TRACTOR_OP(relu, (const T &a), { return relu(a); })
+template <class T> T add_random_uniform(const T &a, const T &l, const T &h) {
+  static thread_local std::mt19937 rng{std::mt19937::result_type(rand())};
+  std::uniform_real_distribution<double> dist(l, h);
+  return a + T(dist(rng));
+}
+template <class T, size_t S>
+Batch<T, S> add_random_uniform(const Batch<T, S> &a, const T &l, const T &h) {
+  Batch<T, S> ret;
+  for (size_t i = 0; i < S; i++) {
+    ret[i] = add_random_uniform(a[i], l, h);
+  }
+  return ret;
+}
+TRACTOR_OP(add_random_uniform, (const T &a, const S &l, const S &h),
+           { return add_random_uniform(a, l, h); })
+TRACTOR_D(prepare, add_random_uniform,
+          (const T &a, const S &l, const S &h, const T &x), {})
+TRACTOR_D(forward, add_random_uniform,
+          (const T &da, const S &dl, const S &dh, T &dx), { dx = da; })
+TRACTOR_D(reverse, add_random_uniform, (T & da, S &dl, S &dh, const T &dx), {
+  da = dx;
+  dl = S(0);
+  dh = S(0);
+})
+
+// ------------------------------------------
+
+// template <class T> inline void dropout3(const T &a, const T &b, T &x, T &y) {
+//   static thread_local std::mt19937 rng{std::mt19937::result_type(rand())};
+//   std::uniform_real_distribution<double> dist;
+//   y = (dist(rng) < b) ? T(0) : T(1.0 / (1.0 - b));
+//   x = a * y;
+// }
+// template <class T, size_t S>
+// inline void dropout3(const Batch<T, S> &a, const T &b, Batch<T, S> &x,
+//                      Batch<T, S> &y) {
+//   for (size_t i = 0; i < S; i++) {
+//     dropout2(a[i], b, x[i], y[i]);
+//   }
+// }
+// TRACTOR_OP(dropout2, (const T &a, const S &b, T &x, T &y),
+//            { dropout3(a, b, x, y); })
+// TRACTOR_D(prepare, dropout2,
+//           (const T &a, const S &b, const T &x, const T &y, T &s), { s = y; })
+// TRACTOR_D(forward, dropout2,
+//           (const T &s, const T &da, const S &db, T &dx, T &dy), {
+//             dx = da * s;
+//             dy = T(0);
+//           })
+// TRACTOR_D(reverse, dropout2,
+//           (const T &s, T &da, S &db, const T &dx, const T &dy), {
+//             da = dx * s;
+//             db = S(0);
+//           })
+//
+// template <class A, class B> auto dropout(const A &a, const B &b) {
+//   A x, y;
+//   dropout2(a, b, x, y);
+//   return x;
+// }
+
+// ------------------------------------------
+
+TRACTOR_OP(relu, (const T &a), { return std::max(T(0), a); })
 TRACTOR_D_LOOP(forward, relu, (const T &a, const T &x, const T &da, T &dx),
                (a, x, da, dx), {
                  if (a >= T(0)) {

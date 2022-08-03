@@ -641,7 +641,7 @@ public:
                                                                                \
   template <class... Args,                                                     \
             class TensorCheck =                                                \
-                decltype(checkAllTensor(std::declval<Args>()...)),             \
+                decltype(checkAllTensorStatic(std::declval<Args>()...)),       \
             class Impl = typename std::decay<decltype(*op_##name##_overload(   \
                 *std::declval<Args>().data()...))>::type,                      \
             class Ret = typename std::decay<decltype(Impl::call(               \

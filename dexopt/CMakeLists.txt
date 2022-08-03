@@ -1,6 +1,8 @@
 project(dexopt)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register -g -fopenmp -std=c++17 -O3 -mavx -U__AVX__")
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register -g -fopenmp -std=c++17 -O3 -mavx -U__AVX__")
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register -std=c++17 -fopenmp -O0 -mavx -U__AVX__")
 
 find_package(OpenCV REQUIRED)
 

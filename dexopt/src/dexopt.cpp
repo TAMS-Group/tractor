@@ -426,12 +426,13 @@ int main(int argc, char **argv) {
     auto step_policy = [&]() {
       dexlearn.dexviz().clear();
       dexlearn.simulator()->step();
-      auto policy_output = dexlearn.runPolicyNetwork(layer_mode, iframe++);
-      ROS_INFO_STREAM("policy output size " << policy_output.size());
+      auto policy_output_vector =
+          dexlearn.runPolicyNetwork(layer_mode, iframe++);
+      ROS_INFO_STREAM("policy output size " << policy_output_vector.size());
       ROS_INFO_STREAM("joints " << dexlearn.jointNames().size());
       ROS_INFO_STREAM("eefs " << dexlearn.endEffectors().size());
-      env->controlRobot(dexlearn, policy_output);
-      dexlearn.applyContacts(policy_output);
+      env->controlRobot(dexlearn, policy_output_vector);
+      dexlearn.applyContacts(policy_output_vector);
       visualization_publisher.publish(dexlearn.visualization());
       toMoveIt(dexlearn.simulator()->state(), source_robot_state);
       display_robot_state_pub.publish(source_robot_state);

@@ -1,0 +1,78 @@
+#!/usr/bin/env python
+
+import time
+import tractor as tr
+import tractor.types_double as tt
+import numpy as np
+import matplotlib.pyplot as plt
+
+input = tt.InputLayer()
+output = input
+
+output = tt.DenseLayer(8, activation=tr.ActivationType.ReLU, stdev=0.1)(output)
+output = tt.DenseLayer(8, activation=tr.ActivationType.ReLU, stdev=0.1)(output)
+output = tt.DenseLayer(8, activation=tr.ActivationType.ReLU, stdev=0.1)(output)
+
+#output = tt.ActivationLayer(tr.ActivationType.TanH)(output)
+
+#output = tt.ActivationLayer("relu")
+output = tt.DenseLayer(1)(output)
+
+network = tt.NeuralNetwork([input], [output])
+
+xx = np.linspace(-5, 5, 20)
+
+def g(x):
+    x = tr.add_random_normal(x, tt.Tensor([tt.Scalar(0.01)]))
+    y = network.predict(x)
+    return y
+
+def f():
+    print "f begin"
+    for xf in xx:
+        x = tt.Tensor([xf])
+        y =  g(x)
+        tr.goal(y - tr.sin(x))
+        #tr.goal(y - x)
+    print "f ready"
+
+print "rec begin"
+prog = tr.record(f)
+print "rec ready"
+
+def test():
+    #yy = [tr.unpack(network.predict(tt.Tensor([x])))[0].value for x in xx]
+    yy = [tr.unpack(g(tt.Tensor([x])))[0].value for x in xx]
+    print xx
+    print yy
+    plt.clf()
+    plt.plot(xx, np.sin(xx))
+    plt.plot(xx, yy)
+    #plt.show()
+    #plt.waitforbuttonpress()
+    plt.pause(0.001)
+
+print prog.constants
+print prog.inputs
+print prog.instructions
+print prog.outputs
+
+# solver = tt.LeastSquaresSolver(tr.DefaultEngine())
+# solver.regularization = 1
+
+solver = tt.GradientDescentSolver(tr.DefaultEngine())
+solver.learning_rate = 0.01
+
+solver.compile(prog)
+
+while True:
+    solver.parameterize()
+    solver.gather()
+    for i in range(10):
+        solver.step()
+    solver.scatter()
+    test()
+
+# test()
+# solver.solve()
+# test()

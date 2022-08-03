@@ -50,29 +50,15 @@ const Operator *createTensorOpVariant(const Operator *element_op,
     tensor_op_name += "_" + std::to_string(s);
   }
 
-  std::cout << "gen tensor op type:" << tensor_op_name
-            << " label:" << element_op->label();
-  for (auto &arg : args) {
-    std::cout << " arg:" << arg.typeInfo().name();
-    if (arg.isInput()) {
-      std::cout << "/i";
-    }
-    if (arg.isOutput()) {
-      std::cout << "/o";
-    }
-  }
-  std::cout << std::endl;
-
   size_t element_count = shape.elementCount();
 
   return makeListOperator(
       tensor_op_name, element_op->label(), element_op->opMode(),
-      element_op->opType(), group, args,
+      element_op->opType(),
+      // makeOpType(tensor_op_name),
+      group, args,
       [element_op, element_count](void *base, const uintptr_t *offsets) {
-        std::cout << " > " << element_op->name() << " " << element_count
-                  << std::endl;
         element_op->functionPointers().iterate(base, offsets, element_count);
-        std::cout << "ready" << std::endl;
       });
 }
 
@@ -93,7 +79,9 @@ const Operator *makeTensorOp(const Operator *element_op,
   if (!createTensorOpVariant(element_op->variant<reverse>(), group, shape)) {
     throw std::runtime_error("failed to create reverse tensor op");
   }
-  createTensorOpVariant(element_op->variant<prepare>(), group, shape);
+  if (auto *variant = element_op->tryFindVariant<prepare>()) {
+    createTensorOpVariant(variant, group, shape);
+  }
   return tensor_op;
 }
 
@@ -101,13 +89,6 @@ void emitTensorOpImpl(
     const Operator *element_op,
     const std::initializer_list<const TensorInfo *> &tensor_infos,
     const std::initializer_list<void *> &tensor_data) {
-
-  // std::cout << "tensor op " << element_op->label() << " " <<
-  // element_op->name()
-  //           << std::endl;
-  //  for (auto &i : tensor_infos) {
-  //    std::cout << "arg " << i->shape() << std::endl;
-  //  }
 
   if (tensor_infos.size() == 0) {
     return;
@@ -149,87 +130,13 @@ std::ostream &operator<<(std::ostream &s, const TensorShape &v) {
 TensorOperators::TensorOperators(const TypeInfo &element_type,
                                  const TypeInfo &tensor_type,
                                  const TensorShape &tensor_shape) {
-
-  // size_t element_count = tensor_shape.elementCount();
-  // size_t byte_count = element_type.size() * tensor_shape.elementCount();
-
-  // createTensorOp(const Operator *element_op, const TensorShape &shape) {
-
-  std::cout << "a" << std::endl;
-
   _move = makeTensorOp(Operator::find<compute, op_move>({element_type}),
                        tensor_shape);
-
   _zero = makeTensorOp(Operator::find<compute, op_zero>({element_type}),
                        tensor_shape);
-
   _add = makeTensorOp(
       Operator::find<compute, op_add>({element_type, element_type}),
       tensor_shape);
-
-  std::cout << "z" << std::endl;
-
-  /*_add = makePointerOp(
-      std::string() + "add_" + tensor_type.name(), "add",
-      OpType(typeid(op_add *)),
-      {
-          Operator::Argument::makeInput(tensor_type),
-          Operator::Argument::makeInput(tensor_type),
-          Operator::Argument::makeOutput(tensor_type),
-      },
-      [element_count, add](const void *a, const void *b, void *x) {
-        // std::cout << " > tensor add " << element_count << std::endl;
-        add(element_count, a, b, x);
-      },
-      [element_count, add](const void *a, const void *b, const void *x,
-                           const void *da, const void *db, void *dx) {
-        // std::cout << " > f tensor add " << element_count << std::endl;
-        add(element_count, da, db, dx);
-      },
-      [byte_count](const void *a, const void *b, const void *x, void *da,
-                   void *db, const void *dx) {
-        // std::cout << " > r tensor add " << byte_count << std::endl;
-        std::memcpy(da, dx, byte_count);
-        std::memcpy(db, dx, byte_count);
-      });*/
-
-  /*_move = makePointerOp(
-      std::string() + "move_" + tensor_type.name(), "move",
-      OpType(typeid(op_move *)),
-      {
-          Operator::Argument::makeInput(tensor_type),
-          Operator::Argument::makeOutput(tensor_type),
-      },
-      [byte_count](const void *a, void *x) {
-        std::cout << " > tensor move " << byte_count << std::endl;
-        std::memcpy(x, a, byte_count);
-      },
-      [byte_count](const void *a, const void *x, const void *da, void *dx) {
-        // std::cout << " > f tensor move " << byte_count << std::endl;
-        std::memcpy(dx, da, byte_count);
-      },
-      [byte_count](const void *a, const void *x, void *da, const void *dx) {
-        // std::cout << " > r tensor move " << byte_count << std::endl;
-        std::memcpy(da, dx, byte_count);
-      });
-
-  _zero = makePointerOp(
-      std::string() + "zero_" + tensor_type.name(), "zero",
-      OpType(typeid(op_zero *)),
-      {
-          Operator::Argument::makeOutput(tensor_type),
-      },
-      [byte_count](void *x) {
-        // std::cout << " > tensor zero " << byte_count << std::endl;
-        std::memset(x, 0, byte_count);
-      },
-      [byte_count](const void *x, void *dx) {
-        // std::cout << " > f tensor zero " << byte_count << std::endl;
-        std::memset(dx, 0, byte_count);
-      },
-      [byte_count](const void *x, void *dx) {
-        // std::cout << " > r tensor zero " << byte_count << std::endl;
-      });*/
 }
 
 TensorInfo::TensorInfo(const std::string &name, const TypeInfo &element_type,

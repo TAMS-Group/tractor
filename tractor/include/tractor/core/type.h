@@ -67,54 +67,6 @@ public:
   }
 };
 
-// class TypeInfoData {
-//   size_t _size = 0;
-//   std::type_index _type = typeid(void);
-//   size_t _alignment = 0;
-//
-// public:
-//   template <class T> static const TypeInfoData *get() {
-//     static TypeInfoData ret;
-//     return &ret;
-//   }
-// };
-
-// class TypeInfo {
-//   size_t _size = 0;
-//   std::type_index _type = typeid(void);
-//   size_t _alignment = 0;
-//   // const TypeInfoData *_data = nullptr;
-//
-// public:
-//   inline TypeInfo() {}
-//   // inline TypeInfo(const size_t &size, const std::type_index &type,
-//   //                 const size_t &alignment)
-//   //     : _size(size), _type(type), _alignment(alignment) {}
-//   template <class T> static inline TypeInfo get() {
-//     typedef typename std::decay<T>::type X;
-//     TypeInfo t;
-//     t._size = sizeof(X);
-//     t._type = typeid(X);
-//     t._alignment = std::alignment_of<X>::value;
-//     return t;
-//   }
-//   inline size_t size() const { return _size; }
-//   // inline const std::type_index &type() const { return _type; }
-//   inline const char *name() const { return _type.name(); }
-//   static const TypeInfo &gradientType(const TypeInfo &type);
-//   const TypeInfo &gradientType() const { return gradientType(*this); }
-//   static void registerGradientType(const TypeInfo &type,
-//                                    const TypeInfo &gradient);
-//   size_t alignment() const { return _alignment; }
-//   inline bool operator==(const TypeInfo &b) const { return _type == b._type;
-//   } inline bool operator!=(const TypeInfo &b) const { return _type !=
-//   b._type; } inline bool operator<(const TypeInfo &b) const { return _type <
-//   b._type; } inline bool operator>(const TypeInfo &b) const { return _type >
-//   b._type; } inline bool operator<=(const TypeInfo &b) const { return _type
-//   <= b._type; } inline bool operator>=(const TypeInfo &b) const { return
-//   _type >= b._type; }
-// };
-
 #define TRACTOR_GRADIENT_TYPE_CONCAT_2(a, b) a##b
 
 #define TRACTOR_GRADIENT_TYPE_CONCAT(a, b) TRACTOR_GRADIENT_TYPE_CONCAT_2(a, b)

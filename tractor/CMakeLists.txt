@@ -1,8 +1,14 @@
 project(tractor)
 
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register -g -std=c++17 -fopenmp -O3 -mavx -U__AVX__")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register -std=c++17 -fopenmp -O0 -mavx -U__AVX__")
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register -std=c++17 -fopenmp -O0 -mavx -U__AVX__")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wno-register -std=c++17 -fopenmp -O0 -mavx -U__AVX__")
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wno-register -std=c++17 -O0 -mavx -U__AVX__")
+
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lasan -g -fsanitize=address -Wno-register -std=c++17 -O0")
+#set(LDFLAGS "${LDFLAGS} -lasan -fsanitize=address")
 
 find_package(Bullet REQUIRED)
 
@@ -49,6 +55,7 @@ add_library(${LIBNAME}
     src/core/constraints.cpp
     src/core/eigen.cpp
     src/core/engine.cpp
+    src/core/factory.cpp
     src/core/gradients.cpp
     src/core/lambda.cpp
     src/core/linesearch.cpp
@@ -80,12 +87,11 @@ add_library(${LIBNAME}
     src/neural/layer.cpp
     src/neural/network.cpp
     src/neural/ops.cpp
-    src/neural/synapse.cpp
     src/robot/goals.cpp
     src/robot/jointstate.cpp
     src/robot/jointtypes.cpp
     src/robot/linkstate.cpp
-    src/python/registry.cpp
+    src/python/module.cpp
     src/robot/robot.cpp
     src/robot/robotinfo.cpp
     src/robot/robotmodel.cpp
@@ -98,11 +104,7 @@ add_library(${LIBNAME}
     src/solvers/pgd.cpp
     src/solvers/ps.cpp
     src/solvers/sq.cpp
-    src/tensor/newtensor.cpp
-    src/tensor/tensor.cpp
     src/tensor/ops.cpp
-
-    src/python/module.cpp
 )
 add_dependencies(${LIBNAME} ${${LIBNAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(${LIBNAME} ${catkin_LIBRARIES} ${BULLET_LIBRARIES})
@@ -110,7 +112,7 @@ install(DIRECTORY include/tractor DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATI
 install(TARGETS ${LIBNAME} LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
 
 pybind_add_module(tractor MODULE
-  src/python/main.cpp
+  src/python/loader.cpp
 )
 target_link_libraries(tractor PRIVATE libtractor ${catkin_LIBRARIES})
 set_target_properties(tractor PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_PYTHON_DESTINATION})

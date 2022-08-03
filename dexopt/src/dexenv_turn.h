@@ -46,7 +46,7 @@ struct DexEnvTurn : tractor::DexEnv<ValueSingle, ValueBatch> {
     };
   }
 
-  virtual tractor::Tensor<ScalarBatch> makePolicyInput(
+  virtual std::vector<ScalarBatch> makePolicyInputVector(
       const std::shared_ptr<tractor::PhysicsSimulator<GeometryBatch>>
           &simulator,
       const std::vector<std::string> &joint_names, size_t frame,
@@ -58,11 +58,7 @@ struct DexEnvTurn : tractor::DexEnv<ValueSingle, ValueBatch> {
 
     size_t frequencies = 1;
 
-    tractor::Tensor<ScalarBatch> neural_input;
-    // neural_input.resize(3 * 3 + frequencies * 2);
-    // neural_input.resize(frequencies * 2 + 2 + 3);
-    neural_input.resize(frequencies * 2 + 2);
-    // neural_input.resize(2);
+    std::vector<ScalarBatch> neural_input(frequencies * 2 + 2);
 
     double t = frame * 1.0 / frame_count;
 
@@ -77,14 +73,14 @@ struct DexEnvTurn : tractor::DexEnv<ValueSingle, ValueBatch> {
       ScalarBatch pscale = ValueBatch(10);
       ScalarBatch px, py, pz;
       GeometryBatch::unpack(object_position, px, py, pz);
-      neural_input(i++) = px * pscale;
-      neural_input(i++) = py * pscale;
+      neural_input[i++] = px * pscale;
+      neural_input[i++] = py * pscale;
     }
 
     return neural_input;
   }
 
-  virtual tractor::NeuralNetwork<ScalarBatch>
+  virtual tractor::NeuralNetwork<ValueBatch>
   makePolicyNetwork(const std::vector<std::string> &joint_names,
                     size_t end_effector_count,
                     size_t contact_dimensions) override {
@@ -93,16 +89,16 @@ struct DexEnvTurn : tractor::DexEnv<ValueSingle, ValueBatch> {
 
     double regularization = 0.1;
 
-    tractor::SequentialNeuralNetwork<ScalarBatch> policy_net;
+    tractor::SequentialNeuralNetwork<ValueBatch> policy_net;
 
     // policy_net.add(tractor::DenseLayer<ScalarBatch>(
-    //    64, tractor::Activation::TanH, 0, regularization, 0));
+    //    64, tractor::ActivationType::TanH, 0, regularization, 0));
 
     // policy_net.add(tractor::DropoutLayer<ScalarBatch>(0.3));
 
-    policy_net.add(tractor::DenseLayer<ScalarBatch>(
+    policy_net.add(std::make_shared<tractor::DenseLayer<ValueBatch>>(
         joint_count + end_effector_count * contact_dimensions,
-        tractor::Activation::Linear, 0, regularization, 0));
+        tractor::ActivationType::Linear, 0, regularization, 0));
 
     return policy_net;
   }
@@ -192,7 +188,7 @@ struct DexEnvTurn : tractor::DexEnv<ValueSingle, ValueBatch> {
 
   virtual void
   controlRobot(tractor::DexLearn<ValueSingle, ValueBatch> &dexlearn,
-               const tractor::Tensor<ScalarBatch> &policy_output) override {
+               const std::vector<ScalarBatch> &policy_output) override {
 
     auto &_robot_model = dexlearn.robotModel();
     auto &_group_robot = dexlearn.robotJointGroup();

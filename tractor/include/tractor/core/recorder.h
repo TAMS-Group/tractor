@@ -131,7 +131,7 @@ public:
                  const char *name = nullptr);
   void output(const TypeInfo &type, void *var, void *binding,
               const char *name = nullptr);
-  void goal(const TypeInfo &type, void *var, size_t priority = 0,
+  void goal(const TypeInfo &type, const void *var, size_t priority = 0,
             const char *name = nullptr);
 
   void constant(const TypeInfo &type, void *var);
@@ -178,6 +178,8 @@ inline void recordOperation(const Operator *op, Args *...args) {
     inst->op(op, args...);
   }
 }
+
+void callAndRecord(const Operator *op, void **args);
 
 // template <class T> void Recorder::move(const T *from, T *to) {
 //   Recorder_move_impl(this, from, to);

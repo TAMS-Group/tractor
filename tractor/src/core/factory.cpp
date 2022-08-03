@@ -1,5 +1,5 @@
 // (c) 2020-2022 Philipp Ruppel
 
-#include <tractor/neural/synapse.h>
+#include <tractor/core/factory.h>
 
 namespace tractor {}

@@ -47,13 +47,13 @@ struct DexEnvGrasp : tractor::DexEnv<ValueSingle, ValueBatch> {
     };
   }
 
-  virtual tractor::Tensor<ScalarBatch> makePolicyInput(
+  virtual std::vector<ScalarBatch> makePolicyInputVector(
       const std::shared_ptr<tractor::PhysicsSimulator<GeometryBatch>>
           &simulator,
       const std::vector<std::string> &joint_names, size_t frame,
       size_t frame_count) override {
 
-    tractor::Tensor<ScalarBatch> neural_input;
+    std::vector<ScalarBatch> neural_input;
 
     auto object_pose = simulator->state().links().pose("object");
     auto object_orientation = GeometryBatch::orientation(object_pose);
@@ -66,7 +66,7 @@ struct DexEnvGrasp : tractor::DexEnv<ValueSingle, ValueBatch> {
       if (auto *revolute_joint_state =
               dynamic_cast<tractor::RevoluteJointState<GeometryBatch> *>(
                   &joint_state)) {
-        neural_input(i) = revolute_joint_state->position();
+        neural_input[i] = revolute_joint_state->position();
       }
     }
 
@@ -76,68 +76,69 @@ struct DexEnvGrasp : tractor::DexEnv<ValueSingle, ValueBatch> {
       ScalarBatch pscale = ValueBatch(10);
       ScalarBatch px, py, pz;
       GeometryBatch::unpack(object_position, px, py, pz);
-      neural_input(i++) = px * pscale;
-      neural_input(i++) = py * pscale;
-      neural_input(i++) = pz * pscale;
+      neural_input[i++] = px * pscale;
+      neural_input[i++] = py * pscale;
+      neural_input[i++] = pz * pscale;
 
       ScalarBatch rxx, rxy, rxz;
       GeometryBatch::unpack(
           object_orientation *
               GeometryBatch::pack(ValueBatch(1), ValueBatch(0), ValueBatch(0)),
           rxx, rxy, rxz);
-      neural_input(i++) = rxx;
-      neural_input(i++) = rxy;
-      neural_input(i++) = rxz;
+      neural_input[i++] = rxx;
+      neural_input[i++] = rxy;
+      neural_input[i++] = rxz;
 
       ScalarBatch ryx, ryy, ryz;
       GeometryBatch::unpack(
           object_orientation *
               GeometryBatch::pack(ValueBatch(0), ValueBatch(1), ValueBatch(0)),
           ryx, ryy, ryz);
-      neural_input(i++) = ryx;
-      neural_input(i++) = ryy;
-      neural_input(i++) = ryz;
+      neural_input[i++] = ryx;
+      neural_input[i++] = ryy;
+      neural_input[i++] = ryz;
 
       ScalarBatch hx, hy, hz;
       GeometryBatch::unpack(
           GeometryBatch::translation(simulator->state().links().pose("palm")) -
               object_position,
           hx, hy, hz);
-      neural_input(i++) = hx;
-      neural_input(i++) = hy;
-      neural_input(i++) = hz;
+      neural_input[i++] = hx;
+      neural_input[i++] = hy;
+      neural_input[i++] = hz;
     }
 
     return neural_input;
   }
 
-  virtual tractor::NeuralNetwork<ScalarBatch>
+  virtual tractor::NeuralNetwork<ValueBatch>
   makePolicyNetwork(const std::vector<std::string> &joint_names,
                     size_t end_effector_count,
                     size_t contact_dimensions) override {
 
     size_t joint_count = joint_names.size();
 
-    tractor::SequentialNeuralNetwork<ScalarBatch> policy_net;
+    tractor::SequentialNeuralNetwork<ValueBatch> policy_net;
 
     double regularization = 0.01;
 
     // policy_net.add(tractor::DropoutLayer<ScalarBatch>(0.3));
 
-    policy_net.add(tractor::DenseLayer<ScalarBatch>(
-        64, tractor::Activation::Linear, regularization, regularization));
+    policy_net.add(std::make_shared<tractor::DenseLayer<ValueBatch>>(
+        64, tractor::ActivationType::Linear, regularization, regularization));
 
     policy_net.add(
-        tractor::ActivityRegularizationLayer<ScalarBatch>(regularization));
+        std::make_shared<tractor::ActivityRegularizationLayer<ValueBatch>>(
+            regularization));
 
-    policy_net.add(tractor::DropoutLayer<ScalarBatch>(0.3));
+    policy_net.add(std::make_shared<tractor::DropoutLayer<ValueBatch>>(0.3));
 
-    policy_net.add(
-        tractor::ActivationLayer<ScalarBatch>(tractor::Activation::TanH));
+    policy_net.add(std::make_shared<tractor::ActivationLayer<ValueBatch>>(
+        tractor::ActivationType::TanH));
 
-    policy_net.add(tractor::DenseLayer<ScalarBatch>(
+    policy_net.add(std::make_shared<tractor::DenseLayer<ValueBatch>>(
         joint_count + end_effector_count * contact_dimensions,
-        tractor::Activation::Linear, regularization, regularization));
+        tractor::ActivationType::Linear, regularization, regularization));
 
     // policy_net.add(tractor::GaussianNoiseLayer<ScalarBatch>(0.001));
 
@@ -183,7 +184,7 @@ struct DexEnvGrasp : tractor::DexEnv<ValueSingle, ValueBatch> {
 
   virtual void
   controlRobot(tractor::DexLearn<ValueSingle, ValueBatch> &dexlearn,
-               const tractor::Tensor<ScalarBatch> &policy_output) override {
+               const std::vector<ScalarBatch> &policy_output) override {
 
     auto &_robot_model = dexlearn.robotModel();
     auto &_group_robot = dexlearn.robotJointGroup();

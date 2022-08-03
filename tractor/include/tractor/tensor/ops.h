@@ -2,182 +2,186 @@
 
 #pragma once
 
+#include <tractor/core/factory.h>
 #include <tractor/core/list.h>
-#include <tractor/core/operator.h>
-#include <tractor/tensor/tensor.h>
+#include <tractor/core/ops.h>
+
+#define TRACTOR_CHECK_TENSOR_DIMENSIONS(module, input, dims)                   \
+  {                                                                            \
+    if (input.shape().dimensions() != dims) {                                  \
+      throw std::invalid_argument(                                             \
+          std::string() + module +                                             \
+          ": wrong number of dimensions, expected:" + std::to_string(dims) +   \
+          ", found:" + std::to_string(input.shape().dimensions()));            \
+    }                                                                          \
+  }
 
 namespace tractor {
 
-template <class T, size_t Dimensions> class TensorArg : public ArgList {
-  std::array<size_t, Dimensions> _shape;
-  template <class... Indices> size_t _index(const Indices &...indices) const {
-    if (_shape.size() != sizeof...(Indices)) {
-      throw std::runtime_error("incorrect number of tensor index dimensions");
+template <class T> Tensor<T> operator+(const Tensor<T> &a, const Tensor<T> &b) {
+  return add(a, b);
+}
+template <class T> Tensor<T> operator-(const Tensor<T> &a, const Tensor<T> &b) {
+  return sub(a, b);
+}
+template <class T> Tensor<T> operator*(const Tensor<T> &a, const Tensor<T> &b) {
+  return mul(a, b);
+}
+template <class T> Tensor<T> operator/(const Tensor<T> &a, const Tensor<T> &b) {
+  return div(a, b);
+}
+
+template <class T> Tensor<T> &operator+=(Tensor<T> &a, const Tensor<T> &b) {
+  a = add(a, b);
+  return a;
+}
+template <class T> Tensor<T> &operator-=(Tensor<T> &a, const Tensor<T> &b) {
+  a = sub(a, b);
+  return a;
+}
+template <class T> Tensor<T> &operator*=(Tensor<T> &a, const Tensor<T> &b) {
+  a = mul(a, b);
+  return a;
+}
+template <class T> Tensor<T> &operator/=(Tensor<T> &a, const Tensor<T> &b) {
+  a = div(a, b);
+  return a;
+}
+
+// ------------------------------------------
+
+template <class Value>
+void unpack(const Tensor<Value> &tensor, std::vector<Var<Value>> &vector) {
+
+  static Factory<const TensorInfo *, const Operator *> factory{
+      [](const TensorInfo *tensor_info) {
+        std::vector<Operator::Argument> args;
+        args.push_back(Operator::Argument::makeInput(tensor_info->type()));
+        for (size_t i = 0; i < tensor_info->shape().elementCount(); i++) {
+          args.push_back(
+              Operator::Argument::makeOutput(TypeInfo::get<Value>()));
+        }
+
+        size_t element_count = tensor_info->shape().elementCount();
+        const Operator *op = makeListOperator(
+            std::string() + "unpack_" + TypeInfo::get<Value>().name() + "_" +
+                std::to_string(element_count),
+            "unpack", args,
+            [element_count](const ArgList &args) {
+              for (size_t i = 0; i < element_count; i++) {
+                args.arg<Value>(i + 1) = args.argp<Value>(0)[i];
+              }
+            },
+            [element_count](const ArgList &args) {
+              size_t d = element_count + 1;
+              for (size_t i = 0; i < element_count; i++) {
+                args.arg<Value>(d + i + 1) = args.argp<Value>(d)[i];
+              }
+            },
+            [element_count](const ArgList &args) {
+              size_t d = element_count + 1;
+              for (size_t i = 0; i < element_count; i++) {
+                args.argp<Value>(d)[i] = args.arg<Value>(d + i + 1);
+              }
+            });
+        return op;
+      }};
+
+  auto *op = factory[tensor.info()];
+
+  vector.resize(tensor.info()->shape().elementCount());
+
+  std::vector<void *> args;
+  {
+    args.push_back((void *)tensor.data());
+    for (auto &e : vector) {
+      args.push_back((void *)&e);
     }
-    std::array<size_t, sizeof...(Indices)> ii = {indices...};
-    size_t ret = 0;
-    for (size_t i = 0; i < sizeof...(Indices); i++) {
-      if (ii.at(i) >= _shape.at(i)) {
-        throw std::runtime_error("tensor index out of range");
-      }
-      ret *= _shape[i];
-      ret += ii[i];
-    }
-    return ret;
   }
 
-public:
-  TensorArg(void *base, const uintptr_t *offsets,
-            const std::array<size_t, Dimensions> &shape)
-      : ArgList(base, offsets), _shape(shape) {}
-  size_t dimensions() const { return _shape.size(); }
-  const std::array<size_t, Dimensions> &shape() const { return _shape; }
-  size_t size() const {
-    if (_shape.empty()) {
-      return 0;
-    }
-    size_t s = 1;
-    for (auto &v : _shape) {
-      s *= v;
-    }
-    return s;
-  }
-  template <class... Indices>
-  auto &operator()(const Indices &...indices) const {
-    return arg<T>(_index(indices...));
-  }
-};
+  callAndRecord(op, args.data());
+}
 
-template <class T, size_t N>
-TensorArg<T, N> bindTensorArg(void *base, const uintptr_t **offsets,
-                              const std::array<size_t, N> &shape) {
-  TensorArg<T, N> ret(base, *offsets, shape);
-  (*offsets) += ret.size();
+template <class Value>
+std::vector<Var<Value>> unpack(const Tensor<Value> &tensor) {
+  std::vector<Var<Value>> ret;
+  unpack(tensor, ret);
   return ret;
 }
 
-template <class ActivationScalar, class WeightScalar>
-Tensor<ActivationScalar> dense_mul_vec_mat(const Tensor<ActivationScalar> &a,
-                                           const Tensor<WeightScalar> &b) {
+// ------------------------------------------
 
-  throw std::runtime_error("");
+template <class Value>
+Tensor<Value> pack_tensor(const Var<Value> *data, const TensorShape &shape) {
 
-  // uint64_t rows = b.shape()[0];
-  // uint64_t cols = b.shape()[1];
-  //
-  // Tensor<ActivationScalar> r;
-  // r.resize(cols);
-  //
-  // typedef typename std::decay<decltype(value(a[0]))>::type Batch;
-  // typedef typename std::decay<decltype(value(b[0]))>::type Weight;
-  //
-  // if (auto rec = Recorder::instance()) {
-  //
-  //   std::string label = "dense_mul_vec_mat";
-  //
-  //   std::string name = label + "_" + std::to_string(rows) + "_" +
-  //                      std::to_string(cols) + "_" +
-  //                      typeid(ActivationScalar).name();
-  //
-  //   std::vector<Operator::Argument> arguments;
-  //   arguments.push_back(Operator::Argument::make<const uint64_t &>());
-  //   arguments.push_back(Operator::Argument::make<const uint64_t &>());
-  //   for (size_t row = 0; row < rows; row++) {
-  //     arguments.push_back(Operator::Argument::make<const Batch &>());
-  //   }
-  //   for (size_t row = 0; row < rows; row++) {
-  //     for (size_t col = 0; col < cols; col++) {
-  //       arguments.push_back(Operator::Argument::make<const Weight &>());
-  //     }
-  //   }
-  //   for (size_t col = 0; col < cols; col++) {
-  //     arguments.push_back(Operator::Argument::make<Batch &>());
-  //   }
-  //
-  //   const Operator *op = makeListOperator(
-  //       name, label, arguments,
-  //       [](void *base, const uintptr_t *offsets) {
-  //         auto rows = bindArg<uint64_t>(base, &offsets);
-  //         auto cols = bindArg<uint64_t>(base, &offsets);
-  //         auto a = bindTensorArg<Batch, 1>(base, &offsets, {rows});
-  //         auto b = bindTensorArg<Weight, 2>(base, &offsets, {rows, cols});
-  //         auto x = bindTensorArg<Batch, 1>(base, &offsets, {cols});
-  //         for (size_t col = 0; col < cols; col++) {
-  //           Batch s = Batch(0);
-  //           for (size_t row = 0; row < rows; row++) {
-  //             s += a(row) * Batch(b(row, col));
-  //           }
-  //           x(col) = s;
-  //         }
-  //       },
-  //       [](void *base, const uintptr_t *offsets) {
-  //         auto rows = bindArg<uint64_t>(base, &offsets);
-  //         auto cols = bindArg<uint64_t>(base, &offsets);
-  //         auto a = bindTensorArg<Batch, 1>(base, &offsets, {rows});
-  //         auto b = bindTensorArg<Weight, 2>(base, &offsets, {rows, cols});
-  //         auto x = bindTensorArg<Batch, 1>(base, &offsets, {cols});
-  //         auto drows = bindArg<uint64_t>(base, &offsets);
-  //         auto dcols = bindArg<uint64_t>(base, &offsets);
-  //         auto da = bindTensorArg<Batch, 1>(base, &offsets, {rows});
-  //         auto db = bindTensorArg<Weight, 2>(base, &offsets, {rows, cols});
-  //         auto dx = bindTensorArg<Batch, 1>(base, &offsets, {cols});
-  //         for (size_t col = 0; col < cols; col++) {
-  //           Batch s = Batch(0);
-  //           for (size_t row = 0; row < rows; row++) {
-  //             s += da(row) * Batch(b(row, col)) + a(row) * Batch(db(row,
-  //             col));
-  //           }
-  //           dx(col) = s;
-  //         }
-  //       },
-  //       [](void *base, const uintptr_t *offsets) {
-  //         auto rows = bindArg<uint64_t>(base, &offsets);
-  //         auto cols = bindArg<uint64_t>(base, &offsets);
-  //         auto a = bindTensorArg<Batch, 1>(base, &offsets, {rows});
-  //         auto b = bindTensorArg<Weight, 2>(base, &offsets, {rows, cols});
-  //         auto x = bindTensorArg<Batch, 1>(base, &offsets, {cols});
-  //         auto drows = bindArg<uint64_t>(base, &offsets);
-  //         auto dcols = bindArg<uint64_t>(base, &offsets);
-  //         auto da = bindTensorArg<Batch, 1>(base, &offsets, {rows});
-  //         auto db = bindTensorArg<Weight, 2>(base, &offsets, {rows, cols});
-  //         auto dx = bindTensorArg<Batch, 1>(base, &offsets, {cols});
-  //         for (size_t row = 0; row < rows; row++) {
-  //           Batch s = Batch(0);
-  //           for (size_t col = 0; col < cols; col++) {
-  //             db(row, col) = batchSum(a(row) * dx(col));
-  //             s += dx(col) * Batch(b(row, col));
-  //           }
-  //           da(row) = s;
-  //         }
-  //       });
-  //
-  //   Var<uint64_t> vrows(rows);
-  //   Var<uint64_t> vcols(cols);
-  //   rec->op(op);
-  //   rec->arg(&vrows);
-  //   rec->arg(&vcols);
-  //   for (size_t row = 0; row < rows; row++) {
-  //     rec->arg(&a(row));
-  //   }
-  //   for (size_t row = 0; row < rows; row++) {
-  //     for (size_t col = 0; col < cols; col++) {
-  //       rec->arg(&b(row, col));
-  //     }
-  //   }
-  //   for (size_t col = 0; col < cols; col++) {
-  //     rec->arg(&r(col));
-  //   }
-  // }
-  //
-  // for (size_t col = 0; col < cols; col++) {
-  //   Batch s = Batch(0);
-  //   for (size_t row = 0; row < rows; row++) {
-  //     s += value(a(row)) * Batch(value(b(row, col)));
-  //   }
-  //   value(r(col)) = s;
-  // }
-  //
-  // return r;
+  static Factory<const TensorInfo *, const Operator *> factory{
+      [](const TensorInfo *tensor_info) {
+        std::vector<Operator::Argument> args(
+            tensor_info->shape().elementCount(),
+            Operator::Argument::makeInput(TypeInfo::get<Value>()));
+        args.push_back(Operator::Argument::makeOutput(tensor_info->type()));
+
+        size_t element_count = tensor_info->shape().elementCount();
+        const Operator *op = makeListOperator(
+            std::string() + "pack_" + TypeInfo::get<Value>().name() + "_" +
+                std::to_string(element_count),
+            "pack", args,
+            [element_count](const ArgList &args) {
+              for (size_t i = 0; i < element_count; i++) {
+                args.argp<Value>(element_count)[i] = args.arg<Value>(i);
+              }
+            },
+            [element_count](const ArgList &args) {
+              size_t d = element_count + 1;
+              for (size_t i = 0; i < element_count; i++) {
+                args.argp<Value>(d + element_count)[i] = args.arg<Value>(d + i);
+              }
+            },
+            [element_count](const ArgList &args) {
+              size_t d = element_count + 1;
+              for (size_t i = 0; i < element_count; i++) {
+                args.arg<Value>(d + i) = args.argp<Value>(d + element_count)[i];
+              }
+            });
+        return op;
+      }};
+
+  Tensor<Value> ret(shape);
+
+  auto *op = factory[ret.info()];
+
+  std::vector<void *> args;
+  {
+    size_t n = shape.elementCount();
+    for (size_t i = 0; i < n; i++) {
+      args.push_back((void *)(data + i));
+    }
+    args.push_back(ret.data());
+  }
+
+  callAndRecord(op, args.data());
+
+  return ret;
+}
+
+template <class Value>
+Tensor<Value> pack_tensor(const std::vector<Var<Value>> &vector,
+                          const TensorShape &shape) {
+  if (vector.size() != shape.elementCount()) {
+    throw std::runtime_error("pack failed, shapes not compatible");
+  }
+  return pack_tensor(vector.data(), shape);
+}
+
+template <class Value>
+Tensor<Value> pack_tensor(const std::vector<Var<Value>> &vector) {
+  return pack_tensor(vector.data(), TensorShape(vector.size()));
+}
+
+template <class Value>
+Tensor<Value> make_tensor(const TensorShape &shape, const Value &v) {
+  std::vector<Var<Value>> vector(shape.elementCount(), Var<Value>(v));
+  return pack_tensor(vector, shape);
 }
 
 } // namespace tractor

@@ -82,19 +82,29 @@ public:
 
   virtual void goals(tractor::DexLearn<ValueSingle, ValueBatch> &dexlearn) = 0;
 
-  virtual tractor::Tensor<ScalarBatch> makePolicyInput(
+  virtual std::vector<ScalarBatch> makePolicyInputVector(
       const std::shared_ptr<tractor::PhysicsSimulator<GeometryBatch>>
           &simulator,
       const std::vector<std::string> &joint_names, size_t frame,
       size_t frame_count) = 0;
 
-  virtual tractor::NeuralNetwork<ScalarBatch>
+  tractor::Tensor<ValueBatch> makePolicyInputTensor(
+      const std::shared_ptr<tractor::PhysicsSimulator<GeometryBatch>>
+          &simulator,
+      const std::vector<std::string> &joint_names, size_t frame,
+      size_t frame_count) {
+    std::vector<ScalarBatch> policy_input_vector =
+        makePolicyInputVector(simulator, joint_names, frame, frame_count);
+    return pack_tensor(policy_input_vector);
+  }
+
+  virtual tractor::NeuralNetwork<ValueBatch>
   makePolicyNetwork(const std::vector<std::string> &joint_names,
                     size_t end_effector_count, size_t contact_dimensions) = 0;
 
   virtual void
   controlRobot(tractor::DexLearn<ValueSingle, ValueBatch> &dexlearn,
-               const tractor::Tensor<ScalarBatch> &policy_output) = 0;
+               const std::vector<ScalarBatch> &policy_output) = 0;
 };
 
 } // namespace tractor

@@ -1,4 +1,4 @@
-// (c) 2020-2022 Philipp Ruppel
+// (c) 2022 Philipp Ruppel
 
 #pragma once
 
@@ -16,6 +16,26 @@
 namespace tractor {
 
 namespace py = pybind11;
+
+template <class Type>
+static auto pythonizeType(py::module &main_module, py::module &type_module,
+                          const char *name) {
+
+  auto t = py::class_<Type>(type_module, name);
+  t.def(py::init<>());
+  t.def("__repr__", [name](const Type &v) {
+    std::stringstream ss;
+    ss << value(v);
+    return ss.str();
+  });
+
+  main_module.def("parameter", [](Type &var) { parameter(var); });
+  main_module.def("variable", [](Type &var) { variable(var); });
+  main_module.def("output", [](Type &var) { output(var); });
+  main_module.def("goal", [](Type &var) { goal(var); });
+
+  return t;
+}
 
 class PyInstruction {
   std::shared_ptr<Program> _program;

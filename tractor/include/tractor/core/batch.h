@@ -144,6 +144,8 @@ BATCH_OP_2_X(/=)
 
 // -----------------------------------------------------------------------------
 
+#if 1
+
 template <size_t S>
 inline Batch<double, S> operator+(const Batch<double, S> &a,
                                   const Batch<double, S> &b) {
@@ -244,6 +246,20 @@ inline Batch<double, S> operator-(const Batch<double, S> &a) {
     ret._simd[i] = _mm256_sub_pd(_mm256_set1_pd(0.0), a._simd[i]);
   }
   return ret;
+}
+
+#endif
+
+// -----------------------------------------------------------------------------
+
+template <class T> inline void batch_sum(const T &dx, T &da) { da = dx; }
+template <class T, size_t S>
+inline void batch_sum(const Batch<T, S> &dx, T &da) {
+  T rs = T(0);
+  for (size_t i = 0; i < S; i++) {
+    rs += dx[i];
+  }
+  da = rs;
 }
 
 // -----------------------------------------------------------------------------

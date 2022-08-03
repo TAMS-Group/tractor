@@ -13,7 +13,17 @@ namespace tractor {
 
 static thread_local Recorder *g_recorder_instance = nullptr;
 
-void Recorder::goal(const TypeInfo &type, void *var, size_t priority,
+void callAndRecord(const Operator *op, void **args) {
+  op->callIndirect(args);
+  if (auto *rec = Recorder::instance()) {
+    rec->op(op);
+    for (size_t i = 0; i < op->argumentCount(); i++) {
+      rec->push((uintptr_t)args[i]);
+    }
+  }
+}
+
+void Recorder::goal(const TypeInfo &type, const void *var, size_t priority,
                     const char *name) {
   _goals.emplace_back(_outputs.size(), priority);
   uintptr_t temp = (((uintptr_t)_alloc.alloc(type)) | 0x8000000000000000ul);
@@ -85,13 +95,9 @@ void Recorder::parameter(const TypeInfo &type, void *var, void *binding,
 
 void Recorder::output(const TypeInfo &type, void *var, void *binding,
                       const char *name) {
-  if (binding) {
-    _outputs.emplace_back(type, (uintptr_t)var, 0, (uintptr_t)binding);
-  } else {
-    uintptr_t temp = (((uintptr_t)_alloc.alloc(type)) | 0x8000000000000000ul);
-    move(type, var, (void *)temp);
-    _outputs.emplace_back(type, temp, 0, 0);
-  }
+  uintptr_t temp = (((uintptr_t)_alloc.alloc(type)) | 0x8000000000000000ul);
+  move(type, var, (void *)temp);
+  _outputs.emplace_back(type, temp, 0, (uintptr_t)binding);
 }
 
 Recorder *Recorder::instance() { return g_recorder_instance; }
@@ -215,7 +221,6 @@ static void precomputeConstants(Program &program) {
   std::vector<Program::Instruction> new_insts;
   auto new_const_data = program.constData();
 
-  // size_t new_memory_size = program.memorySize();
   Allocator alloc;
   alloc.keep(program);
 
@@ -223,20 +228,32 @@ static void precomputeConstants(Program &program) {
   size_t const_op_count = 0;
   size_t op_count = 0;
   for (auto &inst : program.instructions()) {
-    bool is_const = true;
+
+    // std::cout << "c op " << inst.op()->name();
+    // for (size_t iarg = 0; iarg < inst.argumentCount(); iarg++) {
+    //   std::cout << " " << inst.op()->arg(iarg).typeInfo().name();
+    // }
+    // std::cout << std::endl;
+
+    bool is_const = false;
     for (size_t iarg = 0; iarg < inst.argumentCount(); iarg++) {
       if (inst.op()->arg(iarg).isInput()) {
+        is_const = true;
         if (!constness[inst.arg(iarg)]) {
           is_const = false;
+          break;
         }
       }
     }
+
     for (size_t iarg = 0; iarg < inst.argumentCount(); iarg++) {
       if (inst.op()->arg(iarg).isOutput()) {
         constness[inst.arg(iarg)] = is_const;
       }
     }
+
     if (is_const) {
+      // std::cout << "op is const " << inst.op()->name() << std::endl;
       if (inst.op()->is<op_move>()) {
         const_move_count++;
       } else {
@@ -251,10 +268,13 @@ static void precomputeConstants(Program &program) {
           new_insts.push_back(move_op);
           new_insts.push_back(new_addr);
           new_insts.push_back(inst.arg(iarg));
+          // std::cout << "insert const load " << move_op->name() << " for type
+          // "
+          //           << inst.op()->arg(iarg).typeInfo().name() << " from "
+          //           << new_addr << " to " << inst.arg(iarg) << std::endl;
           program.addConstant(Program::Constant(inst.op()->arg(iarg).typeInfo(),
                                                 new_addr,
                                                 new_const_data.size()));
-          // new_memory_size += inst.op()->arg(iarg).size();
           for (size_t i = 0; i < inst.op()->arg(iarg).size(); i++) {
             new_const_data.push_back(memory[inst.arg(iarg) + i]);
           }
@@ -271,7 +291,6 @@ static void precomputeConstants(Program &program) {
 
   program.setInstructions(new_insts);
   program.setConstData(new_const_data);
-  // program.setMemorySize(new_memory_size);
   alloc.apply(program);
 
   std::cout << op_count << " ops" << std::endl;
@@ -635,136 +654,29 @@ void Recorder::finish(Program &program) {
     _alloc.apply(program);
   }
 
-  /*
-    {
-      program.clear();
-
-      std::unordered_map<uintptr_t, uintptr_t> page_map;
-      auto map = [&](uintptr_t a, const TypeInfo &type, bool alloc = false) {
-        if (a & 0x8000000000000000ul) {
-          return a & ~0x8000000000000000ul;
-        }
-        auto &addr = page_map[a];
-        if (!addr || alloc) {
-          addr = _alloc.alloc(type);
-        }
-        return addr;
-      };
-
-      std::unordered_map<size_t, const void *> address_to_output;
-      for (auto &rec_inst :
-           ArrayRef<Program::Instruction,
-                    Program::InstructionIterator<const Program::Instruction>>(
-               _instructions)) {
-        // std::cout << "op" << std::endl;
-        auto *op = rec_inst.op();
-        // std::cout << op->name() << " " << op->argumentCount() << " "
-        //           << op->arguments().size() << std::endl;
-        for (size_t i = 0; i < op->argumentCount(); i++) {
-          auto &rec_arg = rec_inst.arg(i);
-          auto &op_arg = op->arg(i);
-          if (op_arg.isOutput()) {
-            address_to_output[rec_arg] = &rec_arg;
-          }
-        }
-      }
-
-      std::unordered_map<const void *, size_t> output_to_address;
-      {
-        size_t offset = 0;
-        for (auto port : _inputs) {
-          // auto addr = _memory_size;
-          //_memory_size += port.size();
-          auto addr = _alloc.alloc(port.typeInfo());
-          output_to_address[address_to_output[port.address()]] = addr;
-          port.address() = addr;
-          port.offset() = offset;
-          offset += port.size();
-          program.addInput(port);
-        }
-      }
-      {
-        size_t offset = 0;
-        for (auto port : _parameters) {
-          // auto addr = _memory_size;
-          //_memory_size += port.size();
-          auto addr = _alloc.alloc(port.typeInfo());
-          output_to_address[address_to_output[port.address()]] = addr;
-          port.address() = addr;
-          port.offset() = offset;
-          offset += port.size();
-          program.addParameter(port);
-        }
-      }
-
-      std::vector<Program::Instruction> prog_insts;
-      for (auto &rec_inst :
-           ArrayRef<Program::Instruction,
-                    Program::InstructionIterator<const Program::Instruction>>(
-               _instructions)) {
-        auto *op = rec_inst.op();
-        prog_insts.emplace_back(rec_inst.code());
-        for (size_t i = 0; i < op->argumentCount(); i++) {
-          auto &rec_arg = rec_inst.arg(i);
-          auto &op_arg = op->arg(i);
-
-          auto prog_arg = map(rec_arg, op_arg.typeInfo(), op_arg.isOutput());
-          prog_insts.emplace_back(prog_arg);
-
-          {
-            auto out_it = output_to_address.find(&rec_arg);
-            if (op_arg.isOutput() && out_it != output_to_address.end()) {
-              page_map[rec_arg] = out_it->second;
-            }
-          }
-        }
-      }
-
-      {
-        size_t offset = 0;
-        for (auto port : _outputs) {
-          port.address() = map(port.address(), port.typeInfo());
-          port.offset() = offset;
-          offset += port.size();
-          program.addOutput(port);
-        }
-      }
-
-      for (auto &goal : _goals) {
-        program.addGoal(goal);
-      }
-
-      for (auto port : _constants) {
-        program.addConstant(port);
-      }
-
-      program.setBoundData(_bound_data);
-      program.setConstData(_const_data);
-      program.setInstructions(prog_insts);
-      // program.setMemorySize(_memory_size);
-      _alloc.apply(program);
-    }
-  */
-
   checkMemory(program);
 
   std::cout << "code size " << program.code().size() << std::endl;
 
   std::cout << "precompute constants" << std::endl;
   precomputeConstants(program);
+  // checkMemory(program);
 
   std::cout << "code size " << program.code().size() << std::endl;
 
   std::cout << "skip moves" << std::endl;
   skipMoves(program);
+  // checkMemory(program);
 
   std::cout << "code size " << program.code().size() << std::endl;
 
   std::cout << "remove unused instructions" << std::endl;
   removeUnusedInstructions(program);
+  // checkMemory(program);
 
   std::cout << "remove unused constants" << std::endl;
   removeUnusedConstants(program);
+  // checkMemory(program);
 
   std::cout << "code size " << program.code().size() << std::endl;
 

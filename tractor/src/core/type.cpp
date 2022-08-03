@@ -20,6 +20,7 @@ TypeInfo TypeInfo::make(const std::string &name, size_t size,
     d->name = d->str.c_str();
     d->size = size;
     d->alignment = alignment;
+    d->id = d;
     map[name] = d;
   }
   TypeInfo ret;

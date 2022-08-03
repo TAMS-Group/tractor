@@ -1,3 +1,5 @@
+// (c) 2022 Philipp Ruppel
+
 #include <pybind11/pybind11.h>
 
 namespace tractor {
