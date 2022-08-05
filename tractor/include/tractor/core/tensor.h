@@ -5,15 +5,18 @@
 #include <tractor/core/any.h>
 #include <tractor/core/recorder.h>
 
+#include <boost/container/small_vector.hpp>
+
 namespace tractor {
 
 class TensorShape {
-  std::vector<size_t> _data;
+  boost::container::small_vector<size_t, 4> _data;
 
 public:
   TensorShape() {}
   explicit TensorShape(const std::initializer_list<size_t> &s) : _data(s) {}
-  explicit TensorShape(const std::vector<size_t> &s) : _data(s) {}
+  explicit TensorShape(const std::vector<size_t> &s)
+      : _data(s.begin(), s.end()) {}
   template <class... Args>
   explicit TensorShape(size_t s, Args &&...args) : _data({s, args...}) {}
   size_t dimensions() const { return _data.size(); }
@@ -38,6 +41,7 @@ public:
     return _data != other._data;
   }
   bool empty() const { return _data.empty(); }
+  size_t hash() const;
 };
 
 std::ostream &operator<<(std::ostream &s, const TensorShape &v);
@@ -136,6 +140,11 @@ public:
   const TensorInfo *info() const { return _tensor_info; }
   size_t sizeInBytes() const { return shape().elementCount() * sizeof(T); }
 };
+
+template <class Scalar>
+std::ostream &operator<<(std::ostream &s, const Tensor<Scalar> &tensor) {
+  return s << "Tensor(" << tensor.shape() << ")";
+}
 
 void emitTensorOpImpl(
     const Operator *op,

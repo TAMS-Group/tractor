@@ -2,6 +2,7 @@
 
 #include <tractor/engines/jit.h>
 
+#include <tractor/core/log.h>
 #include <tractor/core/profiler.h>
 
 #include <sys/mman.h>
@@ -106,7 +107,7 @@ namespace tractor {
 //
 // void JITEngine::JITProgramBase::_free() {
 //   if (_data) {
-//     std::cout << "free jit memory " << _data << std::endl;
+//     TRACTOR_DEBUG_STREAM("free jit memory " << _data);
 //     munmap(_data, _size);
 //     _data = nullptr;
 //     _size = 0;
@@ -131,24 +132,24 @@ namespace tractor {
 //     // hint = ((hint >> 16) << 16);
 //     intptr_t hint = 64 * 1024;
 //     while (!_data) {
-//       std::cout << "hint" << (void *)hint << std::endl;
+//       TRACTOR_DEBUG_STREAM("hint" << (void *)hint);
 //       _data = mmap((void *)hint, size, PROT_READ | PROT_WRITE | PROT_EXEC,
 //                    MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED, 0, 0);
 //       if ((int64_t)_data <= 0) {
 //         _data = nullptr;
 //       }
 //       hint += 64 * 1024;
-//       std::cout << "jit memory allocated " << _data << std::endl;
+//       TRACTOR_DEBUG_STREAM("jit memory allocated " << _data);
 //     }
 //   }
 //   */
 //
 //   /*
 //   intptr_t hint = 64 * 1024;
-//   std::cout << "jit memory hint" << (void *)hint << std::endl;
+//   TRACTOR_DEBUG_STREAM("jit memory hint" << (void *)hint);
 //   _data = mmap((void *)hint, size, PROT_READ | PROT_WRITE | PROT_EXEC,
 //                MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
-//   std::cout << "jit memory allocated " << _data << std::endl;
+//   TRACTOR_DEBUG_STREAM("jit memory allocated " << _data);
 //   */
 //
 //   _size = size;
@@ -181,7 +182,7 @@ namespace tractor {
 //
 // void JITEngine::ExecutableImpl::_compile(const Program &program) {
 //
-//   // std::cout << program << std::endl;
+//   // TRACTOR_DEBUG_STREAM(program);
 //
 //   uintptr_t function_base = -1;
 //   size_t program_size = 0;
@@ -334,14 +335,14 @@ namespace tractor {
 // void JITEngine::ExecutableImpl::_execute(
 //     const std::shared_ptr<Memory> &memory) const {
 //
-//   // std::cout << "this " << this << std::endl;
-//   // std::cout << "memory " << memory.get() << std::endl;
+//   // TRACTOR_DEBUG_STREAM("this " << this);
+//   // TRACTOR_DEBUG_STREAM("memory " << memory.get());
 //   auto &temp = *(MemoryImpl *)(memory.get());
-//   // std::cout << "temp " << &temp << std::endl;
-//   // std::cout << "_memory_size " << _memory_size << std::endl;
-//   // std::cout << "temp.size() " << temp.size() << std::endl;
+//   // TRACTOR_DEBUG_STREAM("temp " << &temp);
+//   // TRACTOR_DEBUG_STREAM("_memory_size " << _memory_size);
+//   // TRACTOR_DEBUG_STREAM("temp.size() " << temp.size());
 //   temp.resize(std::max(temp.size(), _memory_size));
-//   // std::cout << "x" << __LINE__ << std::endl;
+//   // TRACTOR_DEBUG_STREAM("x" << __LINE__);
 //
 //   {
 //     TRACTOR_PROFILER("load constants");
@@ -350,10 +351,10 @@ namespace tractor {
 //                   _const_data.data() + port.offset(), port.size());
 //     }
 //   }
-//   // std::cout << "x" << __LINE__ << std::endl;
+//   // TRACTOR_DEBUG_STREAM("x" << __LINE__);
 //
-//   // std::cout << "arg base " << _arguments.data() << std::endl;
-//   // std::cout << "mem base " << temp.data() << std::endl;
+//   // TRACTOR_DEBUG_STREAM("arg base " << _arguments.data());
+//   // TRACTOR_DEBUG_STREAM("mem base " << temp.data());
 //
 //   {
 //     TRACTOR_PROFILER("jitfnc");

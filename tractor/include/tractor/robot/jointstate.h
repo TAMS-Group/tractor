@@ -89,9 +89,9 @@ public:
     AlignedStdVector<typename Geometry::Scalar> pp(_robot_info->variableCount(),
                                                    typename Geometry::Scalar());
     for (size_t i = 0; i < pp.size(); i++) {
-      // std::cout << i << " " << pp[i] << std::endl;
+      // TRACTOR_DEBUG_STREAM(i << " " << pp[i]);
       pp[i] = typename Geometry::Value(moveit_state.getVariablePosition(i));
-      // std::cout << i << " " << pp[i] << std::endl;
+      // TRACTOR_DEBUG_STREAM(i << " " << pp[i]);
     }
     deserializePositions(pp);
   }

@@ -5,6 +5,7 @@
 #include <tractor/core/factory.h>
 #include <tractor/core/list.h>
 #include <tractor/core/ops.h>
+#include <tractor/core/profiler.h>
 
 #define TRACTOR_CHECK_TENSOR_DIMENSIONS(module, input, dims)                   \
   {                                                                            \
@@ -68,17 +69,20 @@ void unpack(const Tensor<Value> &tensor, std::vector<Var<Value>> &vector) {
                 std::to_string(element_count),
             "unpack", args,
             [element_count](const ArgList &args) {
+              TRACTOR_PROFILER("tensor unpack nl");
               for (size_t i = 0; i < element_count; i++) {
                 args.arg<Value>(i + 1) = args.argp<Value>(0)[i];
               }
             },
             [element_count](const ArgList &args) {
+              TRACTOR_PROFILER("tensor unpack f");
               size_t d = element_count + 1;
               for (size_t i = 0; i < element_count; i++) {
                 args.arg<Value>(d + i + 1) = args.argp<Value>(d)[i];
               }
             },
             [element_count](const ArgList &args) {
+              TRACTOR_PROFILER("tensor unpack r");
               size_t d = element_count + 1;
               for (size_t i = 0; i < element_count; i++) {
                 args.argp<Value>(d)[i] = args.arg<Value>(d + i + 1);
@@ -127,17 +131,20 @@ Tensor<Value> pack_tensor(const Var<Value> *data, const TensorShape &shape) {
                 std::to_string(element_count),
             "pack", args,
             [element_count](const ArgList &args) {
+              TRACTOR_PROFILER("tensor pack nl");
               for (size_t i = 0; i < element_count; i++) {
                 args.argp<Value>(element_count)[i] = args.arg<Value>(i);
               }
             },
             [element_count](const ArgList &args) {
+              TRACTOR_PROFILER("tensor pack f");
               size_t d = element_count + 1;
               for (size_t i = 0; i < element_count; i++) {
                 args.argp<Value>(d + element_count)[i] = args.arg<Value>(d + i);
               }
             },
             [element_count](const ArgList &args) {
+              TRACTOR_PROFILER("tensor pack r");
               size_t d = element_count + 1;
               for (size_t i = 0; i < element_count; i++) {
                 args.arg<Value>(d + i) = args.argp<Value>(d + element_count)[i];

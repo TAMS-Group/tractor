@@ -65,6 +65,7 @@ public:
   std::shared_ptr<ProfilerTrack>
   track(const std::shared_ptr<ProfilerTrack> &track);
   std::vector<std::shared_ptr<ProfilerTrack>> tracks() const;
+  std::vector<std::pair<std::shared_ptr<ProfilerTrack>, ProfilerData>> swap();
 };
 
 class ProfilerThread {
@@ -74,6 +75,7 @@ class ProfilerThread {
   std::condition_variable _condition;
 
 public:
+  static void start();
   ProfilerThread(
       const std::shared_ptr<Profiler> &profiler = Profiler::instance());
   ~ProfilerThread();

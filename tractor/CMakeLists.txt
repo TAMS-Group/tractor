@@ -1,14 +1,20 @@
 project(tractor)
 
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register -g -std=c++17 -fopenmp -O3 -mavx -U__AVX__")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register -std=c++17 -fopenmp -O0 -mavx -U__AVX__")
+# ------------------------------------------------------------------
+# options...
 
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wno-register -std=c++17 -fopenmp -O0 -mavx -U__AVX__")
+# uncomment for better runtime performance but longer build times
+set(OPT_FLAGS -O3)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -Wno-register -std=c++17 -O0 -mavx -U__AVX__")
+# uncomment for faster build times but lower runtime performance
+#set(OPT_FLAGS -O0)
 
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -lasan -g -fsanitize=address -Wno-register -std=c++17 -O0")
-#set(LDFLAGS "${LDFLAGS} -lasan -fsanitize=address")
+# uncomment to enable address sanatizer
+#set(ASAN_FLAGS -fsanitize=address)
+
+# ------------------------------------------------------------------
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ASAN_FLAGS} -g -Wno-register -std=c++17 ${OPT_FLAGS} -mavx -U__AVX__ -fopenmp")
 
 find_package(Bullet REQUIRED)
 
@@ -55,14 +61,17 @@ add_library(${LIBNAME}
     src/core/constraints.cpp
     src/core/eigen.cpp
     src/core/engine.cpp
+    src/core/enum.cpp
     src/core/factory.cpp
     src/core/gradients.cpp
     src/core/lambda.cpp
     src/core/linesearch.cpp
     src/core/list.cpp
+    src/core/log.cpp
     src/core/matrix.cpp
     src/core/operator.cpp
     src/core/ops.cpp
+    src/core/platform.cpp
     src/core/profiler.cpp
     src/core/program.cpp
     src/core/recorder.cpp
@@ -106,8 +115,20 @@ add_library(${LIBNAME}
     src/solvers/sq.cpp
     src/tensor/ops.cpp
 )
-add_dependencies(${LIBNAME} ${${LIBNAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(${LIBNAME} ${catkin_LIBRARIES} ${BULLET_LIBRARIES})
+
+add_dependencies(
+  ${LIBNAME}
+  ${${LIBNAME}_EXPORTED_TARGETS}
+  ${catkin_EXPORTED_TARGETS}
+)
+
+target_link_libraries(
+  ${LIBNAME}
+  ${catkin_LIBRARIES}
+  ${BULLET_LIBRARIES}
+  ${ASAN_FLAGS}
+)
+
 install(DIRECTORY include/tractor DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
 install(TARGETS ${LIBNAME} LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION})
 

@@ -2,6 +2,8 @@
 
 #include <tractor/core/operator.h>
 
+#include <tractor/core/log.h>
+
 #include <algorithm>
 #include <stdarg.h>
 #include <unordered_map>
@@ -59,8 +61,6 @@ void Operator::invoke(const void *first, ...) const {
 Operator::Operator(const std::string &name, const std::string &label,
                    const OpMode &mode, const OpType &op, const OpGroup &group)
     : _name(name), _label(label), _op(op), _mode(mode) {
-  // std::cout << name << " " << mode.name() << " " << group.name() <<
-  // std::endl;
   auto *registry = OperatorRegistry::instance();
   registry->name_map[name] = this;
   auto &map = registry->group_map[group];
@@ -165,7 +165,7 @@ size_t OperatorModeMap::index(const OpMode &type) {
   auto &i = map[type];
   if (!i) {
     i = map.size();
-    // std::cout << "mode id " << type.name() << " " << i << std::endl;
+    // TRACTOR_DEBUG_STREAM("mode id " << type.name() << " " << i);
   }
   return i;
 }

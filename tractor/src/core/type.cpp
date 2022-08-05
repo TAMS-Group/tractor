@@ -2,6 +2,8 @@
 
 #include <tractor/core/type.h>
 
+#include <tractor/core/log.h>
+
 #include <iostream>
 #include <map>
 #include <unordered_map>
@@ -50,8 +52,8 @@ const TypeInfo &TypeInfo::gradientType(const TypeInfo &type) {
 
 void TypeInfo::registerGradientType(const TypeInfo &type,
                                     const TypeInfo &gradient) {
-  // std::cout << "gradient type " << type.name() << " " << gradient.name()
-  //            << std::endl;
+  TRACTOR_DEBUG_STREAM("gradient type " << type.name() << " "
+                                        << gradient.name());
   auto &m = gradientTypeMap();
   m[type] = gradient;
 }

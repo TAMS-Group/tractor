@@ -9,20 +9,13 @@ q = tt.Quaternion(0,0,0,1)
 
 def f():
     tr.variable(q)
-    #tt.goal(tr.mul(q, tt.Vector3(0,0,1)) - tt.Vector3(0,1,0))
     tr.goal(q * tt.Vector3(0,0,1) - tt.Vector3(0,1,0))
 
 prog = tr.record(f)
-
-print prog.constants
-print prog.inputs
-print prog.instructions
-print prog.outputs
+print prog
 
 solver = tt.LeastSquaresSolver(tr.DefaultEngine())
-
 solver.compile(prog)
-
 solver.tolerance = 1e-12
 solver.regularization = 0.01
 

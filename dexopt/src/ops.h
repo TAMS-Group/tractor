@@ -84,7 +84,7 @@ static void collision_project(const Vector3<T> &point, const uint64_t &shape_id,
                               Vector3<T> &normal, T &distance) {
   // auto &shape = *(CollisionShape<T> *)shape_id;
   // shape.project(point, normal, distance);
-  throw std::runtime_error("NYI collision_project");
+  throw std::runtime_error("collision_project NYI");
 }
 TRACTOR_OP(collision_project,
            (const Vector3<T> &point, const uint64_t &shape_id,

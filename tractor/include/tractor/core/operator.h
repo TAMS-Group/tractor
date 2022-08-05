@@ -381,14 +381,19 @@ class OperatorImpl : public Operator {
           offsets += sizeof...(Indices) + 1;
         }
       }
+      static inline void iterateImpl(size_t iterations, Ret *ret,
+                                     typename std::decay<Args>::type *...args) {
+        for (size_t i = 0; i < iterations; i++) {
+          ret[i] = Impl::call(args[i]...);
+        }
+      }
       static void iterate(void *base, const uintptr_t *offsets,
                           size_t iterations) {
-        for (size_t i = 0; i < iterations; i++) {
-          ((Ret *)(void *)((uint8_t *)base + offsets[sizeof...(Indices)]))[i] =
-              Impl::call(
-                  ((typename std::decay<Args>::type
-                        *)(void *)((uint8_t *)base + offsets[Indices]))[i]...);
-        }
+        iterateImpl(
+            iterations,
+            (Ret *)(void *)((uint8_t *)base + offsets[sizeof...(Indices)]),
+            ((typename std::decay<Args>::type *)(void *)((uint8_t *)base +
+                                                         offsets[Indices]))...);
       }
       static void indirect(void *base, const uintptr_t *offsets) {
         *(Ret *)(void *)((uint8_t *)base + offsets[sizeof...(Indices)]) =
@@ -412,13 +417,18 @@ class OperatorImpl : public Operator {
           offsets += sizeof...(Indices);
         }
       }
+      static inline void iterateImpl(size_t iterations,
+                                     typename std::decay<Args>::type *...args) {
+        for (size_t i = 0; i < iterations; i++) {
+          Impl::call(args[i]...);
+        }
+      }
       static void iterate(void *base, const uintptr_t *offsets,
                           size_t iterations) {
-        for (size_t i = 0; i < iterations; i++) {
-          Impl::call(
-              ((typename std::decay<Args>::type
-                    *)(void *)((uint8_t *)base + offsets[Indices]))[i]...);
-        }
+        iterateImpl(
+            iterations,
+            ((typename std::decay<Args>::type *)(void *)((uint8_t *)base +
+                                                         offsets[Indices]))...);
       }
       static void indirect(void *base, const uintptr_t *offsets) {
         Impl::call(

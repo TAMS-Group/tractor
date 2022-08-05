@@ -5,6 +5,7 @@
 #include <cstring>
 #include <functional>
 #include <iostream>
+#include <memory>
 #include <tuple>
 #include <type_traits>
 #include <typeindex>
@@ -283,21 +284,26 @@ public:
     _bound_data.assign(d.begin(), d.end());
   }
 
-  void clear() {
-    _memory_size = 0;
-    _instructions.clear();
-    _inputs.clear();
-    _outputs.clear();
-    _constants.clear();
-    _const_data.clear();
-    _goals.clear();
-  }
+  void clear();
 
   size_t memorySize() const { return _memory_size; }
-  // void setMemorySize(size_t s) { _memory_size = s; }
-  void updateMemorySize(size_t s) { _memory_size = s; }
+  void updateMemorySize(size_t s);
 
+public:
+  struct Context : std::enable_shared_from_this<Context> {
+    std::vector<std::shared_ptr<const void>> references;
+  };
+
+protected:
+  std::shared_ptr<Context> _context;
+
+public:
+  const std::shared_ptr<Context> &context() const { return _context; }
+  void createNewContext() { _context = std::make_shared<Context>(); }
+
+public:
   Program() {}
+  Program(const std::shared_ptr<Context> &context) : _context(context) {}
   Program(const std::function<void()> &function) { record(function); }
   void record(const std::function<void()> &function);
 };

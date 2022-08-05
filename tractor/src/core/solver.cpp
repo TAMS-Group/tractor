@@ -3,6 +3,7 @@
 #include <tractor/core/solver.h>
 
 #include <tractor/core/engine.h>
+#include <tractor/core/log.h>
 
 #include <chrono>
 
@@ -13,9 +14,8 @@ Solver::Solver(const std::shared_ptr<Engine> &engine) : _engine(engine) {
 }
 
 void Solver::_log(const char *label, const Program &prog) {
-  // std::cout << "solver program " << label << " " << typeid(*this).name() <<
-  // "\n"
-  //            << prog << std::endl;
+  TRACTOR_DEBUG_STREAM("solver program " << label << " "
+                                         << typeid(*this).name());
 }
 
 void Solver::compile(const Program &prog) {
@@ -83,20 +83,10 @@ void Solver::solve() {
   while (true) {
     double step = _step();
     _first_step = false;
-    // if (step < _tolerance * _tolerance) {
     if (step < _tolerance) {
-      std::cout << "converged" << std::endl;
+      TRACTOR_DEBUG_STREAM("converged");
       break;
     }
-    /*auto t = std::chrono::steady_clock::now();
-    std::cout << "time "
-              << std::chrono::duration<double>(t - _start_time).count()
-              << std::endl;
-    if (_timeout >= 0 &&
-        t > _start_time + std::chrono::duration<double>(_timeout)) {
-      std::cout << "timeout" << std::endl;
-      break;
-  }*/
     if (_expired()) {
       break;
     }

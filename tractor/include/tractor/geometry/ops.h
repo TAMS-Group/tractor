@@ -921,7 +921,7 @@ template <class T> Pose<T> operator+(const Pose<T> &a, const Twist<T> &b) {
 }
 TRACTOR_OP_T(pose_twist, add, (const Pose<T> &a, const Twist<T> &b), {
   Pose<T> ret = a + b;
-  // std::cout << "add pose twist " << ret << std::endl;
+  // TRACTOR_DEBUG_STREAM("add pose twist " << ret);
   return ret;
 })
 TRACTOR_D_T(prepare, pose_twist, add,

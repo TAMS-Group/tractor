@@ -2,6 +2,8 @@
 
 #include <tractor/engines/loop.h>
 
+#include <tractor/core/log.h>
+
 #include <algorithm>
 #include <unordered_map>
 
@@ -71,12 +73,12 @@ namespace tractor {
 //     }
 //   }
 //
-//   std::cout << "loops" << std::endl;
+//   TRACTOR_DEBUG_STREAM("loops");
 //   for (size_t i = 0; i < ops.size(); i++) {
-//     std::cout << _instructions[i].iterations << " " << ops[i]->name()
-//               << std::endl;
+//     TRACTOR_DEBUG_STREAM( _instructions[i].iterations << " " <<
+//     ops[i]->name()
+//               );
 //   }
-//   std::cout << std::endl;
 // }
 //
 // void LoopEngine::ExecutableImpl::_execute(

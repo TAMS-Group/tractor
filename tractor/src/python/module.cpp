@@ -9,6 +9,7 @@
 
 #include <tractor/core/constraints.h>
 #include <tractor/core/engine.h>
+#include <tractor/core/log.h>
 #include <tractor/core/profiler.h>
 
 #include <tractor/engines/simple.h>
@@ -30,10 +31,13 @@ static void pythonizeTemplates(py::module &main_module, const char *name) {
 
 static void pythonizeMain(py::module &m) {
 
-  py::enum_<ActivationType>(m, "ActivationType")
-      .value("Linear", ActivationType::Linear)
-      .value("ReLU", ActivationType::ReLU)
-      .value("TanH", ActivationType::TanH);
+  class Log {};
+  py::class_<Log>(m, "logger")
+      .def_property_static(
+          "verbosity", [](py::object) { return getLogVerbosity(); },
+          [](py::object, int v) { setLogVerbosity(v); });
+
+  TRACTOR_PYTHONIZE_ENUM(m, ActivationType);
 
   py::class_<Solver>(m, "Solver")
       .def("compile", [](Solver &solver,
@@ -152,7 +156,16 @@ static void pythonizeMain(py::module &m) {
                                for (auto &v : program->constants())
                                  ret.push_back(v);
                                return ret;
-                             });
+                             })
+      .def("__repr__", [](const Program &v) {
+        std::stringstream ss;
+        ss << v;
+        std::string s = ss.str();
+        while (!s.empty() && std::isspace(s.back())) {
+          s.pop_back();
+        }
+        return s;
+      });
   m.def("record", [](const std::function<void()> &f) {
     return std::make_shared<Program>(f);
   });
@@ -162,11 +175,11 @@ static void pythonizeMain(py::module &m) {
   }
 
   auto profiler = m.def_submodule("profiler");
-  profiler.def("start", []() { static ProfilerThread p; });
+  profiler.def("start", []() { tractor::ProfilerThread::start(); });
 }
 
 void initTractorPython(pybind11::module &m) {
-  std::cout << "building module" << std::endl;
+  TRACTOR_DEBUG_STREAM("building module");
   tractor::pythonizeMain(m);
 }
 

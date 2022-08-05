@@ -73,8 +73,6 @@ static Scalar minimizeGoldenSection(const Function &f, const Scalar &tolerance,
   auto f2 = f(x2);
   auto f3 = f(x3);
   while (std::abs(x4 - x1) > tolerance) {
-    // std::cout << "gss1 " << x1 << " " << x2 << " " << x3 << " " << x4 << " "
-    //          << f2 << " " << f3 << std::endl;
     if (f3 < f2) {
       x1 = x2;
       x2 = x4 - (x4 - x1) * step;
@@ -90,25 +88,11 @@ static Scalar minimizeGoldenSection(const Function &f, const Scalar &tolerance,
       f2 = f(x2);
       // f3 = f(x3);
     }
-    // std::cout << "gss2 " << x1 << " " << x2 << " " << x3 << " " << x4 << " "
-    //          << f2 << " " << f3 << std::endl;
   }
   Scalar x = (x2 + x3) * Scalar(0.5);
   // Scalar x = x2;
   // return x;
   auto fx = f(x);
-  /*
-  if (x > low + tolerance * Scalar(5) && f(x - tolerance * Scalar(2)) < fx) {
-    std::cout << x - tolerance * Scalar(2) << " "
-              << f(x - tolerance * Scalar(2)) << std::endl;
-    throw std::runtime_error("golden section line search failed 1");
-  }
-  if (x < high - tolerance * Scalar(5) && f(x + tolerance * Scalar(2)) < fx) {
-    std::cout << x + tolerance * Scalar(2) << " "
-              << f(x + tolerance * Scalar(2)) << std::endl;
-    throw std::runtime_error("golden section line search failed 2");
-  }
-  */
   if (f(high) < fx) {
     return high;
   }
@@ -127,16 +111,13 @@ static Scalar rootBisect(const Function &f, const Scalar &tolerance,
   Scalar x3 = high;
   // auto f1 = f(x1);
   // auto f3 = f(x3);
-  // std::cout << "bisect " << f1 << " " << f3 << std::endl;
+  // TRACTOR_DEBUG_STREAM("bisect " << f1 << " " << f3);
 
   while (std::abs(x3 - x1) > tolerance) {
 
     Scalar x2 = (x1 + x3) * Scalar(0.5);
     auto f2 = f(x2);
 
-    // std::cout << "bisect " << x1 << " " << x2 << " " << x3 << " " << f1 << "
-    // "
-    //          << f2 << " " << f3 << std::endl;
     /*
     if (std::abs(f2) <= tolerance) {
       x1 = x3 = x2;
@@ -203,7 +184,7 @@ static Scalar rootSecant(const Function &f, const Scalar &tolerance,
   if (!std::isfinite(f1)) {
     return low;
   }
-  // std::cout << "bisect " << f1 << " " << f3 << std::endl;
+  // TRACTOR_DEBUG_STREAM("bisect " << f1 << " " << f3);
   // Scalar x2l = x1;
   while (std::abs(x3 - x1) > tolerance) {
     Scalar x2;
@@ -221,9 +202,6 @@ static Scalar rootSecant(const Function &f, const Scalar &tolerance,
     //}
     // x2l = x2;
     auto f2 = f(x2);
-    // std::cout << "secant " << x1 << " " << x2 << " " << x3 << " " << f1 << "
-    // "
-    //          << f2 << " " << f3 << std::endl;
     if (std::abs(f2) <= tolerance) {
       x1 = x3 = x2;
       f1 = f3 = f2;
@@ -232,11 +210,11 @@ static Scalar rootSecant(const Function &f, const Scalar &tolerance,
     if ((f2 >= 0 && f3 <= 0) || (f2 <= 0 && f3 >= 0)) {
       x1 = x2;
       f1 = f2;
-      // std::cout << "a" << std::endl;
+      // TRACTOR_DEBUG_STREAM("a");
     } else {
       x3 = x2;
       f3 = f2;
-      // std::cout << "b" << std::endl;
+      // TRACTOR_DEBUG_STREAM("b");
     }
   }
   Scalar x = (x1 + x3) * Scalar(0.5);

@@ -218,7 +218,7 @@ public:
     if (_use_barrier) {
       _x_barrier_step->run(input.head(_primal_variable_count), _memory,
                            _dualprop_temp);
-      // std::cout << "barrier step " << _dualprop_temp << std::endl;
+      // TRACTOR_DEBUG_STREAM("barrier step " << _dualprop_temp);
       output.head(_primal_variable_count) += _dualprop_temp * barrier_weight;
       // output.head(_primal_variable_count) +=
       //      _dualprop_temp * (barrier_weight * barrier_weight);
@@ -245,7 +245,7 @@ public:
       if (_use_barrier) {
         _x_barrier_diagonal->execute(_memory);
         _x_barrier_diagonal->outputVector(_memory, _dualprop_temp);
-        // std::cout << "barrier diagonal " << _dualprop_temp << std::endl;
+        // TRACTOR_DEBUG_STREAM("barrier diagonal " << _dualprop_temp);
         output.head(_primal_variable_count) += _dualprop_temp * barrier_weight;
         // output.head(_primal_variable_count) +=
         //    _dualprop_temp * (barrier_weight * barrier_weight);
@@ -253,7 +253,7 @@ public:
 
       output.head(_primal_variable_count).array() += _current_regularization;
 
-      // std::cout << output << std::endl;
+      // TRACTOR_DEBUG_STREAM(output);
 
     } else {
 
@@ -287,13 +287,13 @@ public:
 
       _x_barrier_init->run(input.head(_primal_variable_count), _memory,
                            _dualres_temp);
-      // std::cout << "barrier gradient " << _dualprop_temp << std::endl;
+      // TRACTOR_DEBUG_STREAM("barrier gradient " << _dualprop_temp);
       // TRACTOR_LOG_VEC(_dualres_temp);
       output.head(_primal_variable_count) -= _dualres_temp * barrier_weight;
 
       _x_barrier_step->run(input.head(_primal_variable_count), _memory,
                            _dualres_temp);
-      // std::cout << "barrier step " << _dualprop_temp << std::endl;
+      // TRACTOR_DEBUG_STREAM("barrier step " << _dualprop_temp);
       // TRACTOR_LOG_VEC(_dualres_temp);
       output.head(_primal_variable_count) += _dualres_temp * barrier_weight;
     }
@@ -385,7 +385,7 @@ protected:
     _dual_variable_count = _primal_variable_count + _constraint_indices.size();
     TRACTOR_LOG_VAR(_dual_variable_count);
 
-    std::cout << _p_accu << std::endl;
+    TRACTOR_DEBUG_STREAM(_p_accu);
     // throw 0;
   }
 
@@ -457,7 +457,7 @@ protected:
           _diag_in[i] = Scalar(1);
           _x_fprop->run(_diag_in, _memory, _diag_out);
           Scalar v = _diag_out.dot(_diag_out);
-          // std::cout << v << " " << _objective_diagonal[i] << std::endl;
+          // TRACTOR_DEBUG_STREAM(v << " " << _objective_diagonal[i]);
           _objective_diagonal[i] = v;
           _diag_in[i] = Scalar(0);
         }
@@ -520,12 +520,6 @@ protected:
               _memory);
           _x_project->run(_step_solution.head(_primal_variable_count), _memory,
                           _v_project);
-          /*for (size_t i = 0; i < _primal_variable_count; i++) {
-            std::cout << i << " " << _p_fprop.input(i).name() << " "
-                      << (_step_solution[i] - _v_project[i]) << "         "
-                      << (_nonlinear_solution[i] + _step_solution[i]) << " "
-                      << (_nonlinear_solution[i] + _v_project[i]) << std::endl;
-          }*/
         }
 
         _qp_solution = _step_solution;
@@ -547,10 +541,10 @@ protected:
 
 #if 0
     for (size_t i = 0; i < _primal_variable_count; i++) {
-      std::cout << i << " " << _p_prog.input(i).name() << " " << _qp_solution[i]
+      TRACTOR_DEBUG_STREAM(i << " " << _p_prog.input(i).name() << " " << _qp_solution[i]
                 << " " << _step_solution[i] << " "
                 << (_nonlinear_solution[i] + _qp_solution[i]) << " "
-                << (_nonlinear_solution[i] + _step_solution[i]) << std::endl;
+                << (_nonlinear_solution[i] + _step_solution[i]));
     }
 #endif
 
@@ -647,72 +641,24 @@ protected:
         _dualres(_step_solution, _step_residuals);
         if (!_step_residuals.allFinite()) {
 
-          std::cout << std::endl;
-
           {
             auto it_nonlinear = _p_prog.inputs().begin();
             auto it_linear = _p_fprop.inputs().begin();
             for (size_t i = 0; i < _p_prog.inputs().size(); i++) {
               auto &nonlinear_input = *it_nonlinear;
               auto &linear_input = *it_linear;
-              std::cout << "nl " << i << " " << nonlinear_input.name() << " ";
+              TRACTOR_DEBUG_STREAM("nl " << i << " " << nonlinear_input.name()
+                                         << " ");
               for (size_t j = 0; j < nonlinear_input.size() / sizeof(Scalar);
                    j++) {
-                std::cout << " "
-                          << _nonlinear_solution[nonlinear_input.offset() /
-                                                     sizeof(Scalar) +
-                                                 j];
+                TRACTOR_DEBUG_STREAM(
+                    " " << _nonlinear_solution[nonlinear_input.offset() /
+                                                   sizeof(Scalar) +
+                                               j]);
               }
-              std::cout << std::endl;
               ++it_nonlinear;
               ++it_linear;
             }
-
-            std::cout << std::endl;
-          }
-
-          {
-            auto it_nonlinear = _p_prog.inputs().begin();
-            auto it_linear = _p_fprop.inputs().begin();
-            for (size_t i = 0; i < _p_prog.inputs().size(); i++) {
-              auto &nonlinear_input = *it_nonlinear;
-              auto &linear_input = *it_linear;
-              std::cout << "solution " << i << " " << nonlinear_input.name()
-                        << " ";
-              for (size_t j = 0; j < linear_input.size() / sizeof(Scalar);
-                   j++) {
-                std::cout
-                    << " "
-                    << _step_solution[linear_input.offset() / sizeof(Scalar) +
-                                      j];
-              }
-              std::cout << std::endl;
-              ++it_nonlinear;
-              ++it_linear;
-            }
-            std::cout << std::endl;
-          }
-
-          {
-            auto it_nonlinear = _p_prog.inputs().begin();
-            auto it_linear = _p_fprop.inputs().begin();
-            for (size_t i = 0; i < _p_prog.inputs().size(); i++) {
-              auto &nonlinear_input = *it_nonlinear;
-              auto &linear_input = *it_linear;
-              std::cout << "residual " << i << " " << nonlinear_input.name()
-                        << " ";
-              for (size_t j = 0; j < linear_input.size() / sizeof(Scalar);
-                   j++) {
-                std::cout
-                    << " "
-                    << _step_residuals[linear_input.offset() / sizeof(Scalar) +
-                                       j];
-              }
-              std::cout << std::endl;
-              ++it_nonlinear;
-              ++it_linear;
-            }
-            std::cout << std::endl;
           }
         }
         TRACTOR_CHECK_ALL_FINITE(_step_residuals);
@@ -852,14 +798,6 @@ protected:
               TRACTOR_PROFILER("qp bisection search");
               line_search_result =
                   rootBisect(df, tolerance(), Scalar(0), Scalar(1));
-              std::cout << "line_search_result " << line_search_result
-                        << std::endl;
-            }
-            if (1) {
-              for (double p = 0.0; p <= 1.00001; p += 0.1) {
-                std::cout << df(p) << " ";
-              }
-              std::cout << std::endl;
             }
           }
 
@@ -877,14 +815,7 @@ protected:
               TRACTOR_PROFILER("qp bisection search");
               line_search_result =
                   rootBisect(df, tolerance(), Scalar(0), Scalar(1));
-              std::cout << "line_search_result " << line_search_result
-                        << std::endl;
-            }
-            if (1) {
-              for (double p = 0.0; p <= 1.00001; p += 0.1) {
-                std::cout << df(p) << " ";
-              }
-              std::cout << std::endl;
+              TRACTOR_DEBUG_STREAM("line_search_result " << line_search_result);
             }
           }
 
@@ -919,14 +850,7 @@ protected:
               TRACTOR_PROFILER("qp bisection search");
               line_search_result =
                   rootBisect(df, tolerance(), Scalar(0), Scalar(1));
-              std::cout << "line_search_result " << line_search_result
-                        << std::endl;
-            }
-            if (1) {
-              for (double p = 0.0; p <= 1.00001; p += 0.1) {
-                std::cout << df(p) << " ";
-              }
-              std::cout << std::endl;
+              TRACTOR_DEBUG_STREAM("line_search_result " << line_search_result);
             }
           }
 
@@ -1019,14 +943,7 @@ Scalar ret = Scalar((_qp_solution - _step_solution)
 
               // line_search_result = rootBisect(df, 0.01, Scalar(0),
               // Scalar(1));
-              std::cout << "line_search_result " << line_search_result
-                        << std::endl;
-            }
-            if (0) {
-              for (double p = 0.0; p <= 1.00001; p += 0.1) {
-                std::cout << df(p) << " ";
-              }
-              std::cout << std::endl;
+              TRACTOR_DEBUG_STREAM("line_search_result " << line_search_result);
             }
           }
         }
@@ -1079,7 +996,7 @@ Scalar ret = Scalar((_qp_solution - _step_solution)
 
     TRACTOR_CHECK_ALL_FINITE(_nonlinear_solution);
 
-    std::cout << "finished" << std::endl;
+    TRACTOR_DEBUG_STREAM("finished");
 
     return (_nonlinear_solution - _previous_nonlinear_solution).squaredNorm();
   }

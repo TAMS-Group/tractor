@@ -13,7 +13,6 @@ print tt.Scalar(1.0)
 print tt.Scalar().value
 print tt.Scalar(5).value
 
-print "a"
 print tr.tanh(tt.Scalar(0.3))
 print tr.tanh(tt.Scalar(1.0))
 print tr.sin(tt.Scalar(5.0))

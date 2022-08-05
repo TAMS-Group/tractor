@@ -71,6 +71,7 @@ void Executable::compile(const Program &program) {
       throw std::runtime_error("invalid op");
     }
   }
+  _program_context = program.context();
   _inputs.clear();
   _input_size = 0;
   for (auto &port : program.inputs()) {

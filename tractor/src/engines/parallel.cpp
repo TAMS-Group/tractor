@@ -44,8 +44,7 @@ namespace tractor {
 //
 //   for (size_t iw = 0; iw < _waves.size(); iw++) {
 //     auto &wave = _waves[iw];
-//     std::cout << "wave " << iw << " " << wave.instructions.size() <<
-//     std::endl;
+//     TRACTOR_DEBUG_STREAM( "wave " << iw << " " << wave.instructions.size() );
 //   }
 // }
 //

@@ -3,6 +3,7 @@
 #pragma once
 
 #include <tractor/core/list.h>
+#include <tractor/core/log.h>
 #include <tractor/core/operator.h>
 
 namespace tractor {
@@ -25,7 +26,7 @@ template <class Functor> struct PointerOp : Operator {
             const OpMode &mode, const OpType &op, const OpGroup &group,
             const std::vector<Operator::Argument> &args, const Functor &functor)
       : Operator(name, label, mode, op, group), _functor(functor) {
-    std::cout << "make op " << name << std::endl;
+    TRACTOR_DEBUG_STREAM("make op " << name);
     _arguments = args;
     __init(&Functor::operator());
     _functions.context.push_back((uintptr_t)this);

@@ -2,6 +2,7 @@
 
 #include <tractor/core/program.h>
 
+#include <tractor/core/log.h>
 #include <tractor/core/operator.h>
 #include <tractor/core/recorder.h>
 
@@ -27,7 +28,25 @@ void printPorts(std::ostream &stream, const char *label, const T &data) {
   }
 }
 
+void Program::updateMemorySize(size_t s) {
+  TRACTOR_DEBUG_STREAM("update memory size " << s);
+  _memory_size = s;
+}
+
+void Program::clear() {
+  _memory_size = 0;
+  _instructions.clear();
+  _inputs.clear();
+  _outputs.clear();
+  _constants.clear();
+  _const_data.clear();
+  _goals.clear();
+  _context.reset();
+  _bound_data.clear();
+}
+
 void Program::record(const std::function<void()> &function) {
+  _context = nullptr;
   struct RecorderImpl : Recorder {
     RecorderImpl(Program *prog) : Recorder(prog) {}
   };
@@ -35,7 +54,7 @@ void Program::record(const std::function<void()> &function) {
   // try {
   function();
   // } catch (const std::exception &ex) {
-  //   std::cout << ex.what() << std::endl;
+  //   TRACTOR_DEBUG_STREAM(ex.what());
   //   throw;
   // }
   if (Recorder::instance() != &rec) {
@@ -45,31 +64,30 @@ void Program::record(const std::function<void()> &function) {
 
 std::ostream &operator<<(std::ostream &stream, const Program &prog) {
 
-  printPorts(stream, "inputs", prog.inputs());
-  printPorts(stream, "parameters", prog.parameters());
-  printPorts(stream, "outputs", prog.outputs());
-  printBuffer(stream, "goals", prog.goals());
-  printPorts(stream, "constants", prog.constants());
-  printBuffer(stream, "constdata", prog.constData());
-  printBuffer(stream, "code", prog.code());
+  // printPorts(stream, "inputs", prog.inputs());
+  // printPorts(stream, "parameters", prog.parameters());
+  // printPorts(stream, "outputs", prog.outputs());
+  // printBuffer(stream, "goals", prog.goals());
+  // printPorts(stream, "constants", prog.constants());
+  // printBuffer(stream, "constdata", prog.constData());
+  // printBuffer(stream, "code", prog.code());
 
-  /*
   for (auto &port : prog.inputs()) {
     stream << "input " << (void *)port.address() << " "
            << (void *)port.binding() << " " << port.size() << " "
-           << port.type().name() << std::endl;
+           << port.typeInfo().name() << std::endl;
   }
 
   for (auto &port : prog.parameters()) {
     stream << "parameter " << (void *)port.address() << " "
            << (void *)port.offset() << " " << (void *)port.binding() << " "
-           << port.size() << " " << port.type().name() << std::endl;
+           << port.size() << " " << port.typeInfo().name() << std::endl;
   }
 
   for (auto &port : prog.outputs()) {
     stream << "output " << (void *)port.address() << " "
            << (void *)port.offset() << " " << (void *)port.binding() << " "
-           << port.size() << " " << port.type().name() << std::endl;
+           << port.size() << " " << port.typeInfo().name() << std::endl;
   }
 
   for (auto &goal : prog.goals()) {
@@ -78,11 +96,10 @@ std::ostream &operator<<(std::ostream &stream, const Program &prog) {
 
   for (auto &port : prog.constants()) {
     stream << "constant " << (void *)port.address() << " " << port.size() << " "
-           << port.type().name() << std::endl;
+           << port.typeInfo().name() << std::endl;
   }
 
   stream << "memory size " << prog.memorySize() << std::endl;
-  */
 
   for (auto &inst : prog.instructions()) {
     stream << "instruction ";

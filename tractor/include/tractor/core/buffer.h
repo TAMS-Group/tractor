@@ -9,6 +9,8 @@
 #include <typeinfo>
 #include <vector>
 
+#include <tractor/core/log.h>
+
 namespace tractor {
 
 class Buffer {
@@ -74,9 +76,8 @@ public:
   template <class PContainer> void scatter(const PContainer &container) const {
     for (const auto &port : container) {
       if (port.binding()) {
-        // std::cout << "scatter " << _data.size() << " " << port.offset() << "
-        // "
-        //          << (void *)port.binding() << std::endl;
+        TRACTOR_DEBUG_STREAM("scatter " << _data.size() << " " << port.offset()
+                                        << " " << (void *)port.binding());
         std::memcpy((void *)port.binding(), _data.data() + port.offset(),
                     port.size());
       }

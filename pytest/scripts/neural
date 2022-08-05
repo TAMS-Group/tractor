@@ -6,73 +6,81 @@ import tractor.types_double as tt
 import numpy as np
 import matplotlib.pyplot as plt
 
+print "hello"
+
+noise = 0.1
+stdev = 0.1
+activation = "tanh"
+units = 256
+weight_regularization = 0.01
+activity_regularization = 0.01
+bias_regularization = 0.01
+layers = 3
+
+#tr.logger.verbosity = 3
+tr.profiler.start()
+
 input = tt.InputLayer()
 output = input
-
-output = tt.DenseLayer(8, activation=tr.ActivationType.ReLU, stdev=0.1)(output)
-output = tt.DenseLayer(8, activation=tr.ActivationType.ReLU, stdev=0.1)(output)
-output = tt.DenseLayer(8, activation=tr.ActivationType.ReLU, stdev=0.1)(output)
-
-#output = tt.ActivationLayer(tr.ActivationType.TanH)(output)
-
-#output = tt.ActivationLayer("relu")
+for i in range(layers):
+    output = tt.DenseLayer(
+        units,
+        activation=activation,
+        stdev=stdev,
+        weight_regularization=weight_regularization,
+        activity_regularization=activity_regularization,
+        bias_regularization=bias_regularization,
+    )(output)
 output = tt.DenseLayer(1)(output)
+
+print "hello"
 
 network = tt.NeuralNetwork([input], [output])
 
-xx = np.linspace(-5, 5, 20)
+xx = np.linspace(-5, 5, 100)
+
+def r(x):
+    #return x
+    return tr.add_random_normal(x, tt.Tensor([tt.Scalar(noise)]))
 
 def g(x):
-    x = tr.add_random_normal(x, tt.Tensor([tt.Scalar(0.01)]))
-    y = network.predict(x)
-    return y
+    return network.predict(r(x))
 
 def f():
     print "f begin"
     for xf in xx:
         x = tt.Tensor([xf])
-        y =  g(x)
+        y = g(x)
         tr.goal(y - tr.sin(x))
-        #tr.goal(y - x)
     print "f ready"
 
 print "rec begin"
 prog = tr.record(f)
 print "rec ready"
+print prog
 
 def test():
-    #yy = [tr.unpack(network.predict(tt.Tensor([x])))[0].value for x in xx]
-    yy = [tr.unpack(g(tt.Tensor([x])))[0].value for x in xx]
-    print xx
-    print yy
     plt.clf()
-    plt.plot(xx, np.sin(xx))
-    plt.plot(xx, yy)
-    #plt.show()
-    #plt.waitforbuttonpress()
-    plt.pause(0.001)
+    #plt.plot(xx, np.sin(xx))
+    plt.plot(xx, [np.sin(r(tt.Tensor([x])).value[0]) for x in xx])
+    #plt.plot(xx, [g(tt.Tensor([x])).value[0] for x in xx])
+    plt.plot(xx, [network.predict(tt.Tensor([x])).value[0] for x in xx])
+    key = plt.waitforbuttonpress(timeout=0.001)
+    if key is True:
+        exit(0)
 
-print prog.constants
-print prog.inputs
-print prog.instructions
-print prog.outputs
+solver = tt.LeastSquaresSolver(tr.DefaultEngine())
+solver.regularization = 1
+solver.max_linear_iterations = 10
+solver.step_scaling = 1
 
-# solver = tt.LeastSquaresSolver(tr.DefaultEngine())
-# solver.regularization = 1
-
-solver = tt.GradientDescentSolver(tr.DefaultEngine())
-solver.learning_rate = 0.01
+# solver = tt.GradientDescentSolver(tr.DefaultEngine())
+# solver.learning_rate = 0.0001
 
 solver.compile(prog)
 
+solver.timeout = 0.01
 while True:
-    solver.parameterize()
-    solver.gather()
-    for i in range(10):
-        solver.step()
-    solver.scatter()
+    #print tr.logger.verbosity
+    solver.solve()
     test()
-
-# test()
-# solver.solve()
-# test()

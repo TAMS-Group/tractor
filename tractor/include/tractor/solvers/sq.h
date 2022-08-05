@@ -57,9 +57,9 @@ protected:
 
   virtual double _step() override {
 
-    // std::cout << "sq step" << std::endl;
+    // TRACTOR_DEBUG_STREAM("sq step");
 
-    // std::cout << "reg " << _regularization << std::endl;
+    // TRACTOR_DEBUG_STREAM("reg " << _regularization);
 
     if (!_nonlinear_solution.allFinite()) {
       throw std::runtime_error("previous solution not finite");
@@ -72,7 +72,7 @@ protected:
       _x_prog->run(_nonlinear_solution, _memory, _gradient_temp);
     }
 
-    // std::cout << "loss " << _gradient_temp.squaredNorm() << std::endl;
+    // TRACTOR_DEBUG_STREAM("loss " << _gradient_temp.squaredNorm());
     _loss = _gradient_temp.squaredNorm();
 
     TRACTOR_CHECK_ALL_FINITE(_gradient_temp);
@@ -158,7 +158,7 @@ protected:
           _regularization *= Scalar(2.0);
           _regularization = std::min(_regularization, Scalar(1.0));
         }
-        std::cout << "reg " << _regularization << std::endl;
+        TRACTOR_DEBUG_STREAM("reg " << _regularization);
       }
     }
     accumulate(_nonlinear_solution, _linear_solution);
@@ -194,7 +194,7 @@ protected:
 
       Scalar line_search_result =
           minimizeTernary(f, tolerance(), Scalar(0), Scalar(1));
-      std::cout << "ls " << line_search_result << std::endl;
+      TRACTOR_DEBUG_STREAM("ls " << line_search_result);
       line_search_result *= Scalar(0.9);
       _linear_solution *= line_search_result;
     }
@@ -231,7 +231,7 @@ protected:
       line_search_result =
           minimizeTernary(f, line_search_result * 0.05, Scalar(0),
                           Scalar(line_search_result * 2));
-      std::cout << "ls " << line_search_result << std::endl;
+      TRACTOR_DEBUG_STREAM("ls " << line_search_result);
       // line_search_result *= Scalar(0.9);
       _linear_solution *= line_search_result;
     }
@@ -275,7 +275,7 @@ protected:
           break;
         }
       }
-      std::cout << "line_search_result " << line_search_result << std::endl;
+      TRACTOR_DEBUG_STREAM("line_search_result " << line_search_result);
       if (line_search_result > 0) {
         accumulate(_nonlinear_solution, _linear_solution * line_search_result);
       }
@@ -287,7 +287,7 @@ protected:
     double step =
         (_previous_nonlinear_solution - _nonlinear_solution).squaredNorm();
     _previous_nonlinear_solution = _nonlinear_solution;
-    std::cout << "sq step " << step << std::endl;
+    TRACTOR_DEBUG_STREAM("sq step " << step);
     return step;
 
     // return 1;

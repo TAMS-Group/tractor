@@ -99,7 +99,7 @@ Display:
         Metallic: 0,000000
         Normals: ""
         Opacity: 1,000000
-        Roughness: 0,257142
+        Roughness: 0,228571
         Texture: ""
         Unlit: false
         id: 70669
@@ -278,13 +278,13 @@ Window:
   FieldOfView: 45,000000
   Name: Window
   ViewPosition:
-    X: 0,337765
-    Y: 0,376532
-    Z: 0,225981
+    X: 0,423569
+    Y: 0,319767
+    Z: 0,188711
   ViewTarget:
-    X: -0,029381
-    Y: 0,048841
-    Z: 0,113000
+    X: -0,040407
+    Y: 0,009747
+    Z: 0,089614
   id: 77426
   type: SceneWindow
 id: 6

@@ -2,6 +2,8 @@
 
 #include <tractor/collision/robot.h>
 
+#include <tractor/core/log.h>
+
 #include <geometric_shapes/mesh_operations.h>
 #include <moveit/robot_model/robot_model.h>
 #include <moveit/robot_state/robot_state.h>
@@ -86,7 +88,7 @@ public:
         planes.push_back(Plane<double>(dir, support(dir)));
       }
       // for (auto &p : planes) {
-      //    std::cout << "plane " << p << std::endl;
+      //    TRACTOR_DEBUG_STREAM("plane " << p);
       //}
 
       btAlignedObjectArray<btVector3> bt_plane_equations;
@@ -109,7 +111,7 @@ public:
       }
 
       // for (auto &p : points) {
-      //    std::cout << "point " << p << std::endl;
+      //    TRACTOR_DEBUG_STREAM("point " << p);
       //}
       // throw 0;
     }
@@ -122,7 +124,7 @@ public:
     for (size_t i = 0; i < hull_computer.vertices.size(); i++) {
       auto &v = hull_computer.vertices[i];
       _vertices.emplace_back(v.x(), v.y(), v.z());
-      // std::cout << "hull vertex " << _vertices.back() << std::endl;
+      // TRACTOR_DEBUG_STREAM("hull vertex " << _vertices.back());
     }
 
     _planes.clear();
@@ -135,14 +137,8 @@ public:
       auto v2 = convertBullet(hull_computer.vertices[edge2->getTargetVertex()]);
       _planes.emplace_back(normalized(cross(v1 - v0, v2 - v0)),
                            (v0 + v1 + v2) * (1.0 / 3.0));
-      // std::cout << "hull plane " << _planes.back() << std::endl;
+      // TRACTOR_DEBUG_STREAM("hull plane " << _planes.back());
     }
-    // getchar();
-
-    // std::cout << "vertices:" << _vertices.size() << " planes:" <<
-    // _planes.size()
-    //          << std::endl;
-    // getchar();
   }
 };
 

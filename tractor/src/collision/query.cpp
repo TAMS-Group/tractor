@@ -2,6 +2,8 @@
 
 #include <tractor/collision/query.h>
 
+#include <tractor/core/log.h>
+
 #include <BulletCollision/NarrowPhaseCollision/btComputeGjkEpaPenetration.h>
 #include <BulletCollision/NarrowPhaseCollision/btGjkEpa3.h>
 #include <BulletCollision/NarrowPhaseCollision/btMprPenetration.h>
@@ -63,7 +65,7 @@ void doCollisionQuery(const CollisionSupportInterface &a,
   // simplex_solver.reset();
   // int ret = btComputeGjkEpaPenetration(wa, wb, cdesc, simplex_solver, &info);
 
-  // std::cout << "normal ret " << ret << std::endl;
+  // TRACTOR_DEBUG_STREAM("normal ret " << ret);
 
   if (res == 0) {
 
@@ -95,14 +97,14 @@ void doCollisionQuery(const CollisionSupportInterface &a,
 
   btGjkEpaSolver3::sResults results;
   bool ok = btGjkEpaSolver3_Distance(wa, wb, guess, results);
-  // std::cout << "is_separated " << ok << std::endl;
+  // TRACTOR_DEBUG_STREAM("is_separated " << ok);
 
   // if (!ok || results.distance < 0) {
   if (!ok) {
     ok = btGjkEpaSolver3_Penetration(wa, wb, guess, results);
 
     if (!ok) {
-      std::cout << "collision detection failed" << std::endl;
+      TRACTOR_DEBUG_STREAM("collision detection failed");
     }
 
     /*result.ax = NAN;
@@ -139,16 +141,16 @@ void doCollisionQuery(const CollisionSupportInterface &a,
 
     // throw std::runtime_error("collision detection failed");
 
-    std::cout << "ERROR COLLISION DETECTION FAILED !!!!" << std::endl;
+    TRACTOR_DEBUG_STREAM("ERROR COLLISION DETECTION FAILED !!!!");
   }
 #endif
 
   /*
-  std::cout << result.ax << " " << result.ay << " " << result.az << std::endl;
-  std::cout << result.bx << " " << result.by << " " << result.bz << std::endl;
-  std::cout << result.nx << " " << result.ny << " " << result.nz << std::endl;
-  std::cout << result.d << std::endl;
-  std::cout << ret << std::endl;
+  TRACTOR_DEBUG_STREAM(result.ax << " " << result.ay << " " << result.az);
+  TRACTOR_DEBUG_STREAM(result.bx << " " << result.by << " " << result.bz);
+  TRACTOR_DEBUG_STREAM(result.nx << " " << result.ny << " " << result.nz);
+  TRACTOR_DEBUG_STREAM(result.d);
+  TRACTOR_DEBUG_STREAM(ret);
   getchar();
   */
 }

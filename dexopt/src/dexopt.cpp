@@ -122,6 +122,8 @@ makeSolver(const std::shared_ptr<tractor::Engine> &engine,
 
 int main(int argc, char **argv) {
 
+  tractor::ProfilerThread::start();
+
   std::vector<std::shared_ptr<tractor::DexEnv<ValueSingle, ValueBatch>>> envs =
       {
           std::make_shared<tractor::DexEnvGrasp<ValueSingle, ValueBatch>>(),

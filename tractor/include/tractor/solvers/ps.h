@@ -261,7 +261,7 @@ protected:
 
     // for (size_t iteration = 0; iteration < 100; iteration++) {
     for (size_t iteration = 0; 1; iteration++) {
-      // std::cout << "iteration " << iteration << std::endl;
+      // TRACTOR_DEBUG_STREAM("iteration " << iteration);
       TRACTOR_LOG_VAR(iteration);
       TRACTOR_LOG_VAR(padding);
 
@@ -368,10 +368,11 @@ protected:
         _x_project->run(_step_solution.head(_primal_variable_count), _memory,
                         _v_project);
         for (size_t i = 0; i < _primal_variable_count; i++) {
-          std::cout << i << " " << _p_fprop.input(i).name() << " "
-                    << (_step_solution[i] - _v_project[i]) << "         "
-                    << (_nonlinear_solution[i] + _step_solution[i]) << " "
-                    << (_nonlinear_solution[i] + _v_project[i]) << std::endl;
+          TRACTOR_DEBUG_STREAM(
+              i << " " << _p_fprop.input(i).name() << " "
+                << (_step_solution[i] - _v_project[i]) << "         "
+                << (_nonlinear_solution[i] + _step_solution[i]) << " "
+                << (_nonlinear_solution[i] + _v_project[i]));
         }
       }
 

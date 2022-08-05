@@ -4,6 +4,7 @@
 
 #include <tractor/core/eigen.h>
 #include <tractor/core/gradients.h>
+#include <tractor/core/log.h>
 #include <tractor/core/profiler.h>
 #include <tractor/core/program.h>
 #include <tractor/core/solver.h>
@@ -12,11 +13,6 @@
 
 #define TRACTOR_CHECK_ALL_FINITE(x)                                            \
   if (!x.allFinite()) {                                                        \
-    std::cout << std::endl                                                     \
-              << x.size() << std::endl                                         \
-              << std::endl                                                     \
-              << x << std::endl                                                \
-              << std::endl;                                                    \
     throw std::runtime_error(TRACTOR_STRINGIFY(                                \
         x) " not finite " __FILE__ ":" TRACTOR_STRINGIFY_2(__LINE__));         \
   }
@@ -29,16 +25,14 @@
 
 #if 1
 #define TRACTOR_LOG_VAR(x)                                                     \
-  std::cout << TRACTOR_STRINGIFY_2(x) << ": " << x << std::endl;
+  TRACTOR_DEBUG_STREAM(TRACTOR_STRINGIFY_2(x) << ": " << x);
 #else
 #define TRACTOR_LOG_VAR(x)
 #endif
 
 #if 0
 #define TRACTOR_LOG_VEC(x)                                                     \
-  std::cout << TRACTOR_STRINGIFY_2(x) << std::endl                             \
-            << x << std::endl                                                  \
-            << std::endl;
+  TRACTOR_DEBUG_STREAM(TRACTOR_STRINGIFY_2(x)) << x << std::endl << std::endl;
 #else
 #define TRACTOR_LOG_VEC(x)
 #endif

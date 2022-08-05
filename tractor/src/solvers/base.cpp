@@ -2,6 +2,8 @@
 
 #include <tractor/solvers/base.h>
 
+#include <tractor/core/log.h>
+
 namespace tractor {
 
 void SolverBase::_compileGradients(const Program &prog, const TypeInfo &type) {

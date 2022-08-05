@@ -5,7 +5,6 @@ import tractor as tr
 import tractor.types_double as tt
 
 a = tt.Scalar(3)
-print "a", a
 
 def f():
     global x, b
@@ -16,22 +15,14 @@ def f():
     x += tt.Scalar(0.2)
     tr.output(x)
 
-print "a"
-
 prog = tr.record(f)
 
-print "b"
-
-print prog.constants
-print prog.inputs
-print prog.instructions
-print prog.outputs
+print prog
 
 engine = tr.DefaultEngine()
 memory = engine.createMemory()
 executable = engine.compile(prog)
 
-print "x"
 print x.value
 
 a.value = 2

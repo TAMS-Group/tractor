@@ -47,8 +47,6 @@ template <class Scalar> class NeuralNetwork : public NeuralBase {
       _evaluate(input, mode, tensors);
       args.push_back(tensors[input]);
     }
-    // std::cout << "evaluate layer " << typeid(*layer).name() << " " << layer
-    //           << std::endl;
     tensors[layer] = layer->evaluate(args, mode);
   }
 

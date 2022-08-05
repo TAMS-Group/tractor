@@ -3,17 +3,15 @@
 #pragma once
 
 #include <tractor/core/constraints.h>
+#include <tractor/core/enum.h>
 #include <tractor/neural/ops.h>
+#include <tractor/tensor/ops.h>
 
 #include <random>
 
 namespace tractor {
 
-enum class ActivationType {
-  Linear,
-  TanH,
-  ReLU,
-};
+TRACTOR_ENUM(ActivationType, Linear, TanH, ReLU);
 
 template <class T>
 Tensor<T> applyActivation(const Tensor<T> &input_tensor,
@@ -101,6 +99,7 @@ template <class Scalar> class DenseLayer : public Layer<Scalar> {
   WeightScalar _activity_regularization = 0;
   WeightScalar _stdev = 0;
   bool _use_bias = true;
+  Tensor<Scalar> _activity_regularization_temp;
 
   template <class TensorScalar>
   void _randomizeWeights(Tensor<TensorScalar> &tensor,
@@ -130,9 +129,8 @@ public:
     // TRACTOR_CHECK_TENSOR_DIMENSIONS("DenseLayer", input, 1);
 
     if (!_initialized) {
-      _initialized = true;
-      std::cout << "build dense layer " << input.shape() << " x " << _units
-                << std::endl;
+      TRACTOR_DEBUG_STREAM("build dense layer " << input.shape() << " x "
+                                                << _units);
 
       _weights = Tensor<WeightScalar>(
           TensorShape(input.shape().elementCount(), _units));
@@ -145,23 +143,12 @@ public:
         variable(_bias);
       }
 
-      if (_weight_regularization != 0) {
-        std::vector<Var<WeightScalar>> weights;
-        unpack(_weights, weights);
-        for (auto &weight : weights) {
-          goal(weight * _weight_regularization);
-        }
+      if (_weight_regularization > 0) {
+        goal(_weights * make_tensor(_weights.shape(), _weight_regularization));
       }
 
-      if (_use_bias) {
-        if (_bias_regularization != 0) {
-          std::vector<Var<Scalar>> bias;
-          unpack(_bias, bias);
-          Scalar bias_regularization = Scalar(_bias_regularization);
-          for (auto &b : bias) {
-            goal(b * bias_regularization);
-          }
-        }
+      if (_use_bias && _bias_regularization > 0) {
+        goal(_bias * make_tensor(_bias.shape(), Scalar(_bias_regularization)));
       }
     }
 
@@ -171,13 +158,15 @@ public:
       activity += _bias;
     }
 
-    if (_activity_regularization != 0) {
-      std::vector<Var<Scalar>> act;
-      unpack(activity, act);
-      for (auto &a : act) {
-        goal(a * Scalar(_activity_regularization));
+    if (_activity_regularization > 0) {
+      if (!_initialized) {
+        _activity_regularization_temp =
+            make_tensor(activity.shape(), Scalar(_activity_regularization));
       }
+      goal(activity * _activity_regularization_temp);
     }
+
+    _initialized = true;
 
     return applyActivation(activity, _activation);
   }
@@ -197,9 +186,9 @@ public:
   ActivationLayer(const ActivationType &activation) : _activation(activation) {}
   virtual Tensor<Scalar> evaluate(const std::vector<Tensor<Scalar>> &inputs,
                                   const LayerMode &mode) override {
-    // std::cout << "activation layer begin" << std::endl;
+    // TRACTOR_DEBUG_STREAM("activation layer begin");
     auto ret = applyActivation(inputs.at(0), _activation);
-    // std::cout << "activation layer end" << std::endl;
+    // TRACTOR_DEBUG_STREAM("activation layer end");
     return ret;
   }
 };
@@ -243,32 +232,32 @@ public:
   DropoutLayer(const WeightScalar &rate) : _rate(rate) {}
   virtual Tensor<Scalar> evaluate(const std::vector<Tensor<Scalar>> &inputs,
                                   const LayerMode &mode) override {
-    // auto activations = inputs.at(0);
-    // if (mode.training) {
-    //   activations =
-    //       dropout(activations, make_tensor(activations.shape(),
-    //       Scalar(_rate)));
-    // }
-    // return activations;
-    throw std::runtime_error("NYI");
+    auto activations = inputs.at(0);
+    if (mode.training) {
+      activations = dropout(
+          activations, make_tensor(activations.shape(), WeightScalar(_rate)));
+    }
+    return activations;
   }
 };
 
 template <class Scalar>
 class ActivityRegularizationLayer : public Layer<Scalar> {
   double _l2 = 0.0;
+  Tensor<Scalar> _l2_temp;
+  bool _initialized = false;
 
 public:
   ActivityRegularizationLayer(const double &l2) : _l2(l2) {}
   virtual Tensor<Scalar> evaluate(const std::vector<Tensor<Scalar>> &inputs,
                                   const LayerMode &mode) override {
-    // auto activations = inputs.at(0);
-    // if (_l2 > 0) {
-    //   Scalar l2 = Scalar(_l2);
-    //   goal(activations * l2);
-    // }
-    // return activations;
-    throw std::runtime_error("nyi");
+    auto &activity = inputs.front();
+    if (!_initialized) {
+      _initialized = true;
+      _l2_temp = make_tensor(activity.shape(), Scalar(_l2));
+    }
+    goal(activity * _l2_temp);
+    return activity;
   }
 };
 

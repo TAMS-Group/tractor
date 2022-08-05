@@ -5,6 +5,7 @@
 #include <tractor/core/factory.h>
 #include <tractor/core/lambda.h>
 #include <tractor/core/operator.h>
+#include <tractor/core/profiler.h>
 
 #include <random>
 
@@ -44,14 +45,33 @@ Tensor<Activation> dense_mul_vec_mat(const Tensor<Activation> &activations,
                 TensorInfo::make(act_type, TensorShape(cols))->type()),
         };
         for (auto &a : args) {
-          std::cout << "tensor mul arg " << a.typeInfo().name() << std::endl;
+          TRACTOR_DEBUG_STREAM("tensor mul arg " << a.typeInfo().name());
         }
+
+        std::string base_name = "dense_mul_vec_mat";
+        std::string variant_name = std::string() +
+                                   TypeInfo::get<Activation>().name() + "_" +
+                                   weights_info->name();
+
+        std::shared_ptr<ProfilerTrack> prof_n =
+            Profiler::instance()->track(std::make_shared<ProfilerTrack>(
+                __PRETTY_FUNCTION__, base_name + "_" + variant_name + "_n"));
+
+        std::shared_ptr<ProfilerTrack> prof_f =
+            Profiler::instance()->track(std::make_shared<ProfilerTrack>(
+                __PRETTY_FUNCTION__, base_name + "_" + variant_name + "_f"));
+
+        std::shared_ptr<ProfilerTrack> prof_r =
+            Profiler::instance()->track(std::make_shared<ProfilerTrack>(
+                __PRETTY_FUNCTION__, base_name + "_" + variant_name + "_r"));
+
         const Operator *op = makePointerOp(
-            "dense_mul_vec_mat",
-            std::string() + TypeInfo::get<Activation>().name() + "_" +
-                weights_info->name(),
-            args,
-            [rows, cols](const Activation *a, const Weight *b, Activation *x) {
+            base_name, variant_name, args,
+
+            [rows, cols, prof_n](const Activation *a, const Weight *b,
+                                 Activation *x) {
+              // TRACTOR_PROFILER("dense nl");
+              ProfilerScope profiler_scope(*prof_n);
               for (size_t col = 0; col < cols; col++) {
                 Activation v = Activation(0);
                 for (size_t row = 0; row < rows; row++) {
@@ -60,9 +80,12 @@ Tensor<Activation> dense_mul_vec_mat(const Tensor<Activation> &activations,
                 x[col] = v;
               }
             },
-            [rows, cols](const Activation *a, const Weight *b, Activation *x,
-                         const Activation *da, const Weight *db,
-                         Activation *dx) {
+
+            [rows, cols, prof_f](const Activation *a, const Weight *b,
+                                 Activation *x, const Activation *da,
+                                 const Weight *db, Activation *dx) {
+              // TRACTOR_PROFILER("dense f");
+              ProfilerScope profiler_scope(*prof_f);
               for (size_t col = 0; col < cols; col++) {
                 Activation dv = Activation(0);
                 for (size_t row = 0; row < rows; row++) {
@@ -72,8 +95,12 @@ Tensor<Activation> dense_mul_vec_mat(const Tensor<Activation> &activations,
                 dx[col] = dv;
               }
             },
-            [rows, cols](const Activation *a, const Weight *b, Activation *x,
-                         Activation *da, Weight *db, const Activation *dx) {
+
+            [rows, cols, prof_r](const Activation *a, const Weight *b,
+                                 Activation *x, Activation *da, Weight *db,
+                                 const Activation *dx) {
+              // TRACTOR_PROFILER("dense r");
+              ProfilerScope profiler_scope(*prof_r);
               for (size_t row = 0; row < rows; row++) {
                 Activation dv = Activation(0);
                 for (size_t col = 0; col < cols; col++) {
@@ -87,6 +114,7 @@ Tensor<Activation> dense_mul_vec_mat(const Tensor<Activation> &activations,
                 }
               }
             });
+
         return op;
       }};
 
@@ -156,39 +184,40 @@ TRACTOR_D(reverse, add_random_uniform, (T & da, S &dl, S &dh, const T &dx), {
 
 // ------------------------------------------
 
-// template <class T> inline void dropout3(const T &a, const T &b, T &x, T &y) {
-//   static thread_local std::mt19937 rng{std::mt19937::result_type(rand())};
-//   std::uniform_real_distribution<double> dist;
-//   y = (dist(rng) < b) ? T(0) : T(1.0 / (1.0 - b));
-//   x = a * y;
-// }
-// template <class T, size_t S>
-// inline void dropout3(const Batch<T, S> &a, const T &b, Batch<T, S> &x,
-//                      Batch<T, S> &y) {
-//   for (size_t i = 0; i < S; i++) {
-//     dropout2(a[i], b, x[i], y[i]);
-//   }
-// }
-// TRACTOR_OP(dropout2, (const T &a, const S &b, T &x, T &y),
-//            { dropout3(a, b, x, y); })
-// TRACTOR_D(prepare, dropout2,
-//           (const T &a, const S &b, const T &x, const T &y, T &s), { s = y; })
-// TRACTOR_D(forward, dropout2,
-//           (const T &s, const T &da, const S &db, T &dx, T &dy), {
-//             dx = da * s;
-//             dy = T(0);
-//           })
-// TRACTOR_D(reverse, dropout2,
-//           (const T &s, T &da, S &db, const T &dx, const T &dy), {
-//             da = dx * s;
-//             db = S(0);
-//           })
-//
-// template <class A, class B> auto dropout(const A &a, const B &b) {
-//   A x, y;
-//   dropout2(a, b, x, y);
-//   return x;
-// }
+template <class T> inline void dropout3(const T &a, const T &b, T &x, T &y) {
+  static thread_local std::mt19937 rng{std::mt19937::result_type(rand())};
+  std::uniform_real_distribution<double> dist;
+  y = (dist(rng) < b) ? T(0) : T(1.0 / (1.0 - b));
+  x = a * y;
+}
+template <class T, size_t S>
+inline void dropout3(const Batch<T, S> &a, const T &b, Batch<T, S> &x,
+                     Batch<T, S> &y) {
+  for (size_t i = 0; i < S; i++) {
+    dropout3(a[i], b, x[i], y[i]);
+  }
+}
+TRACTOR_OP(dropout2, (const T &a, const S &b, T &x, T &y),
+           { dropout3(a, b, x, y); })
+TRACTOR_D(prepare, dropout2,
+          (const T &a, const S &b, const T &x, const T &y, T &s), { s = y; })
+TRACTOR_D(forward, dropout2,
+          (const T &s, const T &da, const S &db, T &dx, T &dy), {
+            dx = da * s;
+            dy = T(0);
+          })
+TRACTOR_D(reverse, dropout2,
+          (const T &s, T &da, S &db, const T &dx, const T &dy), {
+            da = dx * s;
+            db = S(0);
+          })
+
+template <class A, class B> A dropout(const A &a, const B &b) {
+  A x(a.shape());
+  A y(a.shape());
+  dropout2(a, b, x, y);
+  return x;
+}
 
 // ------------------------------------------
 

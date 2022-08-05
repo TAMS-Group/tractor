@@ -22,7 +22,7 @@ template <class Ports> static void packPortOffsets(Ports &&ports) {
 void buildGradients(const Program &src, Program &prep, Program *_fprop,
                     Program *_bprop, Program *_hessian, Program *accumulate) {
 
-  Program fprop_dummy, bprop_dummy;
+  Program fprop_dummy(src.context()), bprop_dummy(src.context());
   if (_hessian || accumulate) {
     if (!_fprop) {
       _fprop = &fprop_dummy;
@@ -42,7 +42,7 @@ void buildGradients(const Program &src, Program &prep, Program *_fprop,
     for (auto &inst : src.instructions()) {
       auto *prep_op = inst.op()->tryFindVariant<prepare>();
       if (prep_op) {
-        // std::cout << prep_op->name() << std::endl;
+        // TRACTOR_DEBUG_STREAM(prep_op->name());
         prep_index.push_back(prep_insts.size());
         prep_insts.emplace_back((uintptr_t)prep_op);
         for (size_t i = 0; i < inst.argumentCount(); i++) {

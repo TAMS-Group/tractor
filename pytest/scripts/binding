@@ -1,0 +1,35 @@
+#!/usr/bin/env python
+
+import tractor as tr
+import tractor.types_double as tt
+import gc
+
+global_variable = tt.Scalar(1)
+global_parameter = tt.Scalar(3)
+
+def f():
+
+    tr.variable(global_variable)
+    tr.parameter(global_parameter)
+
+    slack_variable = tt.Scalar(2)
+    tr.variable(slack_variable)
+
+    local_output = slack_variable + global_variable
+    tr.output(local_output)
+
+    global global_output
+    global_output = slack_variable - global_variable
+    tr.output(global_output)
+
+program = tr.record(f)
+print program
+
+gc.collect()
+
+engine = tr.DefaultEngine()
+memory = engine.createMemory()
+executable = engine.compile(program)
+
+print "run"
+executable.run(memory)

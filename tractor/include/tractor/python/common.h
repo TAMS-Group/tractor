@@ -17,11 +17,22 @@ namespace tractor {
 
 namespace py = pybind11;
 
+#define TRACTOR_PYTHONIZE_ENUM(m, Name)                                        \
+  {                                                                            \
+    auto e = py::enum_<ActivationType>(m, "ActivationType");                   \
+    for (auto &p : enumerateEachActivationType()) {                            \
+      e.value(p.second.c_str(), p.first);                                      \
+    }                                                                          \
+    e.def(py::init(                                                            \
+        [](const std::string &s) { return parseActivationType(s); }));         \
+    py::implicitly_convertible<std::string, ActivationType>();                 \
+  }
+
 template <class Type>
 static auto pythonizeType(py::module &main_module, py::module &type_module,
                           const char *name) {
 
-  auto t = py::class_<Type>(type_module, name);
+  auto t = py::class_<Type, std::shared_ptr<Type>>(type_module, name);
   t.def(py::init<>());
   t.def("__repr__", [name](const Type &v) {
     std::stringstream ss;
@@ -29,10 +40,28 @@ static auto pythonizeType(py::module &main_module, py::module &type_module,
     return ss.str();
   });
 
-  main_module.def("parameter", [](Type &var) { parameter(var); });
-  main_module.def("variable", [](Type &var) { variable(var); });
-  main_module.def("output", [](Type &var) { output(var); });
-  main_module.def("goal", [](Type &var) { goal(var); });
+  main_module.def("parameter", [](const std::shared_ptr<Type> &var) {
+    if (auto *rec = Recorder::instance()) {
+      rec->reference(var);
+    }
+    parameter(*var);
+  });
+
+  main_module.def("variable", [](const std::shared_ptr<Type> &var) {
+    if (auto *rec = Recorder::instance()) {
+      rec->reference(var);
+    }
+    variable(*var);
+  });
+
+  main_module.def("output", [](const std::shared_ptr<Type> &var) {
+    if (auto *rec = Recorder::instance()) {
+      rec->reference(var);
+    }
+    output(*var);
+  });
+
+  main_module.def("goal", [](const std::shared_ptr<Type> &var) { goal(*var); });
 
   return t;
 }

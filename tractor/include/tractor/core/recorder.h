@@ -2,10 +2,11 @@
 
 #pragma once
 
-#include <cstring>
-
 #include <tractor/core/allocator.h>
 #include <tractor/core/program.h>
+
+#include <cstring>
+#include <deque>
 
 namespace tractor {
 
@@ -21,6 +22,7 @@ class Recorder {
   std::vector<Program::Constant> _constants;
   std::vector<uint8_t> _const_data;
   std::vector<uint8_t> _bound_data;
+  std::deque<std::shared_ptr<const void>> _references;
   Allocator _alloc;
 
   template <class T> void outputImpl(const Var<T> *p, bool bind) {
@@ -57,7 +59,7 @@ public:
   void op(const Operator *op);
 
   template <class... Args> inline void op(const Operator *o, Args *...args) {
-    //  std::cout << "record op " << op->name() << std::endl;
+    //  TRACTOR_DEBUG_STREAM("record op " << op->name());
     //  _instructions.push_back((uintptr_t)op);
     op(o);
     const void *pointers[] = {(const void *)args...};
@@ -142,6 +144,8 @@ public:
   // void parameter(const Program::Parameter &parameter) {
   //   _parameters.push_back(parameter);
   // }
+
+  void reference(const std::shared_ptr<const void> &ref);
 };
 
 template <class T>

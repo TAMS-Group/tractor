@@ -32,8 +32,7 @@ static void pythonizeTensor(py::module &main_module, py::module &type_module) {
     return Tensor<Scalar>(tensor_shape, tensor_data.data());
   };
 
-  py::class_<Tensor<Scalar>>(type_module, "Tensor")
-      .def(py::init<>())
+  pythonizeType<Tensor<Scalar>>(main_module, type_module, "Tensor")
       .def(py::init(
           [](const py::array_t<Scalar> &a) { return importTensor(a); }))
       .def(py::init(
@@ -76,11 +75,6 @@ static void pythonizeTensor(py::module &main_module, py::module &type_module) {
       .def(py::self - py::self)
       .def(py::self * py::self)
       .def(py::self / py::self);
-
-  main_module.def("variable", [](Tensor<Scalar> &v) { variable(v); });
-  main_module.def("parameter", [](Tensor<Scalar> &v) { parameter(v); });
-  main_module.def("output", [](Tensor<Scalar> &v) { output(v); });
-  main_module.def("goal", [](Tensor<Scalar> &v) { goal(v); });
 
   main_module.def("unpack",
                   [](const Tensor<Scalar> &tensor) { return unpack(tensor); });

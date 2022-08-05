@@ -38,6 +38,7 @@ protected:
   std::vector<Program::Parameter> _parameters;
   size_t _memory_size = 0;
   std::vector<uint8_t> _const_data;
+  std::shared_ptr<Program::Context> _program_context;
 
 public:
   virtual ~Executable() {}

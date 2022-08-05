@@ -3,6 +3,7 @@
 #include <tractor/collision/shape.h>
 
 #include <tractor/collision/query.h>
+#include <tractor/core/log.h>
 
 namespace tractor {
 

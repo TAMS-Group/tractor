@@ -2,6 +2,8 @@
 
 #include <tractor/core/recorder.h>
 
+#include <tractor/core/factory.h>
+#include <tractor/core/log.h>
 #include <tractor/core/operator.h>
 #include <tractor/core/ops.h>
 
@@ -34,6 +36,10 @@ void Recorder::goal(const TypeInfo &type, const void *var, size_t priority,
   }
 }
 
+void Recorder::reference(const std::shared_ptr<const void> &ref) {
+  _references.push_back(ref);
+}
+
 void Recorder::constant(const TypeInfo &type, void *var) {
 
   size_t start = _const_data.size();
@@ -46,28 +52,6 @@ void Recorder::constant(const TypeInfo &type, void *var) {
   uintptr_t temp = (addr | 0x8000000000000000ul);
   move(type, (const void *)temp, var);
 }
-
-// void Recorder::constant(const TypeInfo &type, void *var) {
-//
-//   size_t start = _const_data.size();
-//   _const_data.resize(start + type.size());
-//   std::memcpy(_const_data.data() + start, var, type.size());
-//
-//   uintptr_t addr = _alloc.alloc(type);
-//   _constants.emplace_back(type, addr, (uintptr_t)start);
-//
-//   uintptr_t temp = (addr | 0x8000000000000000ul);
-//   move(type, (const void *)temp, var);
-// }
-
-// void Recorder::goal(const TypeInfo &type, void *var, size_t priority,
-//                     const char *name) {
-//   _goals.emplace_back(_outputs.size(), priority);
-//   output(type, var, nullptr, name);
-//   if (name) {
-//     _outputs.back().name() = name;
-//   }
-// }
 
 void Recorder::move(const TypeInfo &type, const void *from, void *to) {
   const Operator *move_op = Operator::find<compute, op_move>({type});
@@ -103,7 +87,7 @@ void Recorder::output(const TypeInfo &type, void *var, void *binding,
 Recorder *Recorder::instance() { return g_recorder_instance; }
 
 void Recorder::op(const Operator *op) {
-  // std::cout << "record op " << op->name() << std::endl;
+  // TRACTOR_DEBUG_STREAM("record op " << op->name());
   _instructions.push_back((uintptr_t)op);
 }
 
@@ -124,7 +108,7 @@ Recorder::~Recorder() {
 
 static void removeUnusedConstants(Program &program) {
 
-  std::cout << "removing unused constants" << std::endl;
+  TRACTOR_DEBUG_STREAM("removing unused constants");
 
   std::unordered_set<uintptr_t> used;
 
@@ -151,7 +135,7 @@ static void removeUnusedConstants(Program &program) {
 
 static void removeUnusedInstructions(Program &program) {
 
-  std::cout << "removing unused instructions" << std::endl;
+  TRACTOR_DEBUG_STREAM("removing unused instructions");
 
   std::vector<uint8_t> used(program.memorySize(), 0);
 
@@ -195,17 +179,20 @@ static void removeUnusedInstructions(Program &program) {
 
   program.setInstructions(new_insts.rbegin(), new_insts.rend());
 
-  std::cout << instructions.size() << " ops" << std::endl;
-  std::cout << used_count << " used (" << used_count * 100 / instructions.size()
-            << "%)" << std::endl;
-  std::cout << (instructions.size() - used_count) << " unused ("
-            << (instructions.size() - used_count) * 100 / instructions.size()
-            << "%)" << std::endl;
+  TRACTOR_DEBUG_STREAM(instructions.size() << " ops");
+  TRACTOR_DEBUG_STREAM(used_count << " used ("
+                                  << used_count * 100 / instructions.size()
+                                  << "%)");
+  TRACTOR_DEBUG_STREAM((instructions.size() - used_count)
+                       << " unused ("
+                       << (instructions.size() - used_count) * 100 /
+                              instructions.size()
+                       << "%)");
 }
 
 static void precomputeConstants(Program &program) {
 
-  std::cout << "precomputing constants" << std::endl;
+  TRACTOR_DEBUG_STREAM("precomputing constants");
 
   AlignedStdVector<uint8_t> constness(program.memorySize(), 0);
   for (auto &port : program.constants()) {
@@ -229,12 +216,6 @@ static void precomputeConstants(Program &program) {
   size_t op_count = 0;
   for (auto &inst : program.instructions()) {
 
-    // std::cout << "c op " << inst.op()->name();
-    // for (size_t iarg = 0; iarg < inst.argumentCount(); iarg++) {
-    //   std::cout << " " << inst.op()->arg(iarg).typeInfo().name();
-    // }
-    // std::cout << std::endl;
-
     bool is_const = false;
     for (size_t iarg = 0; iarg < inst.argumentCount(); iarg++) {
       if (inst.op()->arg(iarg).isInput()) {
@@ -253,7 +234,7 @@ static void precomputeConstants(Program &program) {
     }
 
     if (is_const) {
-      // std::cout << "op is const " << inst.op()->name() << std::endl;
+      // TRACTOR_DEBUG_STREAM("op is const " << inst.op()->name());
       if (inst.op()->is<op_move>()) {
         const_move_count++;
       } else {
@@ -268,10 +249,6 @@ static void precomputeConstants(Program &program) {
           new_insts.push_back(move_op);
           new_insts.push_back(new_addr);
           new_insts.push_back(inst.arg(iarg));
-          // std::cout << "insert const load " << move_op->name() << " for type
-          // "
-          //           << inst.op()->arg(iarg).typeInfo().name() << " from "
-          //           << new_addr << " to " << inst.arg(iarg) << std::endl;
           program.addConstant(Program::Constant(inst.op()->arg(iarg).typeInfo(),
                                                 new_addr,
                                                 new_const_data.size()));
@@ -293,16 +270,18 @@ static void precomputeConstants(Program &program) {
   program.setConstData(new_const_data);
   alloc.apply(program);
 
-  std::cout << op_count << " ops" << std::endl;
-  std::cout << const_move_count << " const move ("
-            << const_move_count * 100 / op_count << "%)" << std::endl;
-  std::cout << const_op_count << " const ops ("
-            << const_op_count * 100 / op_count << "%)" << std::endl;
+  TRACTOR_DEBUG_STREAM(op_count << " ops");
+  TRACTOR_DEBUG_STREAM(const_move_count << " const move ("
+                                        << const_move_count * 100 / op_count
+                                        << "%)");
+  TRACTOR_DEBUG_STREAM(const_op_count << " const ops ("
+                                      << const_op_count * 100 / op_count
+                                      << "%)");
 }
 
 static void skipMoves(Program &program) {
 
-  std::cout << "skipping redundant moves" << std::endl;
+  TRACTOR_DEBUG_STREAM("skipping redundant moves");
 
   std::unordered_map<size_t, size_t> move_dst_to_src;
   std::vector<Program::Instruction> new_instructions;
@@ -347,179 +326,28 @@ static void skipMoves(Program &program) {
   }
   */
   program.setInstructions(new_instructions.begin(), new_instructions.end());
-  std::cout << rewrite_count << " moves / " << arg_count << " args skipped"
-            << std::endl;
+  TRACTOR_DEBUG_STREAM(rewrite_count << " moves / " << arg_count
+                                     << " args skipped");
 }
 
-#if 0
 static void checkMemory(const Program &program) {
 
-  std::cout << "checking memory" << std::endl;
+  TRACTOR_DEBUG_STREAM("checking memory");
 
-  std::unordered_set<uint64_t> memory;
-
-  for (auto &port : program.inputs()) {
-    // std::cout << "input " << port.address() << " " << port.size() <<
-    // std::endl;
-    for (size_t i = 0; i < port.size(); i++) {
-      memory.insert(port.address() + i);
-    }
-  }
-
-  for (auto &port : program.constants()) {
-    // std::cout << "constant " << port.address() << " " << port.size()
-    //          << std::endl;
-    for (size_t i = 0; i < port.size(); i++) {
-      memory.insert(port.address() + i);
-    }
-  }
-
-  for (auto &port : program.parameters()) {
-    // std::cout << "parameter " << port.address() << " " << port.size()
-    //          << std::endl;
-    for (size_t i = 0; i < port.size(); i++) {
-      memory.insert(port.address() + i);
-    }
-  }
-
-  for (auto &inst : program.instructions()) {
-    for (size_t iarg = 0; iarg < inst.op()->argumentCount(); iarg++) {
-      for (size_t i = 0; i < inst.op()->arg(iarg).size(); i++) {
-        if (inst.op()->arg(iarg).isInput()) {
-          if (memory.find(inst.arg(iarg) + i) == memory.end()) {
-            for (auto &inst2 : program.instructions()) {
-              std::cout << "op " << inst2.op()->name();
-              for (size_t iarg = 0; iarg < inst2.op()->argumentCount();
-                   iarg++) {
-                std::cout << " " << inst2.arg(iarg) << ":"
-                          << inst2.op()->arg(iarg).size();
-              }
-              std::cout << std::endl;
-              if (&inst2 == &inst) {
-                break;
-              }
-            }
-            for (auto &port : program.inputs()) {
-              std::cout << "input " << port.address() << " " << port.size()
-                        << std::endl;
-            }
-            for (auto &port : program.constants()) {
-              std::cout << "constant " << port.address() << " " << port.size()
-                        << std::endl;
-            }
-            for (auto &port : program.parameters()) {
-              std::cout << "parameter " << port.address() << " " << port.size()
-                        << std::endl;
-            }
-            throw std::runtime_error(
-                "read from uninitialized memory t " + inst.op()->name() + " " +
-                std::to_string(iarg) + " " + std::to_string(i) + " " +
-                std::to_string(inst.op()->arg(iarg).size()) + " " +
-                std::to_string(inst.arg(iarg)));
-          }
-        }
-        if (inst.op()->arg(iarg).isOutput()) {
-          memory.insert(inst.arg(iarg) + i);
-        }
-      }
-    }
-  }
-
-  for (auto &port : program.outputs()) {
-    for (size_t i = 0; i < port.size(); i++) {
-      if (memory.find(port.address() + i) == memory.end()) {
-        throw std::runtime_error("read from uninitialized memory z");
-      }
-    }
-  }
-}
-#endif
-
-#if 0
-static void checkMemory(const Program &program) {
-
-  std::cout << "checking memory" << std::endl;
-
-  std::unordered_set<uint64_t> memory;
-
-  for (auto &port : program.inputs()) {
-    memory.insert(port.address());
-  }
-
-  for (auto &port : program.constants()) {
-    memory.insert(port.address());
-  }
-
-  for (auto &port : program.parameters()) {
-    memory.insert(port.address());
-  }
-
-  for (auto &inst : program.instructions()) {
-    for (size_t iarg = 0; iarg < inst.op()->argumentCount(); iarg++) {
-      if (inst.op()->arg(iarg).isInput()) {
-        if (memory.find(inst.arg(iarg)) == memory.end()) {
-          for (auto &inst2 : program.instructions()) {
-            std::cout << "op " << inst2.op()->name();
-            for (size_t iarg = 0; iarg < inst2.op()->argumentCount(); iarg++) {
-              std::cout << " " << inst2.arg(iarg) << ":"
-                        << inst2.op()->arg(iarg).size();
-            }
-            std::cout << std::endl;
-            if (&inst2 == &inst) {
-              break;
-            }
-          }
-          for (auto &port : program.inputs()) {
-            std::cout << "input " << port.address() << " " << port.size()
-                      << std::endl;
-          }
-          for (auto &port : program.constants()) {
-            std::cout << "constant " << port.address() << " " << port.size()
-                      << std::endl;
-          }
-          for (auto &port : program.parameters()) {
-            std::cout << "parameter " << port.address() << " " << port.size()
-                      << std::endl;
-          }
-          throw std::runtime_error("read from uninitialized memory x " +
-                                   inst.op()->name() + " " +
-                                   std::to_string(iarg) + " " +
-                                   std::to_string(inst.op()->arg(iarg).size()) +
-                                   " " + std::to_string(inst.arg(iarg)));
-        }
-      }
-      if (inst.op()->arg(iarg).isOutput()) {
-        memory.insert(inst.arg(iarg));
-      }
-    }
-  }
-
-  for (auto &port : program.outputs()) {
-    if (memory.find(port.address()) == memory.end()) {
-      throw std::runtime_error("read from uninitialized memory y");
-    }
-  }
-}
-#endif
-
-#if 1
-static void checkMemory(const Program &program) {
-
-  std::cout << "checking memory" << std::endl;
-
+  TRACTOR_DEBUG_STREAM("memory size " << program.memorySize());
   std::vector<uint8_t> memory;
   memory.resize(program.memorySize(), 0);
 
   for (auto &port : program.inputs()) {
-    memory[port.address()] = 1;
+    memory.at(port.address()) = 1;
   }
 
   for (auto &port : program.constants()) {
-    memory[port.address()] = 1;
+    memory.at(port.address()) = 1;
   }
 
   for (auto &port : program.parameters()) {
-    memory[port.address()] = 1;
+    memory.at(port.address()) = 1;
   }
 
   for (auto &inst : program.instructions()) {
@@ -533,29 +361,28 @@ static void checkMemory(const Program &program) {
                                  " " + std::to_string(inst.arg(iarg)));
       }
       if (inst.op()->arg(iarg).isInput()) {
-        if (!memory[inst.arg(iarg)]) {
+        if (!memory.at(inst.arg(iarg))) {
           for (auto &inst2 : program.instructions()) {
-            std::cout << "op " << inst2.op()->name();
+            TRACTOR_DEBUG_STREAM("op " << inst2.op()->name());
             for (size_t iarg = 0; iarg < inst2.op()->argumentCount(); iarg++) {
-              std::cout << " " << inst2.arg(iarg) << ":"
-                        << inst2.op()->arg(iarg).size();
+              TRACTOR_DEBUG_STREAM("arg " << inst2.arg(iarg) << ":"
+                                          << inst2.op()->arg(iarg).size());
             }
-            std::cout << std::endl;
             if (&inst2 == &inst) {
               break;
             }
           }
           for (auto &port : program.inputs()) {
-            std::cout << "input " << port.address() << " " << port.size()
-                      << std::endl;
+            TRACTOR_DEBUG_STREAM("input " << port.address() << " "
+                                          << port.size());
           }
           for (auto &port : program.constants()) {
-            std::cout << "constant " << port.address() << " " << port.size()
-                      << std::endl;
+            TRACTOR_DEBUG_STREAM("constant " << port.address() << " "
+                                             << port.size());
           }
           for (auto &port : program.parameters()) {
-            std::cout << "parameter " << port.address() << " " << port.size()
-                      << std::endl;
+            TRACTOR_DEBUG_STREAM("parameter " << port.address() << " "
+                                              << port.size());
           }
           throw std::runtime_error(
               "parameter read from uninitialized memory z " +
@@ -565,23 +392,68 @@ static void checkMemory(const Program &program) {
         }
       }
       if (inst.op()->arg(iarg).isOutput()) {
-        memory[inst.arg(iarg)] = 1;
+        memory.at(inst.arg(iarg)) = 1;
       }
     }
   }
 
   for (auto &port : program.outputs()) {
-    if (!memory[port.address()]) {
+    if (!memory.at(port.address())) {
       throw std::runtime_error("output read from uninitialized memory");
     }
   }
 }
-#endif
+
+static void defragmentMemory(Program &program) {
+
+  Allocator allocator;
+  std::unordered_map<uintptr_t, uintptr_t> mapping;
+  auto map = [&](const TypeInfo &type, uintptr_t a) {
+    {
+      auto it = mapping.find(a);
+      if (it != mapping.end()) {
+        return it->second;
+      }
+    }
+    uintptr_t b = allocator.alloc(type);
+    mapping[a] = b;
+    return mapping[a];
+  };
+
+  for (auto &port : program.constants()) {
+    port.address() = map(port.typeInfo(), port.address());
+  }
+  for (auto &port : program.parameters()) {
+    port.address() = map(port.typeInfo(), port.address());
+  }
+  for (auto &port : program.inputs()) {
+    port.address() = map(port.typeInfo(), port.address());
+  }
+  for (auto &port : program.outputs()) {
+    port.address() = map(port.typeInfo(), port.address());
+  }
+
+  // std::vector<Program::Instruction> new_insts;
+  for (auto &inst : program.instructions()) {
+    for (size_t iarg = 0; iarg < inst.op()->argumentCount(); iarg++) {
+      inst.arg(iarg) = map(inst.op()->arg(iarg).typeInfo(), inst.arg(iarg));
+    }
+  }
+
+  TRACTOR_DEBUG_STREAM("defragmentation reducing memory size from "
+                       << program.memorySize() << " to " << allocator.top());
+
+  allocator.apply(program);
+}
 
 void Recorder::finish(Program &program) {
 
   {
     program.clear();
+
+    program.createNewContext();
+    program.context()->references.assign(_references.begin(),
+                                         _references.end());
 
     std::unordered_map<uintptr_t, uintptr_t> host_to_buffer_address;
     auto map = [&](uintptr_t a, const TypeInfo &type, bool alloc = false) {
@@ -656,29 +528,24 @@ void Recorder::finish(Program &program) {
 
   checkMemory(program);
 
-  std::cout << "code size " << program.code().size() << std::endl;
+  TRACTOR_DEBUG_STREAM("code size " << program.code().size());
 
-  std::cout << "precompute constants" << std::endl;
+  TRACTOR_DEBUG_STREAM("precompute constants");
   precomputeConstants(program);
   // checkMemory(program);
 
-  std::cout << "code size " << program.code().size() << std::endl;
-
-  std::cout << "skip moves" << std::endl;
   skipMoves(program);
   // checkMemory(program);
 
-  std::cout << "code size " << program.code().size() << std::endl;
-
-  std::cout << "remove unused instructions" << std::endl;
   removeUnusedInstructions(program);
   // checkMemory(program);
 
-  std::cout << "remove unused constants" << std::endl;
   removeUnusedConstants(program);
   // checkMemory(program);
 
-  std::cout << "code size " << program.code().size() << std::endl;
+  defragmentMemory(program);
+
+  TRACTOR_DEBUG_STREAM("code size " << program.code().size());
 
   checkMemory(program);
 }

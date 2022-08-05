@@ -8,10 +8,10 @@
 
 namespace tractor {
 
-template <class Key, class Value> class Factory {
+template <class Key, class Value, class Hash = std::hash<Key>> class Factory {
   std::mutex _mutex;
   std::function<Value(const Key &)> _factory;
-  std::unordered_map<Key, Value> _map;
+  std::unordered_map<Key, Value, Hash> _map;
 
 public:
   Factory(const std::function<Value(const Key &)> &f) : _factory(f) {}

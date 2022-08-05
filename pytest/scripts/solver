@@ -20,16 +20,12 @@ def f():
 
 prog = tr.record(f)
 
-print prog.constants
-print prog.inputs
-print prog.instructions
-print prog.outputs
+print prog
 
 solver = tt.LeastSquaresSolver(tr.DefaultEngine())
 #solver = tt.GradientDescentSolver(tr.DefaultEngine())
 
 solver.compile(prog)
-
 #solver.timeout = 1
 solver.tolerance = 1e-12
 solver.regularization = 0.01
@@ -38,11 +34,4 @@ print a, b
 
 solver.solve()
 
-print a, b #, math.tanh(a.value) + math.tanh(b.value) - 0.1
-
-# for i in range(100):
-#     print a.value, b.value, math.tanh(a.value) + math.tanh(b.value) + 1
-#     solver.parameterize()
-#     solver.gather()
-#     solver.step()
-#     solver.scatter()
+print a, b
