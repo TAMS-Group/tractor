@@ -23,6 +23,7 @@ class Recorder {
   std::vector<uint8_t> _const_data;
   std::vector<uint8_t> _bound_data;
   std::deque<std::shared_ptr<const void>> _references;
+  // std::unordered_map<std::string, uintptr_t> _const_map;
   Allocator _alloc;
 
   template <class T> void outputImpl(const Var<T> *p, bool bind) {
@@ -105,20 +106,6 @@ public:
 
   template <class T> void output(const Var<T> *p) { outputImpl(p, true); }
 
-  template <class T> void constant(const Var<T> *p) {
-
-    size_t start = _const_data.size();
-    _const_data.resize(start + sizeof(T));
-    std::memcpy(_const_data.data() + start, &p->value(), sizeof(T));
-
-    uintptr_t addr = _alloc.alloc(TypeInfo::get<T>());
-
-    _constants.emplace_back(TypeInfo::get<T>(), addr, (uintptr_t)start);
-
-    uintptr_t temp = (addr | 0x8000000000000000ul);
-    move((const T *)temp, (T *)&p->value());
-  }
-
   template <class T>
   inline void goal(const Var<T> &v, int priority = 0,
                    const std::string &name = std::string()) {
@@ -136,7 +123,11 @@ public:
   void goal(const TypeInfo &type, const void *var, size_t priority = 0,
             const char *name = nullptr);
 
-  void constant(const TypeInfo &type, void *var);
+  void constant(const TypeInfo &type, const void *var);
+
+  template <class T> void constant(const Var<T> *p) {
+    constant(TypeInfo::get<T>(), p);
+  }
 
   // void input(const Program::Input &input) { _inputs.push_back(input); }
   // void output(const Program::Output &output) { _outputs.push_back(output); }

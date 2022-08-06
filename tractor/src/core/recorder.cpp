@@ -40,7 +40,18 @@ void Recorder::reference(const std::shared_ptr<const void> &ref) {
   _references.push_back(ref);
 }
 
-void Recorder::constant(const TypeInfo &type, void *var) {
+void Recorder::constant(const TypeInfo &type, const void *var) {
+
+  // std::string key((const char *)var, type.size());
+  // {
+  //   auto it = _const_map.find(key);
+  //   if (it != _const_map.end()) {
+  //     move(type, (const void *)it->second, (void *)var);
+  //     TRACTOR_INFO_STREAM("merge constants");
+  //     // TRACTOR_INFO_STREAM("merge constants " << *(double *)var);
+  //     return;
+  //   }
+  // }
 
   size_t start = _const_data.size();
   _const_data.resize(start + type.size());
@@ -50,7 +61,9 @@ void Recorder::constant(const TypeInfo &type, void *var) {
   _constants.emplace_back(type, addr, (uintptr_t)start);
 
   uintptr_t temp = (addr | 0x8000000000000000ul);
-  move(type, (const void *)temp, var);
+  move(type, (const void *)temp, (void *)var);
+
+  //_const_map[key] = temp;
 }
 
 void Recorder::move(const TypeInfo &type, const void *from, void *to) {
@@ -404,6 +417,31 @@ static void checkMemory(const Program &program) {
   }
 }
 
+// static void pruneConstants(Program &program) {
+//
+//   Allocator const_alloc;
+//   std::vector<uint8_t> new_const_data;
+//   std::unordered_map<std::string, uintptr_t> const_map;
+//
+//   for (auto &constant : program.constants()) {
+//
+//     std::string key((const char *)program.constData() + constant.offset(),
+//                     constant.size());
+//
+//     if (const_map.find(key) == const_map.end()) {
+//
+//       auto addr = const_alloc.alloc(constant.type());
+//       new_const_data.resize(addr + constant.size());
+//       std::memcpy(new_const_data.data() + addr,
+//                   program.constData() + constant.offset(), constant.size());
+//     }
+//
+//     constant.address() = const_map[key];
+//   }
+//
+//   program.setConstData(new_const_data);
+// }
+
 static void defragmentMemory(Program &program) {
 
   Allocator allocator;
@@ -527,6 +565,8 @@ void Recorder::finish(Program &program) {
   }
 
   checkMemory(program);
+
+  // return;
 
   TRACTOR_DEBUG_STREAM("code size " << program.code().size());
 

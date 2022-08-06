@@ -2,30 +2,42 @@
 
 #pragma once
 
+#include <boost/functional/hash.hpp>
 #include <functional>
 #include <mutex>
 #include <unordered_map>
 
 namespace tractor {
 
-template <class Key, class Value, class Hash = std::hash<Key>> class Factory {
-  std::mutex _mutex;
-  std::function<Value(const Key &)> _factory;
-  std::unordered_map<Key, Value, Hash> _map;
+struct Factory {
+  template <class... KeyTypes> struct Key {
+    template <class ValueType> class Value {
+      struct HashType {
+        size_t operator()(const std::tuple<KeyTypes...> &key) const noexcept {
+          return boost::hash_value(key);
+        }
+      };
+      std::mutex _mutex;
+      std::function<ValueType(const KeyTypes &...)> _factory;
+      std::unordered_map<std::tuple<KeyTypes...>, ValueType, HashType> _map;
 
-public:
-  Factory(const std::function<Value(const Key &)> &f) : _factory(f) {}
-  const Value &operator[](const Key &key) {
-    std::lock_guard<std::mutex> lock(_mutex);
-    {
-      auto it = _map.find(key);
-      if (it != _map.end()) {
-        return it->second;
+    public:
+      Value(const std::function<ValueType(const KeyTypes &...)> &f)
+          : _factory(f) {}
+      const ValueType &get(const KeyTypes &...key_data) {
+        auto key_tuple = std::make_tuple(key_data...);
+        std::lock_guard<std::mutex> lock(_mutex);
+        {
+          auto it = _map.find(key_tuple);
+          if (it != _map.end()) {
+            return it->second;
+          }
+        }
+        _map[key_tuple] = _factory(key_data...);
+        return _map[key_tuple];
       }
-    }
-    _map[key] = _factory(key);
-    return _map[key];
-  }
+    };
+  };
 };
 
 } // namespace tractor

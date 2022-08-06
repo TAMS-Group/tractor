@@ -132,8 +132,8 @@ public:
       TRACTOR_DEBUG_STREAM("build dense layer " << input.shape() << " x "
                                                 << _units);
 
-      _weights = Tensor<WeightScalar>(
-          TensorShape(input.shape().elementCount(), _units));
+      _weights =
+          Tensor<WeightScalar>(TensorShape(input.shape().last(), _units));
       _randomizeWeights(_weights, _stdev);
       variable(_weights);
 
@@ -152,18 +152,15 @@ public:
       }
     }
 
-    Tensor<Scalar> activity = dense_mul_vec_mat(input, _weights);
+    Tensor<Scalar> activity = neural_dense(input, _weights);
 
     if (_use_bias) {
-      activity += _bias;
+      activity = neural_bias(activity, _bias);
     }
 
     if (_activity_regularization > 0) {
-      if (!_initialized) {
-        _activity_regularization_temp =
-            make_tensor(activity.shape(), Scalar(_activity_regularization));
-      }
-      goal(activity * _activity_regularization_temp);
+      goal(activity *
+           make_tensor(activity.shape(), Scalar(_activity_regularization)));
     }
 
     _initialized = true;

@@ -20,21 +20,26 @@ static void pythonizeTensor(py::module &main_module, py::module &type_module) {
     return TensorShape(ss);
   };
 
-  static auto importTensor = [](const py::array_t<Scalar> &array) {
+  static auto importTensor = [](const py::array_t<Scalar> &array,
+                                Tensor<Scalar> &tensor) {
     auto tensor_shape = find_shape(array);
     auto element_count = tensor_shape.elementCount();
     auto array_data = array.data();
-    std::vector<Scalar> tensor_data(element_count);
+    if (tensor_shape != tensor.shape()) {
+      tensor = Tensor<Scalar>(tensor_shape);
+    }
     for (size_t i = 0; i < element_count; i++) {
-      tensor_data[i] = *array_data;
+      tensor.data()[i] = *array_data;
       array_data++;
     }
-    return Tensor<Scalar>(tensor_shape, tensor_data.data());
   };
 
   pythonizeType<Tensor<Scalar>>(main_module, type_module, "Tensor")
-      .def(py::init(
-          [](const py::array_t<Scalar> &a) { return importTensor(a); }))
+      .def(py::init([](const py::array_t<Scalar> &a) {
+        Tensor<Scalar> ret;
+        importTensor(a, ret);
+        return ret;
+      }))
       .def(py::init(
           [](const std::vector<Var<Scalar>> &a) { return pack_tensor(a); }))
       .def("copy",
@@ -69,7 +74,7 @@ static void pythonizeTensor(py::module &main_module, py::module &type_module) {
             return ret;
           },
           [](Tensor<Scalar> &tensor, const py::array_t<Scalar> &array) {
-            tensor = importTensor(array);
+            importTensor(array, tensor);
           })
       .def(py::self + py::self)
       .def(py::self - py::self)
@@ -79,10 +84,15 @@ static void pythonizeTensor(py::module &main_module, py::module &type_module) {
   main_module.def("unpack",
                   [](const Tensor<Scalar> &tensor) { return unpack(tensor); });
 
-  main_module.def("dense_mul_vec_mat", [](const Tensor<Scalar> &activations,
-                                          const Tensor<Scalar> &weights) {
-    return dense_mul_vec_mat(activations, weights);
-  });
+  main_module.def("neural_dense", &neural_dense<Scalar, Scalar>);
+
+  main_module.def("neural_bias", &neural_bias<Scalar, Scalar>);
+
+  type_module.def(
+      "make_tensor",
+      [](const std::vector<size_t> &shape, const Scalar &v) -> Tensor<Scalar> {
+        return make_tensor(TensorShape(shape), v);
+      });
 }
 
 } // namespace tractor

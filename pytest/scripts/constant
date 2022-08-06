@@ -1,0 +1,12 @@
+#!/usr/bin/env python
+
+import tractor as tr
+import tractor.types_double as tt
+
+def f():
+    var = tt.Scalar(2)
+    tr.variable(var)
+    tr.goal(var + tt.Scalar(1) + tt.Scalar(2) + tt.Scalar(1))
+
+prog = tr.record(f)
+print prog

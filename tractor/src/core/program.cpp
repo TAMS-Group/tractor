@@ -95,8 +95,13 @@ std::ostream &operator<<(std::ostream &stream, const Program &prog) {
   }
 
   for (auto &port : prog.constants()) {
-    stream << "constant " << (void *)port.address() << " " << port.size() << " "
-           << port.typeInfo().name() << std::endl;
+    stream << "constant address:" << (void *)port.address()
+           << " port:" << port.size() << " offset:" << port.offset()
+           << " type:" << port.typeInfo().name();
+    if (port.typeInfo() == TypeInfo::get<double>()) {
+      stream << " " << *(double *)(prog.constData().data() + port.offset());
+    }
+    stream << std::endl;
   }
 
   stream << "memory size " << prog.memorySize() << std::endl;

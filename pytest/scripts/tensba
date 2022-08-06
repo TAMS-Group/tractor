@@ -6,11 +6,9 @@ import tractor.types_double as tt
 import math
 import copy
 
-print tr.neural_bias(tt.Tensor([1,2,3]), tt.Tensor([.1,.2,.3])).value
-print tr.neural_bias(tt.Tensor([[1,2,3],[2,3,4]]), tt.Tensor([.1,.2,.3])).value
-exit(0)
+tr.logger.verbosity = 2
 
-inputs = tt.Tensor([1,2,3])
+inputs = tt.Tensor([[1,2,3],[2,4,6],[3,6,9]])
 weights = tt.Tensor([[1,2],[2,3],[3,4]])
 
 print "inputs", inputs.value
@@ -19,9 +17,9 @@ print "outputs", tr.neural_dense(inputs, weights).value
 
 def f():
     #tr.parameter(inputs)
-    x = tt.Tensor(inputs.value)
+    x = tt.Tensor([[1,2,3],[2,4,6],[3,6,9]])
     tr.variable(weights)
-    tr.goal(tr.neural_dense(x, weights) - tt.Tensor([1,5]))
+    tr.goal(tr.neural_dense(x, weights) - tt.Tensor([[1,2],[2,4],[3,6]]))
 
 prog = tr.record(f)
 
@@ -29,14 +27,13 @@ print prog
 
 solver = tt.LeastSquaresSolver(tr.DefaultEngine())
 solver.compile(prog)
-solver.tolerance = 1e-9
-solver.regularization = 0.01
+solver.timeout = 1
+solver.regularization = 0.00001
 
 print "inputs", inputs.value
 print "weights", weights.value
 print "outputs", tr.neural_dense(inputs, weights).value
 
-#solver.parameterize()
 solver.solve()
 
 print "inputs", inputs.value

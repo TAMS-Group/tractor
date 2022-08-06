@@ -41,7 +41,9 @@ public:
     return _data != other._data;
   }
   bool empty() const { return _data.empty(); }
-  size_t hash() const;
+  size_t hash() const noexcept;
+  size_t last(size_t i = 0) const { return _data.at(_data.size() - 1 - i); }
+  friend size_t hash_value(const TensorShape &s) noexcept { return s.hash(); }
 };
 
 std::ostream &operator<<(std::ostream &s, const TensorShape &v);

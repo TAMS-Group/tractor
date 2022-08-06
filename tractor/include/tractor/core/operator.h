@@ -3,6 +3,7 @@
 #pragma once
 
 #include <tractor/core/batch.h>
+#include <tractor/core/platform.h>
 #include <tractor/core/recorder.h>
 #include <tractor/core/tensor.h>
 
@@ -155,10 +156,10 @@ typedef void (*OpFunction)(void *base, const uintptr_t *offsets);
 
 struct OperatorFunctions {
   std::vector<uint64_t> context;
-  LoopFunction loop = nullptr;
+  // LoopFunction loop = nullptr;
   LoopFunction iterate = nullptr;
   OpFunction indirect = nullptr;
-  const void *direct = nullptr;
+  // const void *direct = nullptr;
 };
 
 template <class Functor> class RawArgumentTuple {
@@ -371,74 +372,79 @@ template <class Impl, class Mode, class Op, class Group, class Scalar>
 class OperatorImpl : public Operator {
   template <class... Args> struct Init {
     template <class Ret, size_t... Indices> struct Looper {
-      static void loop(void *base, const uintptr_t *offsets,
-                       size_t iterations) {
-        for (size_t i = 0; i < iterations; i++) {
-          *(Ret *)(void *)((uint8_t *)base + offsets[sizeof...(Indices)]) =
-              Impl::call(
-                  *(typename std::decay<Args>::type
-                        *)(void *)((uint8_t *)base + offsets[Indices])...);
-          offsets += sizeof...(Indices) + 1;
-        }
-      }
-      static inline void iterateImpl(size_t iterations, Ret *ret,
-                                     typename std::decay<Args>::type *...args) {
+      // static void loop(void *base, const uintptr_t *offsets,
+      //                  size_t iterations) TRACTOR_FAST {
+      //   for (size_t i = 0; i < iterations; i++) {
+      //     *(Ret *)(void *)((uint8_t *)base + offsets[sizeof...(Indices)]) =
+      //         Impl::call(
+      //             *(typename std::decay<Args>::type
+      //                   *)(void *)((uint8_t *)base + offsets[Indices])...);
+      //     offsets += sizeof...(Indices) + 1;
+      //   }
+      // }
+      static inline void
+      iterateImpl(size_t iterations, Ret *ret,
+                  typename std::decay<Args>::type *...args) TRACTOR_FAST {
         for (size_t i = 0; i < iterations; i++) {
           ret[i] = Impl::call(args[i]...);
         }
       }
       static void iterate(void *base, const uintptr_t *offsets,
-                          size_t iterations) {
+                          size_t iterations) TRACTOR_FAST {
         iterateImpl(
             iterations,
             (Ret *)(void *)((uint8_t *)base + offsets[sizeof...(Indices)]),
             ((typename std::decay<Args>::type *)(void *)((uint8_t *)base +
                                                          offsets[Indices]))...);
       }
-      static void indirect(void *base, const uintptr_t *offsets) {
+      static void indirect(void *base, const uintptr_t *offsets) TRACTOR_FAST {
         *(Ret *)(void *)((uint8_t *)base + offsets[sizeof...(Indices)]) =
             Impl::call(*(typename std::decay<Args>::type
                              *)(void *)((uint8_t *)base + offsets[Indices])...);
       }
-      static void direct(typename std::decay<Args>::type *...args, Ret *ret) {
-        *ret = Impl::call(*args...);
-      }
-      static std::vector<Argument> arguments() {
+      // static void direct(typename std::decay<Args>::type *...args,
+      //                    Ret *ret) TRACTOR_FAST {
+      //   *ret = Impl::call(*args...);
+      // }
+      static std::vector<Argument> arguments() TRACTOR_SLOW {
         return {Argument::make<Args>()..., Argument::make<Ret &>()};
       }
     };
     template <size_t... Indices> struct Looper<void, Indices...> {
-      static void loop(void *base, const uintptr_t *offsets,
-                       size_t iterations) {
-        for (size_t i = 0; i < iterations; i++) {
-          Impl::call(*(
-              typename std::decay<Args>::type *)(void *)((uint8_t *)base +
-                                                         offsets[Indices])...);
-          offsets += sizeof...(Indices);
-        }
-      }
-      static inline void iterateImpl(size_t iterations,
-                                     typename std::decay<Args>::type *...args) {
+      // static void loop(void *base, const uintptr_t *offsets,
+      //                  size_t iterations) {
+      //   for (size_t i = 0; i < iterations; i++)
+      //     TRACTOR_FAST {
+      //       Impl::call(*(typename std::decay<Args>::type
+      //                        *)(void *)((uint8_t *)base +
+      //                        offsets[Indices])...);
+      //       offsets += sizeof...(Indices);
+      //     }
+      // }
+      static inline void
+      iterateImpl(size_t iterations,
+                  typename std::decay<Args>::type *...args) TRACTOR_FAST {
         for (size_t i = 0; i < iterations; i++) {
           Impl::call(args[i]...);
         }
       }
       static void iterate(void *base, const uintptr_t *offsets,
-                          size_t iterations) {
+                          size_t iterations) TRACTOR_FAST {
         iterateImpl(
             iterations,
             ((typename std::decay<Args>::type *)(void *)((uint8_t *)base +
                                                          offsets[Indices]))...);
       }
-      static void indirect(void *base, const uintptr_t *offsets) {
+      static void indirect(void *base, const uintptr_t *offsets) TRACTOR_FAST {
         Impl::call(
             *(typename std::decay<Args>::type *)(void *)((uint8_t *)base +
                                                          offsets[Indices])...);
       }
-      static void direct(typename std::decay<Args>::type *...args) {
-        Impl::call(*args...);
-      }
-      static std::vector<Argument> arguments() {
+      // static void
+      // direct(typename std::decay<Args>::type *...args) TRACTOR_FAST {
+      //   Impl::call(*args...);
+      // }
+      static std::vector<Argument> arguments() TRACTOR_SLOW {
         return {Argument::make<Args>()...};
       }
     };
@@ -449,10 +455,10 @@ class OperatorImpl : public Operator {
             std::tuple<Args...> *) {
     typedef Init<Args...> _Init;
     typedef typename _Init::template Looper<Return, Indices...> _Loop;
-    _functions.loop = &_Loop::loop;
+    // _functions.loop = &_Loop::loop;
     _functions.iterate = &_Loop::iterate;
     _functions.indirect = &_Loop::indirect;
-    _functions.direct = reinterpret_cast<const void *>(&_Loop::direct);
+    // _functions.direct = reinterpret_cast<const void *>(&_Loop::direct);
     _arguments = _Loop::arguments();
   }
   typedef typename RawArgumentTuple<decltype(&Impl::call)>::Type ArgumentTuple;
@@ -549,7 +555,7 @@ template <class T> struct OverloadSelector<Var<T>> {
   struct op_##prefix##name##_##postfix##_impl_1 {                              \
     typedef scalar T;                                                          \
     typedef BatchScalar<scalar>::Type S;                                       \
-    static inline auto call args impl;                                         \
+    static inline auto call args TRACTOR_FAST impl;                            \
   };                                                                           \
                                                                                \
   struct scalar##postfix##_group;                                              \
@@ -585,7 +591,7 @@ template <class T> struct OverloadSelector<Var<T>> {
   struct op_##prefix##name##_##postfix##_impl_1 {                              \
     typedef scalar T;                                                          \
     typedef BatchScalar<scalar>::Type S;                                       \
-    static inline auto call args impl;                                         \
+    static inline auto call args TRACTOR_SLOW impl;                            \
   };                                                                           \
                                                                                \
   struct scalar##postfix##_group;                                              \

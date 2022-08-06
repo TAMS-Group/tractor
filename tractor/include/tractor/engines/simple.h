@@ -19,7 +19,8 @@ private:
 
   protected:
     virtual void _compile(const Program &program) override;
-    virtual void _execute(const std::shared_ptr<Memory> &memory) const override;
+    virtual void
+    _execute(const std::shared_ptr<Memory> &memory) const override TRACTOR_FAST;
   };
 
 public:

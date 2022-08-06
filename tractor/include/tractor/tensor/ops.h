@@ -54,7 +54,7 @@ template <class T> Tensor<T> &operator/=(Tensor<T> &a, const Tensor<T> &b) {
 template <class Value>
 void unpack(const Tensor<Value> &tensor, std::vector<Var<Value>> &vector) {
 
-  static Factory<const TensorInfo *, const Operator *> factory{
+  static Factory::Key<const TensorInfo *>::Value<const Operator *> factory{
       [](const TensorInfo *tensor_info) {
         std::vector<Operator::Argument> args;
         args.push_back(Operator::Argument::makeInput(tensor_info->type()));
@@ -91,7 +91,7 @@ void unpack(const Tensor<Value> &tensor, std::vector<Var<Value>> &vector) {
         return op;
       }};
 
-  auto *op = factory[tensor.info()];
+  auto *op = factory.get(tensor.info());
 
   vector.resize(tensor.info()->shape().elementCount());
 
@@ -118,7 +118,7 @@ std::vector<Var<Value>> unpack(const Tensor<Value> &tensor) {
 template <class Value>
 Tensor<Value> pack_tensor(const Var<Value> *data, const TensorShape &shape) {
 
-  static Factory<const TensorInfo *, const Operator *> factory{
+  static Factory::Key<const TensorInfo *>::Value<const Operator *> factory{
       [](const TensorInfo *tensor_info) {
         std::vector<Operator::Argument> args(
             tensor_info->shape().elementCount(),
@@ -155,7 +155,7 @@ Tensor<Value> pack_tensor(const Var<Value> *data, const TensorShape &shape) {
 
   Tensor<Value> ret(shape);
 
-  auto *op = factory[ret.info()];
+  auto *op = factory.get(ret.info());
 
   std::vector<void *> args;
   {

@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <tractor/core/platform.h>
+
 #include <Eigen/Dense>
 #include <cstdint>
 
@@ -252,9 +254,11 @@ inline Batch<double, S> operator-(const Batch<double, S> &a) {
 
 // -----------------------------------------------------------------------------
 
-template <class T> inline void batch_sum(const T &dx, T &da) { da = dx; }
+template <class T> TRACTOR_FAST inline void batch_sum(const T &dx, T &da) {
+  da = dx;
+}
 template <class T, size_t S>
-inline void batch_sum(const Batch<T, S> &dx, T &da) {
+TRACTOR_FAST inline void batch_sum(const Batch<T, S> &dx, T &da) {
   T rs = T(0);
   for (size_t i = 0; i < S; i++) {
     rs += dx[i];

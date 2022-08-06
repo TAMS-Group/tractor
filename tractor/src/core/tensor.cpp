@@ -14,7 +14,7 @@
 
 namespace tractor {
 
-size_t TensorShape::hash() const {
+size_t TensorShape::hash() const noexcept {
   size_t hash = 0;
   boost::hash_combine(hash, _data.size());
   for (auto &v : _data) {
@@ -25,7 +25,7 @@ size_t TensorShape::hash() const {
 
 const std::string makeTensorName(const TypeInfo &element,
                                  const TensorShape &shape) {
-  std::string name = std::string() + "tensor_" + element.name();
+  std::string name = element.name();
   for (auto &s : shape) {
     name += "_" + std::to_string(s);
   }
@@ -99,56 +99,33 @@ const Operator *createTensorOpVariant(const Operator *element_op,
 
 const Operator *makeTensorOp(const Operator *element_op,
                              const TensorShape &tensor_shape) {
+  static Factory::Key<const Operator *, TensorShape>::Value<const Operator *>
+      factory([](const Operator *element_op, const TensorShape &shape) {
+        std::string group_name = element_op->name();
+        for (auto &s : shape) {
+          group_name += "_" + std::to_string(s);
+        }
+        OpGroup group = makeOpGroup(group_name);
 
-  struct Key {
-    const Operator *element_op = nullptr;
-    TensorShape tensor_shape;
-    Key() {}
-    Key(const Operator *element_op, const TensorShape &tensor_shape)
-        : element_op(element_op), tensor_shape(tensor_shape) {}
-    bool operator==(const Key &other) const {
-      return element_op == other.element_op &&
-             tensor_shape == other.tensor_shape;
-    }
-  };
+        auto *tensor_op = createTensorOpVariant(element_op, group, shape);
+        if (!tensor_op) {
+          throw std::runtime_error("failed to create tensor op");
+        }
+        if (!createTensorOpVariant(element_op->variant<forward>(), group,
+                                   shape)) {
+          throw std::runtime_error("failed to create forward tensor op");
+        }
+        if (!createTensorOpVariant(element_op->variant<reverse>(), group,
+                                   shape)) {
+          throw std::runtime_error("failed to create reverse tensor op");
+        }
+        if (auto *variant = element_op->tryFindVariant<prepare>()) {
+          createTensorOpVariant(variant, group, shape);
+        }
 
-  struct Hash {
-    size_t operator()(const Key &key) const {
-      size_t hash = 0;
-      boost::hash_combine(hash, key.element_op);
-      boost::hash_combine(hash, key.tensor_shape.hash());
-      return hash;
-    }
-  };
-
-  static Factory<Key, const Operator *, Hash> factory([](const Key &key) {
-    auto *element_op = key.element_op;
-    const TensorShape &shape = key.tensor_shape;
-
-    std::string group_name = element_op->name();
-    for (auto &s : shape) {
-      group_name += "_" + std::to_string(s);
-    }
-    OpGroup group = makeOpGroup(group_name);
-
-    auto *tensor_op = createTensorOpVariant(element_op, group, shape);
-    if (!tensor_op) {
-      throw std::runtime_error("failed to create tensor op");
-    }
-    if (!createTensorOpVariant(element_op->variant<forward>(), group, shape)) {
-      throw std::runtime_error("failed to create forward tensor op");
-    }
-    if (!createTensorOpVariant(element_op->variant<reverse>(), group, shape)) {
-      throw std::runtime_error("failed to create reverse tensor op");
-    }
-    if (auto *variant = element_op->tryFindVariant<prepare>()) {
-      createTensorOpVariant(variant, group, shape);
-    }
-
-    return tensor_op;
-  });
-
-  return factory[Key(element_op, tensor_shape)];
+        return tensor_op;
+      });
+  return factory.get(element_op, tensor_shape);
 }
 
 void emitTensorOpImpl(
@@ -169,7 +146,8 @@ void emitTensorOpImpl(
   const auto &shape = (*tensor_infos.begin())->shape();
   for (auto &inf : tensor_infos) {
     if (inf->shape() != shape) {
-      throw std::invalid_argument("tensor shapes do not match");
+      throw std::invalid_argument(element_op->name() +
+                                  " tensor shapes do not match");
     }
   }
 
