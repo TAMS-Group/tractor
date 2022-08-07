@@ -55,8 +55,8 @@ void Any::_copy(const TypeInfo &type, const void *from, void *to) {
   std::memcpy(to, from, type.size());
   if (auto *rec = Recorder::instance()) {
     rec->op(move_op);
-    rec->push((uintptr_t)from);
-    rec->push((uintptr_t)to);
+    rec->arg(type, from);
+    rec->arg(type, to);
   }
 }
 

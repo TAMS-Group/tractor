@@ -65,8 +65,7 @@ void unpack(const Tensor<Value> &tensor, std::vector<Var<Value>> &vector) {
 
         size_t element_count = tensor_info->shape().elementCount();
         const Operator *op = makeListOperator(
-            std::string() + "unpack_" + TypeInfo::get<Value>().name() + "_" +
-                std::to_string(element_count),
+            std::string() + "unpack_" + args.front().typeInfo().name(),
             "unpack", args,
             [element_count](const ArgList &args) {
               TRACTOR_PROFILER("tensor unpack nl");
@@ -127,9 +126,8 @@ Tensor<Value> pack_tensor(const Var<Value> *data, const TensorShape &shape) {
 
         size_t element_count = tensor_info->shape().elementCount();
         const Operator *op = makeListOperator(
-            std::string() + "pack_" + TypeInfo::get<Value>().name() + "_" +
-                std::to_string(element_count),
-            "pack", args,
+            std::string() + "pack_" + args.back().typeInfo().name(), "pack",
+            args,
             [element_count](const ArgList &args) {
               TRACTOR_PROFILER("tensor pack nl");
               for (size_t i = 0; i < element_count; i++) {

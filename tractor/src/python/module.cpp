@@ -170,6 +170,46 @@ static void pythonizeMain(py::module &m) {
     return std::make_shared<Program>(f);
   });
 
+  struct PyDerivatives {
+    Program prepare, forward, reverse, hessian, accumulate;
+  };
+  py::class_<PyDerivatives>(m, "Derivatives")
+      .def_readonly("prepare", &PyDerivatives::prepare)
+      .def_readonly("forward", &PyDerivatives::forward)
+      .def_readonly("reverse", &PyDerivatives::reverse)
+      .def_readonly("hessian", &PyDerivatives::hessian)
+      .def_readonly("accumulate", &PyDerivatives::accumulate);
+  m.def("derive", [](const Program &src) {
+    PyDerivatives ret;
+    buildGradients(src, ret.prepare, &ret.forward, &ret.reverse, &ret.hessian,
+                   &ret.accumulate);
+    return ret;
+  });
+
+  // m.def("derive", [](const Program &src) {
+  //   std::shared_ptr<Program> prep = std::make_shared<Program>();
+  //   std::shared_ptr<Program> fprop = std::make_shared<Program>();
+  //   std::shared_ptr<Program> bprop = std::make_shared<Program>();
+  //   std::shared_ptr<Program> hessian = std::make_shared<Program>();
+  //   std::shared_ptr<Program> accumulate = std::make_shared<Program>();
+  //   buildGradients(src, *prep, fprop.get(), bprop.get(), hessian.get(),
+  //                  accumulate.get());
+  // });
+
+  // m.def(
+  //     "derive",
+  //     [](const Program &src, Program &prep,
+  //        const std::shared_ptr<Program> &fprop,
+  //        const std::shared_ptr<Program> &bprop,
+  //        const std::shared_ptr<Program> &hessian,
+  //        const std::shared_ptr<Program> &accumulate) {
+  //       buildGradients(src, prep, fprop.get(), bprop.get(), hessian.get(),
+  //                      accumulate.get());
+  //     },
+  //     py::arg("source"), py::arg("prepare"), py::arg("forward") = nullptr,
+  //     py::arg("reverse") = nullptr, py::arg("hessian") = nullptr,
+  //     py::arg("accumulate") = nullptr);
+
   for (auto *op : Operator::all()) {
     op->pythonize(m);
   }

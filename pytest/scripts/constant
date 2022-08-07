@@ -3,10 +3,18 @@
 import tractor as tr
 import tractor.types_double as tt
 
+global_constant = tt.Scalar(1)
+global_variable = tt.Scalar(2)
+
 def f():
-    var = tt.Scalar(2)
-    tr.variable(var)
-    tr.goal(var + tt.Scalar(1) + tt.Scalar(2) + tt.Scalar(1))
+    tr.variable(global_variable)
+
+    local_constant = tt.Scalar(3)
+    local_variable = tt.Scalar(4)
+    tr.variable(local_variable)
+
+    tr.goal(global_constant + global_variable + local_constant + local_variable)
+    #tr.goal(global_variable + local_constant + local_variable)
 
 prog = tr.record(f)
 print prog

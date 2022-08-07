@@ -30,14 +30,14 @@ std::shared_ptr<Profiler> Profiler::instance() {
 std::shared_ptr<ProfilerTrack>
 Profiler::track(const std::shared_ptr<ProfilerTrack> &track) {
   if (track) {
-    TRACTOR_DEBUG_STREAM("adding profiler track " << track->name() << " "
-                                                  << track->source());
+    // TRACTOR_DEBUG_STREAM("adding profiler track " << track->name() << " "
+    //                                               << track->source());
     {
       std::unique_lock<std::mutex> lock(_mutex);
       _tracks.emplace_back(track);
     }
-    TRACTOR_DEBUG_STREAM("profiler track added, total number "
-                         << _tracks.size());
+    // TRACTOR_DEBUG_STREAM("profiler track added, total number "
+    //                      << _tracks.size());
   }
   return track;
 }

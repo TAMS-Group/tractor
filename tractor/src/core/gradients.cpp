@@ -9,6 +9,8 @@
 #include <map>
 #include <unordered_map>
 
+#include <boost/container/small_vector.hpp>
+
 namespace tractor {
 
 template <class Ports> static void packPortOffsets(Ports &&ports) {
@@ -16,6 +18,48 @@ template <class Ports> static void packPortOffsets(Ports &&ports) {
   for (auto &port : ports) {
     port.offset() = offset;
     offset += port.size();
+  }
+}
+
+struct SumInfo {
+  TypeInfo type_info;
+  boost::container::small_vector<uint64_t, 8> arguments;
+  bool initialized = false;
+  bool finalized = false;
+  uint64_t destination = 0;
+};
+
+static void buildSumTree(Allocator &alloc, SumInfo &sum_info,
+                         std::vector<Program::Instruction> &instructions) {
+  auto &type_info = sum_info.type_info;
+  if (!sum_info.finalized) {
+    if (sum_info.arguments.size() > 1) {
+      auto *add_op = Operator::find<compute, op_add>({type_info, type_info});
+      while (sum_info.arguments.size() > 1) {
+        boost::container::small_vector<uint64_t, 8> args2;
+        size_t i = 0;
+        for (; i + 1 < sum_info.arguments.size(); i += 2) {
+          uintptr_t o = alloc.alloc(type_info);
+          instructions.push_back((uintptr_t)add_op);
+          instructions.push_back(sum_info.arguments[i + 0]);
+          instructions.push_back(sum_info.arguments[i + 1]);
+          instructions.push_back(o);
+          args2.push_back(o);
+        }
+        for (; i < sum_info.arguments.size(); i += 1) {
+          args2.push_back(sum_info.arguments[i]);
+        }
+        sum_info.arguments = args2;
+      }
+    }
+    if (sum_info.arguments.size() == 1) {
+      auto *move_op = Operator::find<compute, op_move>({type_info});
+      instructions.push_back(move_op);
+      instructions.push_back(sum_info.arguments[0]);
+      instructions.push_back(sum_info.destination);
+    }
+    sum_info.finalized = true;
+    sum_info.arguments.clear();
   }
 }
 
@@ -65,6 +109,7 @@ void buildGradients(const Program &src, Program &prep, Program *_fprop,
   }
 
   if (_bprop) {
+    TRACTOR_DEBUG_STREAM("building reverse gradient program");
 
     auto &bprop = *_bprop;
     bprop.clear();
@@ -118,93 +163,117 @@ void buildGradients(const Program &src, Program &prep, Program *_fprop,
     }
 
     {
-      // size_t memory_size = bprop.memorySize();
+      TRACTOR_DEBUG_STREAM("building reverse gradient sum trees");
       Allocator alloc;
       alloc.keep(bprop);
       std::vector<Program::Instruction> instructions;
-      std::vector<Program::Instruction> sum_instructions;
-      std::unordered_set<size_t> mem_set;
+      std::unordered_map<uint64_t, SumInfo> sum_tree;
+      std::vector<uint64_t> temp_args;
       for (auto &inst : bprop.instructions()) {
         auto *op = inst.op();
-        instructions.emplace_back((uintptr_t)op);
-        sum_instructions.clear();
+        TRACTOR_DEBUG_STREAM("bprop op " << op->name());
+        temp_args.clear();
         for (size_t i = 0; i < inst.argumentCount(); i++) {
-          if (op->arg(i).isOutput() &&
-              (mem_set.find(inst.arg(i)) != mem_set.end())) {
-
-            auto alloc_a = alloc.alloc(inst.op()->arg(i).typeInfo());
-            auto alloc_b = alloc.alloc(inst.op()->arg(i).typeInfo());
-
-            {
-              auto *move_op =
-                  Operator::find<compute, op_move>({op->arg(i).typeInfo()});
-              sum_instructions.push_back((uintptr_t)move_op);
-              sum_instructions.push_back(inst.arg(i));
-
-              // sum_instructions.push_back(memory_size + op->arg(i).size());
-              sum_instructions.push_back(alloc_b);
-            }
-            {
-              auto *add_op = Operator::find<compute, op_add>(
-                  {op->arg(i).typeInfo(), op->arg(i).typeInfo()});
-              sum_instructions.push_back((uintptr_t)add_op);
-
-              // sum_instructions.push_back(memory_size + op->arg(i).size());
-              sum_instructions.push_back(alloc_b);
-
-              // sum_instructions.push_back(memory_size);
-              sum_instructions.push_back(alloc_a);
-
-              sum_instructions.push_back(inst.arg(i));
-            }
-
-            // instructions.emplace_back(memory_size);
-            instructions.emplace_back(alloc_a);
-
-            // memory_size += op->arg(i).size() * 2;
-          } else {
-            instructions.emplace_back(inst.arg(i));
+          auto type_info = op->arg(i).typeInfo();
+          TRACTOR_DEBUG_STREAM("bprop arg "
+                               << i << " " << type_info.name() << " "
+                               << (op->arg(i).isInput() ? "input" : "output"));
+          auto &sum_info = sum_tree[inst.arg(i)];
+          if (!sum_info.initialized) {
+            sum_info.type_info = type_info;
+            sum_info.destination = inst.arg(i);
+            sum_info.initialized = true;
           }
-          if (op->arg(i).isOutput()) {
-            mem_set.insert(inst.arg(i));
+          if (sum_info.type_info != type_info) {
+            throw std::runtime_error("bprop sum tree data type mismatch");
+          }
+          if (op->arg(i).isInput()) {
+            buildSumTree(alloc, sum_info, instructions);
+            temp_args.push_back(inst.arg(i));
+          } else {
+            if (sum_info.finalized) {
+              throw std::runtime_error("bprop write after read");
+            }
+            uint64_t addr = alloc.alloc(type_info);
+            temp_args.push_back(addr);
+            sum_info.arguments.push_back(addr);
           }
         }
-        for (auto &code : sum_instructions) {
-          instructions.push_back(code);
+        instructions.push_back((uintptr_t)op);
+        for (auto &arg : temp_args) {
+          instructions.push_back(arg);
         }
       }
-      // bprop.setMemorySize(memory_size);
+      for (auto &p : sum_tree) {
+        buildSumTree(alloc, p.second, instructions);
+      }
       alloc.apply(bprop);
       bprop.setInstructions(instructions.begin(), instructions.end());
     }
 
-    /*{
-      size_t const_size = 0;
-      std::unordered_set<size_t> input_set;
-      for (auto &input : bprop.inputs()) {
-        input_set.insert(input.address());
-      }
-      for (auto &inst : bprop.instructions()) {
-        auto *op = inst.op();
-        for (size_t i = 0; i < inst.argumentCount(); i++) {
-          if (inst.arg(i) >= prep.memorySize() && op->arg(i).isInput()) {
-            if (input_set.insert(inst.arg(i)).second) {
-              const_size = std::max(const_size, op->arg(i).size());
-              bprop.addConstant(
-                  Program::Constant(op->arg(i).typeInfo(), inst.arg(i), 0));
-            }
-          }
-        }
-      }
-      {
-        std::vector<uint8_t> const_data(const_size, 0);
-        bprop.setConstData(const_data);
-      }
-  }*/
+    // {
+    //   // size_t memory_size = bprop.memorySize();
+    //   Allocator alloc;
+    //   alloc.keep(bprop);
+    //   std::vector<Program::Instruction> instructions;
+    //   std::vector<Program::Instruction> sum_instructions;
+    //   std::unordered_set<size_t> mem_set;
+    //   for (auto &inst : bprop.instructions()) {
+    //     auto *op = inst.op();
+    //     instructions.emplace_back((uintptr_t)op);
+    //     sum_instructions.clear();
+    //     for (size_t i = 0; i < inst.argumentCount(); i++) {
+    //       if (op->arg(i).isOutput() &&
+    //           (mem_set.find(inst.arg(i)) != mem_set.end())) {
+    //
+    //         auto alloc_a = alloc.alloc(inst.op()->arg(i).typeInfo());
+    //         auto alloc_b = alloc.alloc(inst.op()->arg(i).typeInfo());
+    //
+    //         {
+    //           auto *move_op =
+    //               Operator::find<compute,
+    //               op_move>({op->arg(i).typeInfo()});
+    //           sum_instructions.push_back((uintptr_t)move_op);
+    //           sum_instructions.push_back(inst.arg(i));
+    //
+    //           // sum_instructions.push_back(memory_size +
+    //           op->arg(i).size()); sum_instructions.push_back(alloc_b);
+    //         }
+    //         {
+    //           auto *add_op = Operator::find<compute, op_add>(
+    //               {op->arg(i).typeInfo(), op->arg(i).typeInfo()});
+    //           sum_instructions.push_back((uintptr_t)add_op);
+    //
+    //           // sum_instructions.push_back(memory_size +
+    //           op->arg(i).size()); sum_instructions.push_back(alloc_b);
+    //
+    //           // sum_instructions.push_back(memory_size);
+    //           sum_instructions.push_back(alloc_a);
+    //
+    //           sum_instructions.push_back(inst.arg(i));
+    //         }
+    //
+    //         // instructions.emplace_back(memory_size);
+    //         instructions.emplace_back(alloc_a);
+    //
+    //         // memory_size += op->arg(i).size() * 2;
+    //       } else {
+    //         instructions.emplace_back(inst.arg(i));
+    //       }
+    //       if (op->arg(i).isOutput()) {
+    //         mem_set.insert(inst.arg(i));
+    //       }
+    //     }
+    //     for (auto &code : sum_instructions) {
+    //       instructions.push_back(code);
+    //     }
+    //   }
+    //   alloc.apply(bprop);
+    //   bprop.setInstructions(instructions.begin(), instructions.end());
+    // }
 
     {
       std::vector<Program::Instruction> instructions;
-
       std::unordered_set<size_t> input_set;
       for (auto &input : bprop.inputs()) {
         input_set.insert(input.address());
@@ -224,11 +293,9 @@ void buildGradients(const Program &src, Program &prep, Program *_fprop,
           }
         }
       }
-
       for (auto &code : bprop.code()) {
         instructions.emplace_back(code);
       }
-
       bprop.setInstructions(instructions.begin(), instructions.end());
     }
   }
@@ -314,32 +381,6 @@ void buildGradients(const Program &src, Program &prep, Program *_fprop,
       inst_index++;
     }
   }
-
-  /*
-  if (_hessian) {
-    auto &hprop = *_hessian;
-    const auto &fprop = *_fprop;
-    const auto &bprop = *_bprop;
-    hprop.clear();
-    for (auto &port : fprop.inputs()) {
-      hprop.addInput(port);
-    }
-    for (auto &port : bprop.outputs()) {
-      hprop.addOutput(port);
-    }
-    for (auto &port : bprop.constants()) {
-      hprop.addConstant(port);
-    }
-    hprop.setConstData(bprop.constData());
-    for (auto &inst : fprop.code()) {
-      hprop.addCode(inst);
-    }
-    for (auto &inst : bprop.code()) {
-      hprop.addCode(inst);
-    }
-    hprop.setMemorySize(std::max(bprop.memorySize(), fprop.memorySize()));
-  }
-  */
 
   if (_hessian) {
     auto &hprop = *_hessian;
@@ -848,8 +889,8 @@ void buildConstraints(const Program &prog, const Program &fprop,
         inst.op()->tryFindVariant<tractor::barrier_diagonal>();
 
     /*auto *op_penalty_init =
-    inst.op()->tryFindVariant<tractor::penalty_init>(); auto *op_penalty_step =
-    inst.op()->tryFindVariant<tractor::penalty_step>(); auto
+    inst.op()->tryFindVariant<tractor::penalty_init>(); auto *op_penalty_step
+    = inst.op()->tryFindVariant<tractor::penalty_step>(); auto
     *op_penalty_diagonal =
         inst.op()->tryFindVariant<tractor::penalty_diagonal>();*/
 

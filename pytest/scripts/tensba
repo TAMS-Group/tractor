@@ -16,19 +16,23 @@ print "weights", weights.value
 print "outputs", tr.neural_dense(inputs, weights).value
 
 def f():
-    #tr.parameter(inputs)
-    x = tt.Tensor([[1,2,3],[2,4,6],[3,6,9]])
     tr.variable(weights)
-    tr.goal(tr.neural_dense(x, weights) - tt.Tensor([[1,2],[2,4],[3,6]]))
+    tr.goal(tr.neural_dense(inputs, weights) - tt.Tensor([[1.01,2.1],[2,4],[3,6]]))
 
 prog = tr.record(f)
 
 print prog
 
+# solver = tt.GradientDescentSolver(tr.DefaultEngine())
+# solver.compile(prog)
+# solver.timeout = 10
+# solver.tolerance = 0.0000001
+
 solver = tt.LeastSquaresSolver(tr.DefaultEngine())
 solver.compile(prog)
-solver.timeout = 1
+#solver.timeout = 1
 solver.regularization = 0.00001
+solver.tolerance = 1e-9
 
 print "inputs", inputs.value
 print "weights", weights.value

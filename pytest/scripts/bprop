@@ -1,0 +1,41 @@
+#!/usr/bin/env python
+
+import time
+import tractor as tr
+import tractor.types_double as tt
+
+tr.logger.verbosity = 5
+
+a = tt.Scalar(1)
+def f():
+    tr.variable(a)
+    #b = a * a
+    b = a
+    tr.output(b)
+    tr.output(b)
+    tr.output(b)
+    tr.output(b)
+    tr.output(b)
+
+prog = tr.record(f)
+
+print ""
+print prog
+print ""
+
+derivatives = tr.derive(prog)
+
+print ""
+print "prepare"
+print derivatives.prepare
+print ""
+
+print ""
+print "forward"
+print derivatives.forward
+print ""
+
+print ""
+print "reverse"
+print derivatives.reverse
+print ""

@@ -75,10 +75,12 @@ add_library(${LIBNAME}
     src/core/profiler.cpp
     src/core/program.cpp
     src/core/recorder.cpp
+    src/core/simplify.cpp
     src/core/solver.cpp
     src/core/tensor.cpp
     src/core/type.cpp
     src/core/var.cpp
+    src/core/verify.cpp
     src/engines/base.cpp
     src/engines/jit.cpp
     src/engines/loop.cpp

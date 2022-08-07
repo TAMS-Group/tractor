@@ -155,8 +155,12 @@ void emitTensorOpImpl(
   tensor_op->callIndirect((void **)std::data(tensor_data));
   if (auto *rec = Recorder::instance()) {
     rec->op(tensor_op);
-    for (auto &p : tensor_data) {
-      rec->push((uintptr_t)p);
+    auto it_info = tensor_infos.begin();
+    auto it_data = tensor_data.begin();
+    for (size_t i = 0; i < argument_count; i++) {
+      rec->arg((*it_info)->type(), *it_data);
+      it_info++;
+      it_data++;
     }
   }
 }

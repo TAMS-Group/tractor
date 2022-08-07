@@ -7,6 +7,7 @@
 
 #include <cstring>
 #include <deque>
+#include <unordered_set>
 
 namespace tractor {
 
@@ -23,8 +24,10 @@ class Recorder {
   std::vector<uint8_t> _const_data;
   std::vector<uint8_t> _bound_data;
   std::deque<std::shared_ptr<const void>> _references;
-  // std::unordered_map<std::string, uintptr_t> _const_map;
   Allocator _alloc;
+  const Operator *_pending_op = nullptr;
+  std::vector<const void *> _pending_args;
+  std::unordered_set<const void *> _known_addresses;
 
   template <class T> void outputImpl(const Var<T> *p, bool bind) {
     uintptr_t temp =
@@ -51,22 +54,19 @@ public:
 
   const auto &instructions() const { return _instructions; }
 
-  void push(uintptr_t a) { _instructions.push_back(a); }
+  void arg(const TypeInfo &type, const void *a);
 
   template <class Arg> inline void arg(const Var<Arg> *arg) {
-    _instructions.push_back((uintptr_t)(const void *)arg);
+    arg(TypeInfo::get<Arg>(), (uintptr_t)(const void *)arg);
   }
 
   void op(const Operator *op);
 
+  void opIndirect(const Operator *op, size_t argc, void **argv);
+
   template <class... Args> inline void op(const Operator *o, Args *...args) {
-    //  TRACTOR_DEBUG_STREAM("record op " << op->name());
-    //  _instructions.push_back((uintptr_t)op);
-    op(o);
-    const void *pointers[] = {(const void *)args...};
-    for (size_t i = 0; i < sizeof...(args); i++) {
-      _instructions.push_back((uintptr_t)pointers[i]);
-    }
+    void *pointers[] = {(void *)args...};
+    opIndirect(o, sizeof...(Args), pointers);
   }
 
   template <class T> inline void move(const T *from, T *to) {
@@ -129,13 +129,6 @@ public:
     constant(TypeInfo::get<T>(), p);
   }
 
-  // void input(const Program::Input &input) { _inputs.push_back(input); }
-  // void output(const Program::Output &output) { _outputs.push_back(output); }
-  // void goal(const Program::Goal &goal) { _goals.push_back(goal); }
-  // void parameter(const Program::Parameter &parameter) {
-  //   _parameters.push_back(parameter);
-  // }
-
   void reference(const std::shared_ptr<const void> &ref);
 };
 
@@ -175,9 +168,5 @@ inline void recordOperation(const Operator *op, Args *...args) {
 }
 
 void callAndRecord(const Operator *op, void **args);
-
-// template <class T> void Recorder::move(const T *from, T *to) {
-//   Recorder_move_impl(this, from, to);
-// }
 
 } // namespace tractor

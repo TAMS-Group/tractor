@@ -73,25 +73,29 @@ std::ostream &operator<<(std::ostream &stream, const Program &prog) {
   // printBuffer(stream, "code", prog.code());
 
   for (auto &port : prog.inputs()) {
-    stream << "input " << (void *)port.address() << " "
-           << (void *)port.binding() << " " << port.size() << " "
-           << port.typeInfo().name() << std::endl;
+    stream << "input address:" << (void *)port.address()
+           << " offset:" << (void *)port.offset()
+           << " binding:" << (void *)port.binding() << " size:" << port.size()
+           << " type:" << port.typeInfo().name() << std::endl;
   }
 
   for (auto &port : prog.parameters()) {
-    stream << "parameter " << (void *)port.address() << " "
-           << (void *)port.offset() << " " << (void *)port.binding() << " "
-           << port.size() << " " << port.typeInfo().name() << std::endl;
+    stream << "parameter address:" << (void *)port.address()
+           << " offset:" << (void *)port.offset()
+           << " port:" << (void *)port.binding() << " binding:" << port.size()
+           << " type:" << port.typeInfo().name() << std::endl;
   }
 
   for (auto &port : prog.outputs()) {
-    stream << "output " << (void *)port.address() << " "
-           << (void *)port.offset() << " " << (void *)port.binding() << " "
-           << port.size() << " " << port.typeInfo().name() << std::endl;
+    stream << "output address:" << (void *)port.address()
+           << " offset:" << (void *)port.offset()
+           << " binding:" << (void *)port.binding() << " size:" << port.size()
+           << " type:" << port.typeInfo().name() << std::endl;
   }
 
   for (auto &goal : prog.goals()) {
-    stream << "goal " << goal.port() << " " << goal.priority() << std::endl;
+    stream << "goal port:" << goal.port() << " priority:" << goal.priority()
+           << std::endl;
   }
 
   for (auto &port : prog.constants()) {
@@ -99,7 +103,8 @@ std::ostream &operator<<(std::ostream &stream, const Program &prog) {
            << " port:" << port.size() << " offset:" << port.offset()
            << " type:" << port.typeInfo().name();
     if (port.typeInfo() == TypeInfo::get<double>()) {
-      stream << " " << *(double *)(prog.constData().data() + port.offset());
+      stream << " value:"
+             << *(double *)(prog.constData().data() + port.offset());
     }
     stream << std::endl;
   }
