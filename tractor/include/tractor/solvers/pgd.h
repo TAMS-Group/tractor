@@ -135,10 +135,10 @@ protected:
 
     /*_linear_solution.noalias() = _hgrad * _residuals;
     double f = _residuals.dot(_residuals) / _residuals.dot(_linear_solution);
-    TRACTOR_DEBUG_STREAM("f " << f);
+    TRACTOR_DEBUG("f " << f);
     _nonlinear_solution -= _residuals.head(_nonlinear_solution.size()) * f;*/
 
-    // TRACTOR_DEBUG_STREAM("residuals " << _residuals);
+    // TRACTOR_DEBUG("residuals " << _residuals);
 
     /*{
       size_t i = 0;
@@ -167,11 +167,11 @@ protected:
 
     _linear_solution.noalias() = _hgrad * _residuals;
 
-    // TRACTOR_DEBUG_STREAM("residuals " << _residuals);
-    // TRACTOR_DEBUG_STREAM("linear_solution " << _linear_solution);
+    // TRACTOR_DEBUG("residuals " << _residuals);
+    // TRACTOR_DEBUG("linear_solution " << _linear_solution);
 
     double f = _residuals.dot(_residuals) / _residuals.dot(_linear_solution);
-    // TRACTOR_DEBUG_STREAM("f " << f);
+    // TRACTOR_DEBUG("f " << f);
     if (!std::isfinite(f)) {
       return -1;
     }

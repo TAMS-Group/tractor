@@ -61,6 +61,7 @@ void Operator::invoke(const void *first, ...) const {
 Operator::Operator(const std::string &name, const std::string &label,
                    const OpMode &mode, const OpType &op, const OpGroup &group)
     : _name(name), _label(label), _op(op), _mode(mode) {
+  TRACTOR_DEBUG("new operator type " << name);
   auto *registry = OperatorRegistry::instance();
   registry->name_map[name] = this;
   auto &map = registry->group_map[group];
@@ -165,7 +166,7 @@ size_t OperatorModeMap::index(const OpMode &type) {
   auto &i = map[type];
   if (!i) {
     i = map.size();
-    // TRACTOR_DEBUG_STREAM("mode id " << type.name() << " " << i);
+    // TRACTOR_DEBUG("mode id " << type.name() << " " << i);
   }
   return i;
 }

@@ -88,7 +88,7 @@ public:
         planes.push_back(Plane<double>(dir, support(dir)));
       }
       // for (auto &p : planes) {
-      //    TRACTOR_DEBUG_STREAM("plane " << p);
+      //    TRACTOR_DEBUG("plane " << p);
       //}
 
       btAlignedObjectArray<btVector3> bt_plane_equations;
@@ -111,7 +111,7 @@ public:
       }
 
       // for (auto &p : points) {
-      //    TRACTOR_DEBUG_STREAM("point " << p);
+      //    TRACTOR_DEBUG("point " << p);
       //}
       // throw 0;
     }
@@ -124,7 +124,7 @@ public:
     for (size_t i = 0; i < hull_computer.vertices.size(); i++) {
       auto &v = hull_computer.vertices[i];
       _vertices.emplace_back(v.x(), v.y(), v.z());
-      // TRACTOR_DEBUG_STREAM("hull vertex " << _vertices.back());
+      // TRACTOR_DEBUG("hull vertex " << _vertices.back());
     }
 
     _planes.clear();
@@ -137,7 +137,7 @@ public:
       auto v2 = convertBullet(hull_computer.vertices[edge2->getTargetVertex()]);
       _planes.emplace_back(normalized(cross(v1 - v0, v2 - v0)),
                            (v0 + v1 + v2) * (1.0 / 3.0));
-      // TRACTOR_DEBUG_STREAM("hull plane " << _planes.back());
+      // TRACTOR_DEBUG("hull plane " << _planes.back());
     }
   }
 };

@@ -72,7 +72,7 @@ public:
 };
 
 void checkMemory2(const Program &program) {
-  TRACTOR_DEBUG_STREAM("memcheck2 begin");
+  TRACTOR_DEBUG("memcheck2 begin");
   MemoryChecker2 chk;
   for (auto &port : program.inputs()) {
     chk.write(port.address(), port.typeInfo());
@@ -98,14 +98,14 @@ void checkMemory2(const Program &program) {
   for (auto &port : program.outputs()) {
     chk.read(port.address(), port.typeInfo(), [&]() { return "output"; });
   }
-  TRACTOR_DEBUG_STREAM("memcheck2 passed");
+  TRACTOR_DEBUG("memcheck2 passed");
 }
 
 void checkMemory(const Program &program) {
 
-  TRACTOR_DEBUG_STREAM("checking memory");
+  TRACTOR_DEBUG("checking memory");
 
-  TRACTOR_DEBUG_STREAM("memory size " << program.memorySize());
+  TRACTOR_DEBUG("memory size " << program.memorySize());
   std::vector<uint8_t> memory;
   memory.resize(program.memorySize(), 0);
 
@@ -134,9 +134,9 @@ void checkMemory(const Program &program) {
       if (inst.op()->arg(iarg).isInput()) {
         if (!memory.at(inst.arg(iarg))) {
           for (auto &inst2 : program.instructions()) {
-            TRACTOR_DEBUG_STREAM("op " << inst2.op()->name());
+            TRACTOR_DEBUG("op " << inst2.op()->name());
             for (size_t iarg = 0; iarg < inst2.op()->argumentCount(); iarg++) {
-              TRACTOR_DEBUG_STREAM("arg " << inst2.arg(iarg) << ":"
+              TRACTOR_DEBUG("arg " << inst2.arg(iarg) << ":"
                                           << inst2.op()->arg(iarg).size());
             }
             if (&inst2 == &inst) {
@@ -144,15 +144,15 @@ void checkMemory(const Program &program) {
             }
           }
           for (auto &port : program.inputs()) {
-            TRACTOR_DEBUG_STREAM("input " << port.address() << " "
+            TRACTOR_DEBUG("input " << port.address() << " "
                                           << port.size());
           }
           for (auto &port : program.constants()) {
-            TRACTOR_DEBUG_STREAM("constant " << port.address() << " "
+            TRACTOR_DEBUG("constant " << port.address() << " "
                                              << port.size());
           }
           for (auto &port : program.parameters()) {
-            TRACTOR_DEBUG_STREAM("parameter " << port.address() << " "
+            TRACTOR_DEBUG("parameter " << port.address() << " "
                                               << port.size());
           }
           throw std::runtime_error(

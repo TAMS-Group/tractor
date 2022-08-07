@@ -73,9 +73,9 @@ namespace tractor {
 //     }
 //   }
 //
-//   TRACTOR_DEBUG_STREAM("loops");
+//   TRACTOR_DEBUG("loops");
 //   for (size_t i = 0; i < ops.size(); i++) {
-//     TRACTOR_DEBUG_STREAM( _instructions[i].iterations << " " <<
+//     TRACTOR_DEBUG( _instructions[i].iterations << " " <<
 //     ops[i]->name()
 //               );
 //   }

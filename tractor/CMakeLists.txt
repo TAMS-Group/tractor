@@ -4,10 +4,10 @@ project(tractor)
 # options...
 
 # uncomment for better runtime performance but longer build times
-#set(OPT_FLAGS -O3)
+set(OPT_FLAGS -O3)
 
 # uncomment for faster build times but lower runtime performance
-set(OPT_FLAGS -O0)
+#set(OPT_FLAGS -O0)
 
 # uncomment to enable address sanatizer
 #set(ASAN_FLAGS -fsanitize=address)

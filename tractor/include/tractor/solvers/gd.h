@@ -46,14 +46,14 @@ protected:
 
   virtual double _step() override {
 
-    // TRACTOR_DEBUG_STREAM("gd step");
+    // TRACTOR_DEBUG("gd step");
 
     {
       TRACTOR_PROFILER("nonlinear");
       _x_prog->run(_pl, _memory, _residuals);
     }
 
-    // TRACTOR_DEBUG_STREAM("loss " << _residuals.squaredNorm());
+    // TRACTOR_DEBUG("loss " << _residuals.squaredNorm());
     _loss = _residuals.squaredNorm();
 
     {
@@ -69,7 +69,7 @@ protected:
 
       //_x_hprop->run(_gl, _memory, _gl);
 
-      // TRACTOR_DEBUG_STREAM(_gl);
+      // TRACTOR_DEBUG(_gl);
       // getchar();
     }
 
@@ -118,7 +118,7 @@ protected:
         };
         Scalar line_search_result =
             minimizeTernary(f, tolerance(), Scalar(0), Scalar(1));
-        TRACTOR_DEBUG_STREAM("ls " << line_search_result);
+        TRACTOR_DEBUG("ls " << line_search_result);
         line_search_result *= Scalar(0.9);
         _velocity *= line_search_result;
         accumulate(_pl, _velocity);
@@ -126,7 +126,7 @@ protected:
       */
 
     } else {
-      TRACTOR_DEBUG_STREAM("not finite " << _gl);
+      TRACTOR_DEBUG("not finite " << _gl);
     }
 
     return _velocity.squaredNorm();

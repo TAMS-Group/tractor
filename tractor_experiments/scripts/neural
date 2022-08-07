@@ -2,8 +2,8 @@
 
 import time
 import tractor as tr
-import tractor.types_double as tt
-#import tractor.types_float as tt
+#import tractor.types_double as tt
+import tractor.types_float as tt
 import numpy as np
 import matplotlib.pyplot as plt
 import numpy.random
@@ -14,7 +14,7 @@ count = 100
 noise = 0.2
 stdev = 0.2
 activation = "tanh"
-units = 32
+units = 64
 weight_regularization = 0.010
 activity_regularization = 0.01
 bias_regularization = 0.01

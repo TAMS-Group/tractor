@@ -219,7 +219,7 @@ static void pythonizeMain(py::module &m) {
 }
 
 void initTractorPython(pybind11::module &m) {
-  TRACTOR_DEBUG_STREAM("building module");
+  TRACTOR_DEBUG("building module");
   tractor::pythonizeMain(m);
 }
 

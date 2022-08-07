@@ -52,7 +52,7 @@ const TypeInfo &TypeInfo::gradientType(const TypeInfo &type) {
 
 void TypeInfo::registerGradientType(const TypeInfo &type,
                                     const TypeInfo &gradient) {
-  TRACTOR_DEBUG_STREAM("gradient type " << type.name() << " "
+  TRACTOR_DEBUG("gradient type " << type.name() << " "
                                         << gradient.name());
   auto &m = gradientTypeMap();
   m[type] = gradient;

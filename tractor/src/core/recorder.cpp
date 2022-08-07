@@ -48,7 +48,7 @@ void Recorder::arg(const TypeInfo &type, const void *a) {
   }
   if ((((uintptr_t)a & 0x8000000000000000ul) == 0) &&
       _known_addresses.find(a) == _known_addresses.end() && arg.isInput()) {
-    TRACTOR_DEBUG_STREAM("implicit constant " << type.name() << " " << a);
+    TRACTOR_DEBUG("implicit constant " << type.name() << " " << a);
     size_t start = _const_data.size();
     _const_data.resize(start + type.size());
     std::memcpy(_const_data.data() + start, a, type.size());

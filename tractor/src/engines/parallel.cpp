@@ -44,7 +44,7 @@ namespace tractor {
 //
 //   for (size_t iw = 0; iw < _waves.size(); iw++) {
 //     auto &wave = _waves[iw];
-//     TRACTOR_DEBUG_STREAM( "wave " << iw << " " << wave.instructions.size() );
+//     TRACTOR_DEBUG( "wave " << iw << " " << wave.instructions.size() );
 //   }
 // }
 //

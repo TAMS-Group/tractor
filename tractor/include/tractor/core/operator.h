@@ -492,16 +492,16 @@ class OperatorImpl : public Operator {
     });
   }
 
-  template <class X, class T, class S> struct PythonizerFilter {
+  template <class X, class T> struct PythonizerFilter {
     static void pythonize(const Operator *op, pybind11::module &m) {}
   };
-  template <class X> struct PythonizerFilter<X, compute, double> {
+  template <class X> struct PythonizerFilter<X, compute> {
     static void pythonize(const Operator *op, pybind11::module &m) {
       pythonizeImpl(op, m, &Impl::call);
     }
   };
   virtual void pythonize(pybind11::module &m) const override {
-    PythonizerFilter<int, Mode, Scalar>::pythonize(this, m);
+    PythonizerFilter<int, Mode>::pythonize(this, m);
   }
 
 public:

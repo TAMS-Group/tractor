@@ -14,7 +14,7 @@ Solver::Solver(const std::shared_ptr<Engine> &engine) : _engine(engine) {
 }
 
 void Solver::_log(const char *label, const Program &prog) {
-  TRACTOR_DEBUG_STREAM("solver program " << label << " "
+  TRACTOR_DEBUG("solver program " << label << " "
                                          << typeid(*this).name());
 }
 
@@ -84,7 +84,7 @@ void Solver::solve() {
     double step = _step();
     _first_step = false;
     if (step < _tolerance) {
-      TRACTOR_DEBUG_STREAM("converged");
+      TRACTOR_DEBUG("converged");
       break;
     }
     if (_expired()) {

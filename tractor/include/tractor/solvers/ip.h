@@ -218,7 +218,7 @@ public:
     if (_use_barrier) {
       _x_barrier_step->run(input.head(_primal_variable_count), _memory,
                            _dualprop_temp);
-      // TRACTOR_DEBUG_STREAM("barrier step " << _dualprop_temp);
+      // TRACTOR_DEBUG("barrier step " << _dualprop_temp);
       output.head(_primal_variable_count) += _dualprop_temp * barrier_weight;
       // output.head(_primal_variable_count) +=
       //      _dualprop_temp * (barrier_weight * barrier_weight);
@@ -245,7 +245,7 @@ public:
       if (_use_barrier) {
         _x_barrier_diagonal->execute(_memory);
         _x_barrier_diagonal->outputVector(_memory, _dualprop_temp);
-        // TRACTOR_DEBUG_STREAM("barrier diagonal " << _dualprop_temp);
+        // TRACTOR_DEBUG("barrier diagonal " << _dualprop_temp);
         output.head(_primal_variable_count) += _dualprop_temp * barrier_weight;
         // output.head(_primal_variable_count) +=
         //    _dualprop_temp * (barrier_weight * barrier_weight);
@@ -253,7 +253,7 @@ public:
 
       output.head(_primal_variable_count).array() += _current_regularization;
 
-      // TRACTOR_DEBUG_STREAM(output);
+      // TRACTOR_DEBUG(output);
 
     } else {
 
@@ -287,13 +287,13 @@ public:
 
       _x_barrier_init->run(input.head(_primal_variable_count), _memory,
                            _dualres_temp);
-      // TRACTOR_DEBUG_STREAM("barrier gradient " << _dualprop_temp);
+      // TRACTOR_DEBUG("barrier gradient " << _dualprop_temp);
       // TRACTOR_LOG_VEC(_dualres_temp);
       output.head(_primal_variable_count) -= _dualres_temp * barrier_weight;
 
       _x_barrier_step->run(input.head(_primal_variable_count), _memory,
                            _dualres_temp);
-      // TRACTOR_DEBUG_STREAM("barrier step " << _dualprop_temp);
+      // TRACTOR_DEBUG("barrier step " << _dualprop_temp);
       // TRACTOR_LOG_VEC(_dualres_temp);
       output.head(_primal_variable_count) += _dualres_temp * barrier_weight;
     }
@@ -385,7 +385,7 @@ protected:
     _dual_variable_count = _primal_variable_count + _constraint_indices.size();
     TRACTOR_LOG_VAR(_dual_variable_count);
 
-    TRACTOR_DEBUG_STREAM(_p_accu);
+    TRACTOR_DEBUG(_p_accu);
     // throw 0;
   }
 
@@ -457,7 +457,7 @@ protected:
           _diag_in[i] = Scalar(1);
           _x_fprop->run(_diag_in, _memory, _diag_out);
           Scalar v = _diag_out.dot(_diag_out);
-          // TRACTOR_DEBUG_STREAM(v << " " << _objective_diagonal[i]);
+          // TRACTOR_DEBUG(v << " " << _objective_diagonal[i]);
           _objective_diagonal[i] = v;
           _diag_in[i] = Scalar(0);
         }
@@ -541,7 +541,7 @@ protected:
 
 #if 0
     for (size_t i = 0; i < _primal_variable_count; i++) {
-      TRACTOR_DEBUG_STREAM(i << " " << _p_prog.input(i).name() << " " << _qp_solution[i]
+      TRACTOR_DEBUG(i << " " << _p_prog.input(i).name() << " " << _qp_solution[i]
                 << " " << _step_solution[i] << " "
                 << (_nonlinear_solution[i] + _qp_solution[i]) << " "
                 << (_nonlinear_solution[i] + _step_solution[i]));
@@ -647,11 +647,11 @@ protected:
             for (size_t i = 0; i < _p_prog.inputs().size(); i++) {
               auto &nonlinear_input = *it_nonlinear;
               auto &linear_input = *it_linear;
-              TRACTOR_DEBUG_STREAM("nl " << i << " " << nonlinear_input.name()
+              TRACTOR_DEBUG("nl " << i << " " << nonlinear_input.name()
                                          << " ");
               for (size_t j = 0; j < nonlinear_input.size() / sizeof(Scalar);
                    j++) {
-                TRACTOR_DEBUG_STREAM(
+                TRACTOR_DEBUG(
                     " " << _nonlinear_solution[nonlinear_input.offset() /
                                                    sizeof(Scalar) +
                                                j]);
@@ -815,7 +815,7 @@ protected:
               TRACTOR_PROFILER("qp bisection search");
               line_search_result =
                   rootBisect(df, tolerance(), Scalar(0), Scalar(1));
-              TRACTOR_DEBUG_STREAM("line_search_result " << line_search_result);
+              TRACTOR_DEBUG("line_search_result " << line_search_result);
             }
           }
 
@@ -850,7 +850,7 @@ protected:
               TRACTOR_PROFILER("qp bisection search");
               line_search_result =
                   rootBisect(df, tolerance(), Scalar(0), Scalar(1));
-              TRACTOR_DEBUG_STREAM("line_search_result " << line_search_result);
+              TRACTOR_DEBUG("line_search_result " << line_search_result);
             }
           }
 
@@ -943,7 +943,7 @@ Scalar ret = Scalar((_qp_solution - _step_solution)
 
               // line_search_result = rootBisect(df, 0.01, Scalar(0),
               // Scalar(1));
-              TRACTOR_DEBUG_STREAM("line_search_result " << line_search_result);
+              TRACTOR_DEBUG("line_search_result " << line_search_result);
             }
           }
         }
@@ -996,7 +996,7 @@ Scalar ret = Scalar((_qp_solution - _step_solution)
 
     TRACTOR_CHECK_ALL_FINITE(_nonlinear_solution);
 
-    TRACTOR_DEBUG_STREAM("finished");
+    TRACTOR_DEBUG("finished");
 
     return (_nonlinear_solution - _previous_nonlinear_solution).squaredNorm();
   }

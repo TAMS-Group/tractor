@@ -6,6 +6,7 @@
 
 #include "dexenv_grasp.h"
 #include "dexenv_grasp_2.h"
+#include "dexenv_grasp_3.h"
 #include "dexenv_push.h"
 #include "dexenv_turn.h"
 
@@ -41,83 +42,26 @@ std::shared_ptr<tractor::Solver>
 makeSolver(const std::shared_ptr<tractor::Engine> &engine,
            const std::string &solvername) {
 
-  std::shared_ptr<tractor::Solver> solver;
-
   if (solvername == "sq") {
     auto s = std::make_shared<tractor::LeastSquaresSolver<ValueSingle>>(engine);
     s->_regularization = 0.1;
     s->_max_linear_iterations = 100;
-    s->_step_scaling = 0.5;
+    s->_step_scaling = 0.8;
     s->setTimeout(1, false);
     s->setTolerance(1e-9);
-    solver = s;
-  } else
+    return s;
+  }
 
-      if (solvername == "sq001") {
+  if (solvername == "sq2") {
     auto s = std::make_shared<tractor::LeastSquaresSolver<ValueSingle>>(engine);
     s->_regularization = 0.01;
     s->_max_linear_iterations = 100;
-    s->_step_scaling = 0.5;
-    s->setTimeout(1, false);
+    s->_step_scaling = 2;
     s->setTolerance(1e-9);
-    solver = s;
-  } else
-
-      if (solvername == "sq03") {
-    auto s = std::make_shared<tractor::LeastSquaresSolver<ValueSingle>>(engine);
-    s->_regularization = 0.3;
-    s->_max_linear_iterations = 100;
-    s->_step_scaling = 0.5;
-    s->setTimeout(1, false);
-    s->setTolerance(1e-9);
-    solver = s;
-  } else
-
-      if (solvername == "sq1") {
-    auto s = std::make_shared<tractor::LeastSquaresSolver<ValueSingle>>(engine);
-    s->_regularization = 1;
-    s->_max_linear_iterations = 100;
-    s->_step_scaling = 0.5;
-    s->setTimeout(1, false);
-    s->setTolerance(1e-9);
-    solver = s;
-  } else
-
-      if (solvername == "gd01") {
-    solver = std::make_shared<tractor::GradientDescentSolver<ValueSingle>>(
-        engine, 0.1, 0.0);
-    solver->setTimeout(1, true);
-  } else
-
-      if (solvername == "gd001") {
-    solver = std::make_shared<tractor::GradientDescentSolver<ValueSingle>>(
-        engine, 0.01, 0.0);
-    solver->setTimeout(1, true);
-  } else
-
-      if (solvername == "gd0001") {
-    solver = std::make_shared<tractor::GradientDescentSolver<ValueSingle>>(
-        engine, 0.001, 0.0);
-    solver->setTimeout(1, true);
-  } else
-
-      if (solvername == "gd00001") {
-    solver = std::make_shared<tractor::GradientDescentSolver<ValueSingle>>(
-        engine, 0.0001, 0.0);
-    solver->setTimeout(1, true);
-  } else
-
-      if (solvername == "gd000001") {
-    solver = std::make_shared<tractor::GradientDescentSolver<ValueSingle>>(
-        engine, 0.00001, 0.0);
-    solver->setTimeout(1, true);
-  } else
-
-  {
-    throw std::runtime_error("unknown solver " + solvername);
+    return s;
   }
 
-  return solver;
+  throw std::runtime_error("unknown solver " + solvername);
 }
 
 int main(int argc, char **argv) {
@@ -130,6 +74,7 @@ int main(int argc, char **argv) {
           std::make_shared<tractor::DexEnvTurn<ValueSingle, ValueBatch>>(),
           std::make_shared<tractor::DexEnvPush<ValueSingle, ValueBatch>>(),
           std::make_shared<tractor::DexEnvGrasp2<ValueSingle, ValueBatch>>(),
+          std::make_shared<tractor::DexEnvGrasp3<ValueSingle, ValueBatch>>(),
       };
 
   if (argc < 4) {
@@ -190,24 +135,6 @@ int main(int argc, char **argv) {
         acm2.setEntry(a, b, true);
       }
     }
-
-    acm2.setEntry("lfdistal", "rfmiddle", false);
-    acm2.setEntry("rfdistal", "lfmiddle", false);
-
-    acm2.setEntry("ffdistal", "mfdistal", false);
-    acm2.setEntry("mfdistal", "rfdistal", false);
-    acm2.setEntry("rfdistal", "lfdistal", false);
-    acm2.setEntry("lfdistal", "thdistal", false);
-
-    acm2.setEntry("ffmiddle", "mfmiddle", false);
-    acm2.setEntry("mfmiddle", "rfmiddle", false);
-    acm2.setEntry("rfmiddle", "lfmiddle", false);
-    acm2.setEntry("lfmiddle", "thmiddle", false);
-
-    acm2.setEntry("ffproximal", "mfproximal", false);
-    acm2.setEntry("mfproximal", "rfproximal", false);
-    acm2.setEntry("rfproximal", "lfproximal", false);
-    acm2.setEntry("lfproximal", "thproximal", false);
 
     acm2.setEntry("object", "ffdistal", false);
     acm2.setEntry("object", "mfdistal", false);

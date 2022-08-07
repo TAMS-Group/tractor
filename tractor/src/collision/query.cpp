@@ -65,7 +65,7 @@ void doCollisionQuery(const CollisionSupportInterface &a,
   // simplex_solver.reset();
   // int ret = btComputeGjkEpaPenetration(wa, wb, cdesc, simplex_solver, &info);
 
-  // TRACTOR_DEBUG_STREAM("normal ret " << ret);
+  // TRACTOR_DEBUG("normal ret " << ret);
 
   if (res == 0) {
 
@@ -97,14 +97,14 @@ void doCollisionQuery(const CollisionSupportInterface &a,
 
   btGjkEpaSolver3::sResults results;
   bool ok = btGjkEpaSolver3_Distance(wa, wb, guess, results);
-  // TRACTOR_DEBUG_STREAM("is_separated " << ok);
+  // TRACTOR_DEBUG("is_separated " << ok);
 
   // if (!ok || results.distance < 0) {
   if (!ok) {
     ok = btGjkEpaSolver3_Penetration(wa, wb, guess, results);
 
     if (!ok) {
-      TRACTOR_DEBUG_STREAM("collision detection failed");
+      TRACTOR_DEBUG("collision detection failed");
     }
 
     /*result.ax = NAN;
@@ -141,16 +141,16 @@ void doCollisionQuery(const CollisionSupportInterface &a,
 
     // throw std::runtime_error("collision detection failed");
 
-    TRACTOR_DEBUG_STREAM("ERROR COLLISION DETECTION FAILED !!!!");
+    TRACTOR_DEBUG("ERROR COLLISION DETECTION FAILED !!!!");
   }
 #endif
 
   /*
-  TRACTOR_DEBUG_STREAM(result.ax << " " << result.ay << " " << result.az);
-  TRACTOR_DEBUG_STREAM(result.bx << " " << result.by << " " << result.bz);
-  TRACTOR_DEBUG_STREAM(result.nx << " " << result.ny << " " << result.nz);
-  TRACTOR_DEBUG_STREAM(result.d);
-  TRACTOR_DEBUG_STREAM(ret);
+  TRACTOR_DEBUG(result.ax << " " << result.ay << " " << result.az);
+  TRACTOR_DEBUG(result.bx << " " << result.by << " " << result.bz);
+  TRACTOR_DEBUG(result.nx << " " << result.ny << " " << result.nz);
+  TRACTOR_DEBUG(result.d);
+  TRACTOR_DEBUG(ret);
   getchar();
   */
 }

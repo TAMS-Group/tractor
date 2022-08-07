@@ -107,7 +107,7 @@ namespace tractor {
 //
 // void JITEngine::JITProgramBase::_free() {
 //   if (_data) {
-//     TRACTOR_DEBUG_STREAM("free jit memory " << _data);
+//     TRACTOR_DEBUG("free jit memory " << _data);
 //     munmap(_data, _size);
 //     _data = nullptr;
 //     _size = 0;
@@ -132,24 +132,24 @@ namespace tractor {
 //     // hint = ((hint >> 16) << 16);
 //     intptr_t hint = 64 * 1024;
 //     while (!_data) {
-//       TRACTOR_DEBUG_STREAM("hint" << (void *)hint);
+//       TRACTOR_DEBUG("hint" << (void *)hint);
 //       _data = mmap((void *)hint, size, PROT_READ | PROT_WRITE | PROT_EXEC,
 //                    MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED, 0, 0);
 //       if ((int64_t)_data <= 0) {
 //         _data = nullptr;
 //       }
 //       hint += 64 * 1024;
-//       TRACTOR_DEBUG_STREAM("jit memory allocated " << _data);
+//       TRACTOR_DEBUG("jit memory allocated " << _data);
 //     }
 //   }
 //   */
 //
 //   /*
 //   intptr_t hint = 64 * 1024;
-//   TRACTOR_DEBUG_STREAM("jit memory hint" << (void *)hint);
+//   TRACTOR_DEBUG("jit memory hint" << (void *)hint);
 //   _data = mmap((void *)hint, size, PROT_READ | PROT_WRITE | PROT_EXEC,
 //                MAP_ANONYMOUS | MAP_PRIVATE, 0, 0);
-//   TRACTOR_DEBUG_STREAM("jit memory allocated " << _data);
+//   TRACTOR_DEBUG("jit memory allocated " << _data);
 //   */
 //
 //   _size = size;
@@ -182,7 +182,7 @@ namespace tractor {
 //
 // void JITEngine::ExecutableImpl::_compile(const Program &program) {
 //
-//   // TRACTOR_DEBUG_STREAM(program);
+//   // TRACTOR_DEBUG(program);
 //
 //   uintptr_t function_base = -1;
 //   size_t program_size = 0;
@@ -335,14 +335,14 @@ namespace tractor {
 // void JITEngine::ExecutableImpl::_execute(
 //     const std::shared_ptr<Memory> &memory) const {
 //
-//   // TRACTOR_DEBUG_STREAM("this " << this);
-//   // TRACTOR_DEBUG_STREAM("memory " << memory.get());
+//   // TRACTOR_DEBUG("this " << this);
+//   // TRACTOR_DEBUG("memory " << memory.get());
 //   auto &temp = *(MemoryImpl *)(memory.get());
-//   // TRACTOR_DEBUG_STREAM("temp " << &temp);
-//   // TRACTOR_DEBUG_STREAM("_memory_size " << _memory_size);
-//   // TRACTOR_DEBUG_STREAM("temp.size() " << temp.size());
+//   // TRACTOR_DEBUG("temp " << &temp);
+//   // TRACTOR_DEBUG("_memory_size " << _memory_size);
+//   // TRACTOR_DEBUG("temp.size() " << temp.size());
 //   temp.resize(std::max(temp.size(), _memory_size));
-//   // TRACTOR_DEBUG_STREAM("x" << __LINE__);
+//   // TRACTOR_DEBUG("x" << __LINE__);
 //
 //   {
 //     TRACTOR_PROFILER("load constants");
@@ -351,10 +351,10 @@ namespace tractor {
 //                   _const_data.data() + port.offset(), port.size());
 //     }
 //   }
-//   // TRACTOR_DEBUG_STREAM("x" << __LINE__);
+//   // TRACTOR_DEBUG("x" << __LINE__);
 //
-//   // TRACTOR_DEBUG_STREAM("arg base " << _arguments.data());
-//   // TRACTOR_DEBUG_STREAM("mem base " << temp.data());
+//   // TRACTOR_DEBUG("arg base " << _arguments.data());
+//   // TRACTOR_DEBUG("mem base " << temp.data());
 //
 //   {
 //     TRACTOR_PROFILER("jitfnc");

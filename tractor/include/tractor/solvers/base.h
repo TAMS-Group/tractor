@@ -25,14 +25,14 @@
 
 #if 1
 #define TRACTOR_LOG_VAR(x)                                                     \
-  TRACTOR_DEBUG_STREAM(TRACTOR_STRINGIFY_2(x) << ": " << x);
+  TRACTOR_DEBUG(TRACTOR_STRINGIFY_2(x) << ": " << x);
 #else
 #define TRACTOR_LOG_VAR(x)
 #endif
 
 #if 0
 #define TRACTOR_LOG_VEC(x)                                                     \
-  TRACTOR_DEBUG_STREAM(TRACTOR_STRINGIFY_2(x)) << x << std::endl << std::endl;
+  TRACTOR_DEBUG(TRACTOR_STRINGIFY_2(x)) << x << std::endl << std::endl;
 #else
 #define TRACTOR_LOG_VEC(x)
 #endif

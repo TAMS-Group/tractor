@@ -93,7 +93,7 @@ void removeDuplicateConstants(Program &program) {
 
 void removeUnusedConstants(Program &program) {
 
-  TRACTOR_DEBUG_STREAM("removing unused constants");
+  TRACTOR_DEBUG("removing unused constants");
 
   std::unordered_set<uintptr_t> used;
 
@@ -120,7 +120,7 @@ void removeUnusedConstants(Program &program) {
 
 void removeUnusedInstructions(Program &program) {
 
-  TRACTOR_DEBUG_STREAM("removing unused instructions");
+  TRACTOR_DEBUG("removing unused instructions");
 
   std::vector<uint8_t> used(program.memorySize(), 0);
 
@@ -164,11 +164,11 @@ void removeUnusedInstructions(Program &program) {
 
   program.setInstructions(new_insts.rbegin(), new_insts.rend());
 
-  TRACTOR_DEBUG_STREAM(instructions.size() << " ops");
-  TRACTOR_DEBUG_STREAM(used_count << " used ("
+  TRACTOR_DEBUG(instructions.size() << " ops");
+  TRACTOR_DEBUG(used_count << " used ("
                                   << used_count * 100 / instructions.size()
                                   << "%)");
-  TRACTOR_DEBUG_STREAM((instructions.size() - used_count)
+  TRACTOR_DEBUG((instructions.size() - used_count)
                        << " unused ("
                        << (instructions.size() - used_count) * 100 /
                               instructions.size()
@@ -177,7 +177,7 @@ void removeUnusedInstructions(Program &program) {
 
 void precomputeConstants(Program &program) {
 
-  TRACTOR_DEBUG_STREAM("precomputing constants");
+  TRACTOR_DEBUG("precomputing constants");
 
   AlignedStdVector<uint8_t> constness(program.memorySize(), 0);
   for (auto &port : program.constants()) {
@@ -219,7 +219,7 @@ void precomputeConstants(Program &program) {
     }
 
     if (is_const) {
-      // TRACTOR_DEBUG_STREAM("op is const " << inst.op()->name());
+      // TRACTOR_DEBUG("op is const " << inst.op()->name());
       if (inst.op()->is<op_move>()) {
         const_move_count++;
       } else {
@@ -255,18 +255,18 @@ void precomputeConstants(Program &program) {
   program.setConstData(new_const_data);
   alloc.apply(program);
 
-  TRACTOR_DEBUG_STREAM(op_count << " ops");
-  TRACTOR_DEBUG_STREAM(const_move_count << " const move ("
+  TRACTOR_DEBUG(op_count << " ops");
+  TRACTOR_DEBUG(const_move_count << " const move ("
                                         << const_move_count * 100 / op_count
                                         << "%)");
-  TRACTOR_DEBUG_STREAM(const_op_count << " const ops ("
+  TRACTOR_DEBUG(const_op_count << " const ops ("
                                       << const_op_count * 100 / op_count
                                       << "%)");
 }
 
 void skipMoves(Program &program) {
 
-  TRACTOR_DEBUG_STREAM("skipping redundant moves");
+  TRACTOR_DEBUG("skipping redundant moves");
 
   std::unordered_map<size_t, size_t> move_dst_to_src;
   std::vector<Program::Instruction> new_instructions;
@@ -311,7 +311,7 @@ void skipMoves(Program &program) {
   }
   */
   program.setInstructions(new_instructions.begin(), new_instructions.end());
-  TRACTOR_DEBUG_STREAM(rewrite_count << " moves / " << arg_count
+  TRACTOR_DEBUG(rewrite_count << " moves / " << arg_count
                                      << " args skipped");
 }
 
@@ -351,7 +351,7 @@ void defragmentMemory(Program &program) {
     }
   }
 
-  TRACTOR_DEBUG_STREAM("defragmentation reducing memory size from "
+  TRACTOR_DEBUG("defragmentation reducing memory size from "
                        << program.memorySize() << " to " << allocator.top());
 
   allocator.apply(program);

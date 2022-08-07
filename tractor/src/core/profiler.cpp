@@ -30,13 +30,13 @@ std::shared_ptr<Profiler> Profiler::instance() {
 std::shared_ptr<ProfilerTrack>
 Profiler::track(const std::shared_ptr<ProfilerTrack> &track) {
   if (track) {
-    // TRACTOR_DEBUG_STREAM("adding profiler track " << track->name() << " "
+    // TRACTOR_DEBUG("adding profiler track " << track->name() << " "
     //                                               << track->source());
     {
       std::unique_lock<std::mutex> lock(_mutex);
       _tracks.emplace_back(track);
     }
-    // TRACTOR_DEBUG_STREAM("profiler track added, total number "
+    // TRACTOR_DEBUG("profiler track added, total number "
     //                      << _tracks.size());
   }
   return track;
@@ -90,9 +90,9 @@ ProfilerThread::ProfilerThread(const std::shared_ptr<Profiler> &profiler) {
           _condition.wait_until(lock, timeout);
         }
       }
-      TRACTOR_DEBUG_STREAM("profiler swap");
+      TRACTOR_DEBUG("profiler swap");
       auto data = profiler->swap();
-      TRACTOR_DEBUG_STREAM("start printing profiler information");
+      TRACTOR_DEBUG("start printing profiler information");
       std::sort(
           data.begin(), data.end(),
           [](const std::pair<std::shared_ptr<ProfilerTrack>, ProfilerData> &a,
@@ -118,10 +118,10 @@ ProfilerThread::ProfilerThread(const std::shared_ptr<Profiler> &profiler) {
           stream << buf << "\n";
         }
       }
-      TRACTOR_INFO_STREAM(stream.str());
+      TRACTOR_INFO(stream.str());
       timeout = std::max(timeout + std::chrono::seconds(2),
                          std::chrono::steady_clock::now());
-      TRACTOR_DEBUG_STREAM("finished printing profiler information");
+      TRACTOR_DEBUG("finished printing profiler information");
     }
   });
 }

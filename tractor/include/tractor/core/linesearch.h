@@ -111,7 +111,7 @@ static Scalar rootBisect(const Function &f, const Scalar &tolerance,
   Scalar x3 = high;
   // auto f1 = f(x1);
   // auto f3 = f(x3);
-  // TRACTOR_DEBUG_STREAM("bisect " << f1 << " " << f3);
+  // TRACTOR_DEBUG("bisect " << f1 << " " << f3);
 
   while (std::abs(x3 - x1) > tolerance) {
 
@@ -184,7 +184,7 @@ static Scalar rootSecant(const Function &f, const Scalar &tolerance,
   if (!std::isfinite(f1)) {
     return low;
   }
-  // TRACTOR_DEBUG_STREAM("bisect " << f1 << " " << f3);
+  // TRACTOR_DEBUG("bisect " << f1 << " " << f3);
   // Scalar x2l = x1;
   while (std::abs(x3 - x1) > tolerance) {
     Scalar x2;
@@ -210,11 +210,11 @@ static Scalar rootSecant(const Function &f, const Scalar &tolerance,
     if ((f2 >= 0 && f3 <= 0) || (f2 <= 0 && f3 >= 0)) {
       x1 = x2;
       f1 = f2;
-      // TRACTOR_DEBUG_STREAM("a");
+      // TRACTOR_DEBUG("a");
     } else {
       x3 = x2;
       f3 = f2;
-      // TRACTOR_DEBUG_STREAM("b");
+      // TRACTOR_DEBUG("b");
     }
   }
   Scalar x = (x1 + x3) * Scalar(0.5);

@@ -58,37 +58,6 @@ public:
   }
 };
 
-/*
-class RobotStatePublisher {
-  ros::NodeHandle node_handle;
-  ros::Publisher joint_state_pub =
-      node_handle.advertise<sensor_msgs::JointState>("/ik_test/joint_state",
-                                                     10);
-  ros::Publisher robot_state_pub =
-      node_handle.advertise<moveit_msgs::DisplayRobotState>(
-          "/ik_test/display_robot_state", 10);
-
-public:
-  template <class Geometry>
-  void publish(const moveit::core::RobotModelConstPtr &robot_model,
-               const tractor::RobotState<Geometry> &state) {
-    robot_state::RobotState robot_state(robot_model);
-    state.toMoveIt(robot_state);
-    robot_state.update();
-    {
-      sensor_msgs::JointState msg;
-      moveit::core::robotStateToJointStateMsg(robot_state, msg);
-      joint_state_pub.publish(msg);
-    }
-    {
-      moveit_msgs::DisplayRobotState msg;
-      moveit::core::robotStateToRobotStateMsg(robot_state, msg.state);
-      robot_state_pub.publish(msg);
-    }
-  }
-};
-*/
-
 class RobotTrajectoryPublisher {
   ros::NodeHandle node_handle;
   ros::Publisher trajectory_pub =
@@ -183,7 +152,6 @@ public:
           if (feedback->marker_name == name &&
               feedback->event_type ==
                   visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE) {
-            // ROS_INFO_STREAM("goal pose update " << feedback->marker_name);
             Eigen::Affine3d pose;
             tf::poseMsgToEigen(feedback->pose, pose);
             std::lock_guard<std::mutex> lock(data->_mutex);
@@ -296,13 +264,10 @@ template <class Geometry> class TrajectoryOptimization {
   std::shared_ptr<tractor::RobotModel<Geometry>> _robot_model;
   tractor::RobotTrajectory<Geometry> _trajectory;
   tractor::AlignedStdVector<std::shared_ptr<MotionGoal<Geometry>>> _goals;
-  // typename Geometry::Scalar _gate = typename Geometry::Scalar(1);
   std::vector<size_t> _joint_indices;
   size_t _fixed_frames = 0;
 
 public:
-  // auto &gate() const { return _gate; }
-  // auto &gate() { return _gate; }
   auto &robotModel() const { return _robot_model; }
   auto &fixedFrames() const { return _fixed_frames; }
   auto &jointIndices() const { return _joint_indices; }

@@ -44,7 +44,7 @@ const Operator *createTensorOpVariant(const Operator *element_op,
                                       const TensorShape &shape) {
 
   if (!element_op) {
-    TRACTOR_DEBUG_STREAM("op not found");
+    TRACTOR_DEBUG("op not found");
     return nullptr;
   }
 
@@ -133,7 +133,7 @@ void emitTensorOpImpl(
     const std::initializer_list<const TensorInfo *> &tensor_infos,
     const std::initializer_list<void *> &tensor_data) {
 
-  // TRACTOR_DEBUG_STREAM("emit tensor op impl");
+  // TRACTOR_DEBUG("emit tensor op impl");
 
   if (tensor_infos.size() == 0) {
     return;
@@ -180,7 +180,7 @@ std::ostream &operator<<(std::ostream &s, const TensorShape &v) {
 TensorOperators::TensorOperators(const TypeInfo &element_type,
                                  const TypeInfo &tensor_type,
                                  const TensorShape &tensor_shape) {
-  TRACTOR_DEBUG_STREAM("create tensor operators " << tensor_type.name());
+  TRACTOR_DEBUG("create tensor operators " << tensor_type.name());
   _move = makeTensorOp(Operator::find<compute, op_move>({element_type}),
                        tensor_shape);
   _zero = makeTensorOp(Operator::find<compute, op_zero>({element_type}),
@@ -193,7 +193,7 @@ TensorOperators::TensorOperators(const TypeInfo &element_type,
 TensorInfo::TensorInfo(const std::string &name, const TypeInfo &element_type,
                        const TensorShape &shape)
     : _name(name) {
-  TRACTOR_DEBUG_STREAM("create tensor info " << name);
+  TRACTOR_DEBUG("create tensor info " << name);
   _type = TypeInfo::make(_name, element_type.size() * shape.elementCount(),
                          element_type.alignment());
   _shape = shape;

@@ -129,8 +129,7 @@ public:
     // TRACTOR_CHECK_TENSOR_DIMENSIONS("DenseLayer", input, 1);
 
     if (!_initialized) {
-      TRACTOR_DEBUG_STREAM("dense layer build " << input.shape() << " x "
-                                                << _units);
+      TRACTOR_DEBUG("dense layer build " << input.shape() << " x " << _units);
 
       _weights =
           Tensor<WeightScalar>(TensorShape(input.shape().last(), _units));
@@ -138,39 +137,39 @@ public:
       variable(_weights);
 
       if (_use_bias) {
-        TRACTOR_DEBUG_STREAM("dense layer create bias");
+        TRACTOR_DEBUG("dense layer create bias");
         _bias = Tensor<Scalar>(TensorShape(_units));
         _randomizeWeights(_bias, _stdev);
         variable(_bias);
       }
 
       if (_weight_regularization > 0) {
-        TRACTOR_DEBUG_STREAM("dense layer weight regularization "
-                             << _weight_regularization);
+        TRACTOR_DEBUG("dense layer weight regularization "
+                      << _weight_regularization);
         goal(_weights * make_tensor(_weights.shape(), _weight_regularization));
       }
 
       if (_use_bias && _bias_regularization > 0) {
-        TRACTOR_DEBUG_STREAM("dense layer bias regularization "
-                             << _bias_regularization);
+        TRACTOR_DEBUG("dense layer bias regularization "
+                      << _bias_regularization);
         auto reg_tens =
             make_tensor(_bias.shape(), Scalar(_bias_regularization));
-        TRACTOR_DEBUG_STREAM("bias regularization " << _bias.shape() << " "
-                                                    << reg_tens.shape());
+        TRACTOR_DEBUG("bias regularization " << _bias.shape() << " "
+                                             << reg_tens.shape());
         goal(_bias * reg_tens);
       }
     }
 
-    TRACTOR_DEBUG_STREAM("dense layer emit dense op");
+    TRACTOR_DEBUG("dense layer emit dense op");
     Tensor<Scalar> activity = neural_dense(input, _weights);
 
     if (_use_bias) {
-      TRACTOR_DEBUG_STREAM("dense layer apply bias");
+      TRACTOR_DEBUG("dense layer apply bias");
       activity = neural_bias(activity, _bias);
     }
 
     if (_activity_regularization > 0) {
-      TRACTOR_DEBUG_STREAM("dense layer apply activity regularization");
+      TRACTOR_DEBUG("dense layer apply activity regularization");
       goal(activity *
            make_tensor(activity.shape(), Scalar(_activity_regularization)));
     }
@@ -195,9 +194,9 @@ public:
   ActivationLayer(const ActivationType &activation) : _activation(activation) {}
   virtual Tensor<Scalar> evaluate(const std::vector<Tensor<Scalar>> &inputs,
                                   const LayerMode &mode) override {
-    // TRACTOR_DEBUG_STREAM("activation layer begin");
+    // TRACTOR_DEBUG("activation layer begin");
     auto ret = applyActivation(inputs.at(0), _activation);
-    // TRACTOR_DEBUG_STREAM("activation layer end");
+    // TRACTOR_DEBUG("activation layer end");
     return ret;
   }
 };
@@ -227,7 +226,7 @@ public:
     if (mode.training) {
       activations = add_random_normal(
           activations,
-          make_tensor(activations.shape(), Scalar(_standard_deviation)));
+          make_tensor(activations.shape(), WeightScalar(_standard_deviation)));
     }
     return activations;
   }

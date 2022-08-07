@@ -26,7 +26,7 @@ template <class Functor> struct PointerOp : Operator {
             const OpMode &mode, const OpType &op, const OpGroup &group,
             const std::vector<Operator::Argument> &args, const Functor &functor)
       : Operator(name, label, mode, op, group), _functor(functor) {
-    TRACTOR_DEBUG_STREAM("make op " << name);
+    TRACTOR_DEBUG("make op " << name);
     _arguments = args;
     __init(&Functor::operator());
     _functions.context.push_back((uintptr_t)this);

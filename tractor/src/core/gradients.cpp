@@ -86,7 +86,7 @@ void buildGradients(const Program &src, Program &prep, Program *_fprop,
     for (auto &inst : src.instructions()) {
       auto *prep_op = inst.op()->tryFindVariant<prepare>();
       if (prep_op) {
-        // TRACTOR_DEBUG_STREAM(prep_op->name());
+        // TRACTOR_DEBUG(prep_op->name());
         prep_index.push_back(prep_insts.size());
         prep_insts.emplace_back((uintptr_t)prep_op);
         for (size_t i = 0; i < inst.argumentCount(); i++) {
@@ -109,7 +109,7 @@ void buildGradients(const Program &src, Program &prep, Program *_fprop,
   }
 
   if (_bprop) {
-    TRACTOR_DEBUG_STREAM("building reverse gradient program");
+    TRACTOR_DEBUG("building reverse gradient program");
 
     auto &bprop = *_bprop;
     bprop.clear();
@@ -163,7 +163,7 @@ void buildGradients(const Program &src, Program &prep, Program *_fprop,
     }
 
     {
-      TRACTOR_DEBUG_STREAM("building reverse gradient sum trees");
+      TRACTOR_DEBUG("building reverse gradient sum trees");
       Allocator alloc;
       alloc.keep(bprop);
       std::vector<Program::Instruction> instructions;
@@ -171,11 +171,11 @@ void buildGradients(const Program &src, Program &prep, Program *_fprop,
       std::vector<uint64_t> temp_args;
       for (auto &inst : bprop.instructions()) {
         auto *op = inst.op();
-        TRACTOR_DEBUG_STREAM("bprop op " << op->name());
+        TRACTOR_DEBUG("bprop op " << op->name());
         temp_args.clear();
         for (size_t i = 0; i < inst.argumentCount(); i++) {
           auto type_info = op->arg(i).typeInfo();
-          TRACTOR_DEBUG_STREAM("bprop arg "
+          TRACTOR_DEBUG("bprop arg "
                                << i << " " << type_info.name() << " "
                                << (op->arg(i).isInput() ? "input" : "output"));
           auto &sum_info = sum_tree[inst.arg(i)];

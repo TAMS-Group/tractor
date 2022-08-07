@@ -29,7 +29,7 @@ void printPorts(std::ostream &stream, const char *label, const T &data) {
 }
 
 void Program::updateMemorySize(size_t s) {
-  TRACTOR_DEBUG_STREAM("update memory size " << s);
+  TRACTOR_DEBUG("update memory size " << s);
   _memory_size = s;
 }
 
@@ -54,7 +54,7 @@ void Program::record(const std::function<void()> &function) {
   // try {
   function();
   // } catch (const std::exception &ex) {
-  //   TRACTOR_DEBUG_STREAM(ex.what());
+  //   TRACTOR_DEBUG(ex.what());
   //   throw;
   // }
   if (Recorder::instance() != &rec) {

@@ -238,6 +238,46 @@ Display:
       Visible: false
       id: 77670
       type: AxesDisplay
+    - CellCount: 10
+      CellSize: 0,100000
+      Color:
+        A: 1,000000
+        B: 0,500000
+        G: 0,500000
+        R: 0,500000
+      Frame: ""
+      LineWidth: 0,002908
+      MaterialOverride:
+        Color: false
+        Material:
+          Color:
+            B: 0,800000
+            G: 0,800000
+            R: 0,800000
+          Metallic: 0,000000
+          Normals: ""
+          Opacity: 1,000000
+          Roughness: 0,400000
+          Texture: ""
+          Unlit: false
+          id: 77879
+        Normals: false
+        Parameters: false
+        Texture: false
+        id: 77878
+      Name: GridDisplay1
+      Transform:
+        Orientation:
+          Pitch: 0,000000
+          Roll: 90,000000
+          Yaw: 0,000000
+        Position:
+          X: 0,000000
+          Y: 0,000000
+          Z: 0,000000
+      Visible: true
+      id: 77877
+      type: GridDisplay
   Environment:
     AmbientLighting: 1,000000
     BackgroundBrightness: 3,000000
@@ -278,13 +318,13 @@ Window:
   FieldOfView: 45,000000
   Name: Window
   ViewPosition:
-    X: 0,423569
-    Y: 0,319767
-    Z: 0,188711
+    X: 0,155211
+    Y: 0,340347
+    Z: 0,124044
   ViewTarget:
-    X: -0,040407
-    Y: 0,009747
-    Z: 0,089614
+    X: -0,017332
+    Y: -0,017374
+    Z: 0,070487
   id: 77426
   type: SceneWindow
 id: 6

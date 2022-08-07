@@ -27,21 +27,6 @@ void doCollisionQuery(const CollisionSupportInterface &a,
                       const CollisionSupportInterface &b,
                       CollisionResult &result);
 
-// template <class Scalar> struct BarrierSolver {
-//   template <class Matrix, class Input, class Output>
-//   static void solve(const Matrix &matrix, const Input &input, Output &output)
-//   {
-//     throw std::runtime_error("nyi");
-//   }
-// };
-// template <> struct BarrierSolver<double> {
-//   template <class Matrix, class Input, class Output>
-//   static void solve(const Matrix &matrix, const Input &input, Output &output)
-//   {
-//     output = matrix.colPivHouseholderQr().solve(input);
-//   }
-// };
-
 template <class Scalar>
 class CollisionShapeSupport
     : public tractor::internal::CollisionSupportInterface {
@@ -83,22 +68,9 @@ public:
   PointSupport(const Vector3<Scalar> &point) : _point(point) {}
   virtual void support(double dx, double dy, double dz, double &px, double &py,
                        double &pz) const override {
-
     px = double(_point.x());
     py = double(_point.y());
     pz = double(_point.z());
-
-    // double r = 1e-3;
-    // px = double(_point.x() + dx * r);
-    // py = double(_point.y() + dy * r);
-    // pz = double(_point.z() + dz * r);
-
-    /*
-    auto p = _point + normalized(Vector3<Scalar>(dx, dy, dz)) * Scalar(1e-3);
-    px = double(p.x());
-    py = double(p.y());
-    pz = double(p.z());
-    */
   }
   virtual void center(double &px, double &py, double &pz) const override {
     px = double(_point.x());
@@ -108,87 +80,5 @@ public:
 };
 
 } // namespace internal
-
-// template <class Scalar> class ShapeCollisionPair {
-//   bool _initialized = false;
-//   std::shared_ptr<const CollisionShape<Scalar>> _shape_a, _shape_b;
-//   Vector3<Scalar> _point_a, _point_b, _normal;
-//   Scalar _distance;
-//   Plane<Scalar> _barrier;
-//   tractor::internal::CollisionResult _collision_result;
-//
-// public:
-//   ShapeCollisionPair() {}
-//   ShapeCollisionPair(
-//       const std::shared_ptr<const CollisionShape<Scalar>> &shape_a,
-//       const std::shared_ptr<const CollisionShape<Scalar>> &shape_b)
-//       : _shape_a(shape_a), _shape_b(shape_b), _initialized(true) {}
-//   bool initialized() const { return _initialized; }
-//   auto &shapeA() const { return _shape_a; }
-//   auto &shapeB() const { return _shape_b; }
-//   void update(const Pose<Scalar> &pose_a, const Pose<Scalar> &pose_b) {
-//     auto a = tractor::internal::CollisionShapeSupport<Scalar>(pose_a,
-//                                                               _shape_a.get());
-//     auto b = tractor::internal::CollisionShapeSupport<Scalar>(pose_b,
-//                                                               _shape_b.get());
-//     auto &r = _collision_result;
-//     tractor::internal::doCollisionQuery(a, b, r);
-//     _point_a = Vector3<Scalar>(Scalar(r.ax), Scalar(r.ay), Scalar(r.az));
-//     _point_b = Vector3<Scalar>(Scalar(r.bx), Scalar(r.by), Scalar(r.bz));
-//     _normal =
-//         normalized(Vector3<Scalar>(Scalar(r.nx), Scalar(r.ny),
-//         Scalar(r.nz)));
-//     _distance = Scalar(r.d);
-//   }
-//   inline auto &pointA() const { return _point_a; }
-//   inline auto &pointB() const { return _point_b; }
-//   inline auto &normal() const { return _normal; }
-//   inline auto &pointA() { return _point_a; }
-//   inline auto &pointB() { return _point_b; }
-//   inline auto &normal() { return _normal; }
-//   inline auto &distance() const { return _distance; }
-//   inline auto plane() const {
-//     Plane<Scalar> plane;
-//     plane.normal() = _normal;
-//     plane.offset() = -dot(_normal, (_point_a + _point_b) * Scalar(0.5));
-//     return plane;
-//   }
-//   inline auto center() const { return (_point_a + _point_b) * Scalar(0.5); }
-//   auto &barrier() const { return _barrier; }
-//   auto &barrier() { return _barrier; }
-// };
-
-// template <class Scalar> class LinkCollisionPair {
-//   std::shared_ptr<const CollisionLink<Scalar>> _link_a, _link_b;
-//   AlignedStdVector<ShapeCollisionPair<Scalar>> _elements;
-//
-// public:
-//   LinkCollisionPair() {}
-//   LinkCollisionPair(const std::shared_ptr<const CollisionLink<Scalar>>
-//   &link_a,
-//                     const std::shared_ptr<const CollisionLink<Scalar>>
-//                     &link_b)
-//       : _link_a(link_a), _link_b(link_b) {
-//     for (auto &shape_a : link_a->shapes()) {
-//       for (auto &shape_b : link_b->shapes()) {
-//         _elements.emplace_back(shape_a, shape_b);
-//       }
-//     }
-//   }
-//   void update(const Pose<Scalar> &pose_a, const Pose<Scalar> &pose_b) {
-//     for (auto &element : _elements) {
-//       element.update(pose_a, pose_b);
-//     }
-//   }
-//   void optimize(const Pose<Scalar> &pose_a, const Pose<Scalar> &pose_b) {
-//     for (auto &element : _elements) {
-//       element.optimize(pose_a, pose_b);
-//     }
-//   }
-//   inline auto &elements() const { return _elements; }
-//   inline auto &elements() { return _elements; }
-//   inline auto &linkA() const { return _link_a; }
-//   inline auto &linkB() const { return _link_b; }
-// };
 
 } // namespace tractor

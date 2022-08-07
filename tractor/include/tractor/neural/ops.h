@@ -37,7 +37,7 @@ Tensor<Activation> neural_bias(const Tensor<Activation> &inputs,
             Operator::Argument::makeOutput(input_info->type()),
         };
         for (auto &a : args) {
-          TRACTOR_DEBUG_STREAM("tensor mul arg " << a.typeInfo().name());
+          TRACTOR_DEBUG("tensor mul arg " << a.typeInfo().name());
         }
 
         std::string base_name = "neural_bias";
@@ -166,7 +166,7 @@ Tensor<Activation> neural_dense(const Tensor<Activation> &inputs,
             Operator::Argument::makeOutput(output_info->type()),
         };
         for (auto &a : args) {
-          TRACTOR_DEBUG_STREAM("tensor mul arg " << a.typeInfo().name());
+          TRACTOR_DEBUG("tensor mul arg " << a.typeInfo().name());
         }
 
         std::string base_name = "neural_dense";
