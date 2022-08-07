@@ -111,11 +111,13 @@ struct RobotInfo {
   size_t _variable_count = 0;
   RobotJointMap _joints;
   RobotLinkMap _links;
+  RobotIndexMap _variables;
 
 public:
   RobotInfo(const moveit::core::RobotModel &robot_model);
   const RobotJointMap &joints() const { return _joints; }
   const RobotLinkMap &links() const { return _links; }
+  auto &variables() const { return _variables; }
   double variableCount() const { return _variable_count; }
 };
 

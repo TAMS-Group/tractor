@@ -18,6 +18,9 @@
     <build_depend>moveit_core</build_depend>
     <run_depend>moveit_core</run_depend>
 
+    <build_depend>moveit_ros_planning</build_depend>
+    <run_depend>moveit_ros_planning</run_depend>
+
     <build_depend>eigen</build_depend>
     <run_depend>eigen</run_depend>
 

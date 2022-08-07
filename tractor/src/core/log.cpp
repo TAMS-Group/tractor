@@ -44,7 +44,7 @@ void logEndLine(std::ostream &s) {
 
 volatile int &refLogVerbosity() {
   static volatile int g_log_verbosity = []() {
-    int v = 2;
+    int v = (int)LogLevel::Info;
     if (auto *s = getenv("TRACTOR_VERBOSITY")) {
       v = std::atoi(s);
     }

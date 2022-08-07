@@ -3,6 +3,7 @@
 #include <tractor/python/common.h>
 #include <tractor/python/geometry.h>
 #include <tractor/python/neural.h>
+#include <tractor/python/robot.h>
 #include <tractor/python/scalar.h>
 #include <tractor/python/solvers.h>
 #include <tractor/python/tensor.h>
@@ -27,6 +28,7 @@ static void pythonizeTemplates(py::module &main_module, const char *name) {
   pythonizeTensor<Scalar>(main_module, type_module);
   pythonizeSolvers<Scalar>(main_module, type_module);
   pythonizeNeural<Scalar>(main_module, type_module);
+  pythonizeRobot<Scalar>(main_module, type_module);
 }
 
 static void pythonizeMain(py::module &m) {
@@ -170,6 +172,19 @@ static void pythonizeMain(py::module &m) {
     return std::make_shared<Program>(f);
   });
 
+  m.def("init_ros", [](const std::string &name) {
+    TRACTOR_DEBUG("init_ros " << name);
+    auto args =
+        py::module::import("sys").attr("argv").cast<std::vector<std::string>>();
+    std::vector<char *> argv;
+    for (auto &a : args) {
+      TRACTOR_DEBUG("arg " << a);
+      argv.push_back((char *)a.c_str());
+    }
+    int argc = args.size();
+    ros::init(argc, argv.data(), name);
+  });
+
   struct PyDerivatives {
     Program prepare, forward, reverse, hessian, accumulate;
   };
@@ -185,30 +200,6 @@ static void pythonizeMain(py::module &m) {
                    &ret.accumulate);
     return ret;
   });
-
-  // m.def("derive", [](const Program &src) {
-  //   std::shared_ptr<Program> prep = std::make_shared<Program>();
-  //   std::shared_ptr<Program> fprop = std::make_shared<Program>();
-  //   std::shared_ptr<Program> bprop = std::make_shared<Program>();
-  //   std::shared_ptr<Program> hessian = std::make_shared<Program>();
-  //   std::shared_ptr<Program> accumulate = std::make_shared<Program>();
-  //   buildGradients(src, *prep, fprop.get(), bprop.get(), hessian.get(),
-  //                  accumulate.get());
-  // });
-
-  // m.def(
-  //     "derive",
-  //     [](const Program &src, Program &prep,
-  //        const std::shared_ptr<Program> &fprop,
-  //        const std::shared_ptr<Program> &bprop,
-  //        const std::shared_ptr<Program> &hessian,
-  //        const std::shared_ptr<Program> &accumulate) {
-  //       buildGradients(src, prep, fprop.get(), bprop.get(), hessian.get(),
-  //                      accumulate.get());
-  //     },
-  //     py::arg("source"), py::arg("prepare"), py::arg("forward") = nullptr,
-  //     py::arg("reverse") = nullptr, py::arg("hessian") = nullptr,
-  //     py::arg("accumulate") = nullptr);
 
   for (auto *op : Operator::all()) {
     op->pythonize(m);

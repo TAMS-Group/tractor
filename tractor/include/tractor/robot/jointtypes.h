@@ -342,48 +342,30 @@ template <class Base> class JointVariant {
 
 public:
   JointVariant() {}
+
+  const std::shared_ptr<Base> &pointer() { return _instance; }
+
   template <class T> explicit JointVariant(const T &value) {
-
-    // TRACTOR_DEBUG(__LINE__ << " " << typeid(T).name());
-
-    //_instance = std::make_shared<T>(value);
-    //_instance = std::shared_ptr<Base>(new T(value));
-    //_instance = aligned_make_shared<T>(value);
-
     _instance = std::allocate_shared<T, AlignedStdAlloc<T>, const T &>(
         AlignedStdAlloc<T>(), value);
-
-    // TRACTOR_DEBUG(__LINE__ << " " << typeid(T).name());
-
     _clone = [](const std::shared_ptr<Base> &instance) {
-      // TRACTOR_DEBUG(__LINE__ << " " << typeid(T).name());
-
-      // return std::shared_ptr<Base>(
-      //  std::make_shared<T>(*std::dynamic_pointer_cast<T>(instance)));
-
-      // auto ret =
-      //      std::shared_ptr<Base>(new
-      //      T(*std::dynamic_pointer_cast<T>(instance)));
-
       std::shared_ptr<Base> ret =
           std::allocate_shared<T, AlignedStdAlloc<T>, const T &>(
               AlignedStdAlloc<T>(), *std::dynamic_pointer_cast<T>(instance));
-
-      // auto ret = std::shared_ptr<Base>(
-      //      aligned_make_shared<T>(*std::dynamic_pointer_cast<T>(instance)));
-
-      // TRACTOR_DEBUG(__LINE__ << " " << typeid(T).name());
       return ret;
     };
-
-    // TRACTOR_DEBUG(__LINE__ << " " << typeid(T).name());
   }
+
   void assign(const JointVariant &other) {
     if (other._instance) {
       _instance = other._clone(other._instance);
       _clone = other._clone;
+    } else {
+      _instance = nullptr;
+      _clone = nullptr;
     }
   }
+
   JointVariant(const JointVariant &other) { assign(other); }
   JointVariant &operator=(const JointVariant &other) {
     assign(other);

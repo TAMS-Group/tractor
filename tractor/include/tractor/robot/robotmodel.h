@@ -153,6 +153,8 @@ public:
   }
 
   const std::shared_ptr<const RobotInfo> &info() const { return _robot_info; }
+
+  size_t variableCount() const { return _robot_info->variableCount(); }
 };
 
 } // namespace tractor

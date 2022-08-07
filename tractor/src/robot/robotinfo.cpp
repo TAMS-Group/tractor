@@ -71,6 +71,7 @@ RobotJointMap::RobotJointMap(const moveit::core::RobotModel &robot_model)
 
 RobotInfo::RobotInfo(const moveit::core::RobotModel &robot_model)
     : _joints(robot_model), _links(robot_model.getLinkModelNames()),
-      _variable_count(robot_model.getVariableCount()) {}
+      _variable_count(robot_model.getVariableCount()),
+      _variables(robot_model.getVariableNames()) {}
 
 } // namespace tractor

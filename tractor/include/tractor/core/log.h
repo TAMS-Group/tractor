@@ -8,12 +8,12 @@
 namespace tractor {
 
 enum class LogLevel : int {
-  Debug = 1,
-  Info = 2,
-  Success = 3,
-  Warn = 4,
-  Error = 5,
-  Fatal = 6,
+  Debug = 6,
+  Info = 5,
+  Success = 4,
+  Warn = 3,
+  Error = 2,
+  Fatal = 1,
 };
 
 void setLogVerbosity(int verbosity);
