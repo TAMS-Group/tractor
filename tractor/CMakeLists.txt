@@ -114,6 +114,7 @@ add_library(${LIBNAME}
     src/python/geometry.cpp
     src/python/module.cpp
     src/python/neural.cpp
+    src/python/program.cpp
     src/python/robot.cpp
     src/python/ros.cpp
     src/python/scalar.cpp

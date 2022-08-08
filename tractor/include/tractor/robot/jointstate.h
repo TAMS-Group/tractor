@@ -18,17 +18,23 @@ namespace tractor {
 template <class Geometry> class RobotModel;
 
 template <class Geometry> class JointState {
+  std::shared_ptr<const RobotModel<Geometry>> _model;
   std::shared_ptr<const RobotInfo> _robot_info;
   AlignedStdVector<JointVariant<JointStateBase<Geometry>>> _joint_states;
 
 public:
-  void init(const RobotModel<Geometry> &robot_model) {
-    _robot_info = robot_model.info();
-    _joint_states = robot_model.defaultJointStates();
+  void init(const std::shared_ptr<const RobotModel<Geometry>> &robot_model) {
+    _model = robot_model;
+    _robot_info = robot_model->info();
+    _joint_states = robot_model->defaultJointStates();
   }
 
   JointState() {}
-  JointState(const RobotModel<Geometry> &robot_model) { init(robot_model); }
+  JointState(const std::shared_ptr<const RobotModel<Geometry>> &robot_model) {
+    init(robot_model);
+  }
+
+  auto &model() const { return _model; }
 
   size_t size() const { return _joint_states.size(); }
 
@@ -37,6 +43,10 @@ public:
 
   auto begin() { return _joint_states.begin(); }
   auto end() { return _joint_states.end(); }
+
+  auto &pointer(size_t joint_index) {
+    return _joint_states.at(joint_index).pointer();
+  }
 
   const JointStateBase<Geometry> &joint(size_t joint_index) const {
     return *_joint_states.at(joint_index);

@@ -5,23 +5,26 @@ import tractor as tr
 import tractor.types_double as tt
 import math
 import copy
+import numpy as np
 
 print tr.neural_bias(tt.Tensor([1,2,3]), tt.Tensor([.1,.2,.3])).value
 print tr.neural_bias(tt.Tensor([[1,2,3],[2,3,4]]), tt.Tensor([.1,.2,.3])).value
-exit(0)
+#exit(0)
 
 inputs = tt.Tensor([1,2,3])
 weights = tt.Tensor([[1,2],[2,3],[3,4]])
 
 print "inputs", inputs.value
 print "weights", weights.value
-print "outputs", tr.neural_dense(inputs, weights).value
+print "outputs", tr.matmul(inputs, weights).value
+
+print "np", np.matmul(inputs.value, weights.value)
 
 def f():
     #tr.parameter(inputs)
     x = tt.Tensor(inputs.value)
     tr.variable(weights)
-    tr.goal(tr.neural_dense(x, weights) - tt.Tensor([1,5]))
+    tr.goal(tr.matmul(x, weights) - tt.Tensor([1,5]))
 
 prog = tr.record(f)
 
@@ -34,11 +37,11 @@ solver.regularization = 0.01
 
 print "inputs", inputs.value
 print "weights", weights.value
-print "outputs", tr.neural_dense(inputs, weights).value
+print "outputs", tr.matmul(inputs, weights).value
 
 #solver.parameterize()
 solver.solve()
 
 print "inputs", inputs.value
 print "weights", weights.value
-print "outputs", tr.neural_dense(inputs, weights).value
+print "outputs", tr.matmul(inputs, weights).value

@@ -161,7 +161,7 @@ public:
     }
 
     TRACTOR_DEBUG("dense layer emit dense op");
-    Tensor<Scalar> activity = neural_dense(input, _weights);
+    Tensor<Scalar> activity = matmul(input, _weights);
 
     if (_use_bias) {
       TRACTOR_DEBUG("dense layer apply bias");
@@ -194,10 +194,7 @@ public:
   ActivationLayer(const ActivationType &activation) : _activation(activation) {}
   virtual Tensor<Scalar> evaluate(const std::vector<Tensor<Scalar>> &inputs,
                                   const LayerMode &mode) override {
-    // TRACTOR_DEBUG("activation layer begin");
-    auto ret = applyActivation(inputs.at(0), _activation);
-    // TRACTOR_DEBUG("activation layer end");
-    return ret;
+    return applyActivation(inputs.at(0), _activation);
   }
 };
 

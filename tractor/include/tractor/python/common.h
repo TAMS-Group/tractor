@@ -19,6 +19,10 @@ namespace tractor {
 
 namespace py = pybind11;
 
+template <class T, class... Args>
+using ptr_class = py::class_<T, std::shared_ptr<T>, Args...>;
+// typedef py::class_<T, std::shared_ptr<T>, Args...> ptr_class;
+
 class PythonRegistry {
   std::vector<std::function<void(py::module &)>> _ff;
 
@@ -54,101 +58,44 @@ template <class Type>
 static auto pythonizeType(py::module &main_module, py::module &type_module,
                           const char *name) {
 
-  auto t = py::class_<Type, std::shared_ptr<Type>>(type_module, name);
-  t.def(py::init<>());
-  t.def("__repr__", [name](const Type &v) {
-    std::stringstream ss;
-    ss << value(v);
-    return ss.str();
-  });
+  auto t =
+      // py::class_<Type>(type_module, name)
+      ptr_class<Type>(type_module, name)
+          // py::class_<Type, std::unique_ptr<Type>>(type_module, name)
+          .def(py::init<>())
+          .def("__repr__",
+               [name](const Type &v) {
+                 std::stringstream ss;
+                 ss << value(v);
+                 return ss.str();
+               })
+          .def("_internal_make_variable", [](Type &_this) { variable(_this); })
+          .def("_internal_make_parameter",
+               [](Type &_this) { parameter(_this); })
+          .def("_internal_make_output", [](Type &_this) { output(_this); });
 
-  main_module.def("parameter", [](const std::shared_ptr<Type> &var) {
-    if (auto *rec = Recorder::instance()) {
-      rec->reference(var);
-    }
-    parameter(*var);
-  });
-
-  main_module.def("variable", [](const std::shared_ptr<Type> &var) {
-    if (auto *rec = Recorder::instance()) {
-      rec->reference(var);
-    }
-    variable(*var);
-  });
-
-  main_module.def("output", [](const std::shared_ptr<Type> &var) {
-    if (auto *rec = Recorder::instance()) {
-      rec->reference(var);
-    }
-    output(*var);
-  });
+  // main_module.def("parameter", [](const std::shared_ptr<Type> &var) {
+  //   if (auto *rec = Recorder::instance()) {
+  //     rec->reference(var);
+  //   }
+  //   parameter(*var);
+  // });
+  // main_module.def("variable", [](const std::shared_ptr<Type> &var) {
+  //   if (auto *rec = Recorder::instance()) {
+  //     rec->reference(var);
+  //   }
+  //   variable(*var);
+  // });
+  // main_module.def("output", [](const std::shared_ptr<Type> &var) {
+  //   if (auto *rec = Recorder::instance()) {
+  //     rec->reference(var);
+  //   }
+  //   output(*var);
+  // });
 
   main_module.def("goal", [](const std::shared_ptr<Type> &var) { goal(*var); });
 
   return t;
 }
-
-class PyInstruction {
-  std::shared_ptr<Program> _program;
-  Program::InstructionIterator<Program::Instruction> _iterator;
-
-public:
-  PyInstruction(
-      const std::shared_ptr<Program> &program,
-      const Program::InstructionIterator<Program::Instruction> &iterator)
-      : _program(program), _iterator(iterator) {}
-  const Operator &op() const { return *(*_iterator).op(); }
-  const Program::Instruction &inst() const { return *_iterator; }
-  std::string str() const {
-    std::string ret = op().name();
-    ret += "(";
-    for (size_t i = 0; i < inst().argumentCount(); i++) {
-      if (i > 0)
-        ret += ",";
-      ret += std::to_string(inst().arg(i));
-    }
-    ret += ")";
-    return ret;
-  }
-};
-
-class PyInstructionIterator {
-  std::shared_ptr<Program> _program;
-  Program::InstructionIterator<Program::Instruction> _iterator;
-
-public:
-  PyInstructionIterator(
-      const std::shared_ptr<Program> &program,
-      const Program::InstructionIterator<Program::Instruction> &iterator)
-      : _program(program), _iterator(iterator) {}
-  PyInstruction operator*() { return PyInstruction(_program, _iterator); }
-  PyInstructionIterator &operator++() {
-    ++_iterator;
-    return *this;
-  }
-  bool operator==(const PyInstructionIterator &other) const {
-    return _iterator == other._iterator;
-  }
-  bool operator!=(const PyInstructionIterator &other) const {
-    return _iterator != other._iterator;
-  }
-};
-
-class PyInstructionList {
-  std::shared_ptr<Program> _program;
-  ArrayRef<Program::Instruction,
-           Program::InstructionIterator<Program::Instruction>>
-      _instructions;
-
-public:
-  PyInstructionList(const std::shared_ptr<Program> &program)
-      : _program(program), _instructions(program->instructions()) {}
-  PyInstructionIterator begin() const {
-    return PyInstructionIterator(_program, _instructions.begin());
-  }
-  PyInstructionIterator end() const {
-    return PyInstructionIterator(_program, _instructions.end());
-  }
-};
 
 } // namespace tractor

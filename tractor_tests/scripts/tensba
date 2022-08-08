@@ -5,6 +5,7 @@ import tractor as tr
 import tractor.types_double as tt
 import math
 import copy
+import numpy as np
 
 tr.logger.verbosity = 2
 
@@ -13,11 +14,13 @@ weights = tt.Tensor([[1,2],[2,3],[3,4]])
 
 print "inputs", inputs.value
 print "weights", weights.value
-print "outputs", tr.neural_dense(inputs, weights).value
+print "outputs", tr.matmul(inputs, weights).value
+
+print "np", np.matmul(inputs.value, weights.value)
 
 def f():
     tr.variable(weights)
-    tr.goal(tr.neural_dense(inputs, weights) - tt.Tensor([[1.01,2.1],[2,4],[3,6]]))
+    tr.goal(tr.matmul(inputs, weights) - tt.Tensor([[1.01,2.1],[2,4],[3,6]]))
 
 prog = tr.record(f)
 
@@ -36,10 +39,10 @@ solver.tolerance = 1e-9
 
 print "inputs", inputs.value
 print "weights", weights.value
-print "outputs", tr.neural_dense(inputs, weights).value
+print "outputs", tr.matmul(inputs, weights).value
 
 solver.solve()
 
 print "inputs", inputs.value
 print "weights", weights.value
-print "outputs", tr.neural_dense(inputs, weights).value
+print "outputs", tr.matmul(inputs, weights).value

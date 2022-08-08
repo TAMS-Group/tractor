@@ -12,11 +12,10 @@
 namespace tractor {
 
 template <class Geometry>
-void visualize(const std::string &topic, const RobotModel<Geometry> &robot,
-               const JointState<Geometry> &state) {
+void visualize(const std::string &topic, const JointState<Geometry> &state) {
 
   moveit_msgs::DisplayRobotState display;
-  display.state.joint_state.name = robot.info()->variables().names();
+  display.state.joint_state.name = state.model()->info()->variables().names();
 
   AlignedStdVector<typename Geometry::Scalar> positions;
   state.serializePositions(positions);

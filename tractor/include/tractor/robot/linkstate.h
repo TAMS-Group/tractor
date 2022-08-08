@@ -13,17 +13,23 @@ namespace tractor {
 template <class Geometry> class RobotModel;
 
 template <class Geometry> class LinkState {
+  std::shared_ptr<const RobotModel<Geometry>> _model;
   std::shared_ptr<const RobotInfo> _info;
   AlignedStdVector<typename Geometry::Pose> _poses;
 
 public:
-  void init(const RobotModel<Geometry> &robot_model) {
-    _info = robot_model.info();
-    _poses.resize(robot_model.info()->links().size());
+  void init(const std::shared_ptr<const RobotModel<Geometry>> &robot_model) {
+    _model = robot_model;
+    _info = robot_model->info();
+    _poses.resize(robot_model->info()->links().size());
   }
 
   LinkState() {}
-  LinkState(const RobotModel<Geometry> &robot_model) { init(robot_model); }
+  LinkState(const std::shared_ptr<const RobotModel<Geometry>> &robot_model) {
+    init(robot_model);
+  }
+
+  auto &model() const { return _model; }
 
   size_t size() const { return _poses.size(); }
 

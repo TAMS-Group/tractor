@@ -237,14 +237,14 @@ public:
   }
 };
 
-#if 0
+#if 1
 template <class Geometry>
-class FloatingJointModel : public JointModelBase<Geometry> {
+class alignas(32) FloatingJointModel : public JointModelBase<Geometry> {
 
 public:
 };
 template <class Geometry>
-class FloatingJointState : public JointStateBase<Geometry> {
+class alignas(32) FloatingJointState : public JointStateBase<Geometry> {
   typename Geometry::Pose _pose;
 
 public:
@@ -281,7 +281,7 @@ public:
 };
 #endif
 
-#if 1
+#if 0
 template <class Geometry>
 class alignas(32) FloatingJointModel : public JointModelBase<Geometry> {
 

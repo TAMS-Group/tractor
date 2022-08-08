@@ -86,7 +86,7 @@ static void pythonizeTensor(py::module &main_module, py::module &type_module) {
   main_module.def("unpack",
                   [](const Tensor<Scalar> &tensor) { return unpack(tensor); });
 
-  main_module.def("neural_dense", &neural_dense<Scalar, Scalar>);
+  main_module.def("matmul", &matmul<Scalar, Scalar>);
 
   main_module.def("neural_bias", &neural_bias<Scalar, Scalar>);
 

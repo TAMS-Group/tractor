@@ -2,45 +2,54 @@
 
 #include <tractor/python/common.h>
 
-#include <tractor/core/constraints.h>
 #include <tractor/core/engine.h>
-#include <tractor/core/gradients.h>
 #include <tractor/core/log.h>
 #include <tractor/core/profiler.h>
-#include <tractor/core/solver.h>
 #include <tractor/engines/simple.h>
-#include <tractor/geometry/fast.h>
-#include <tractor/neural/ops.h>
-#include <tractor/tensor/ops.h>
 
 namespace tractor {
 
 static void pythonizeMain(py::module &m) {
+
+  struct PythonObjectHolder {
+    pybind11::object object;
+    PythonObjectHolder(const pybind11::object &object) : object(object) {}
+    virtual ~PythonObjectHolder() {}
+  };
+
+  m.def("variable", [](const py::object &o) {
+    if (auto *rec = Recorder::instance()) {
+      rec->reference(std::make_shared<PythonObjectHolder>(o));
+    }
+    o.attr("_internal_make_variable")();
+  });
+
+  m.def("parameter", [](const py::object &o) {
+    if (auto *rec = Recorder::instance()) {
+      rec->reference(std::make_shared<PythonObjectHolder>(o));
+    }
+    o.attr("_internal_make_parameter")();
+  });
+
+  m.def("output", [](const py::object &o) {
+    if (auto *rec = Recorder::instance()) {
+      rec->reference(std::make_shared<PythonObjectHolder>(o));
+    }
+    o.attr("_internal_make_output")();
+  });
+
+  // m.def(
+  //     "test",
+  //     [](const py::object &param) {
+  //
+  //     },
+  //     py::arg("a") = 5);
 
   class Log {};
   py::class_<Log>(m, "logger")
       .def_property_static(
           "verbosity", [](py::object) { return getLogVerbosity(); },
           [](py::object, int v) { setLogVerbosity(v); });
-
-  py::class_<Solver>(m, "Solver")
-      .def("compile", [](Solver &solver,
-                         const Program &program) { solver.compile(program); })
-      .def("parameterize", [](Solver &solver) { solver.parameterize(); })
-      .def("solve",
-           [](Solver &solver) {
-             solver.parameterize();
-             solver.gather();
-             solver.solve();
-             solver.scatter();
-           })
-      .def("gather", &Solver::gather)
-      .def("scatter", &Solver::scatter)
-      .def("step", &Solver::step)
-      .def_property("tolerance", &Solver::tolerance, &Solver::setTolerance)
-      .def_property(
-          "timeout", [](const Solver &solver) { return solver.timeout(); },
-          [](Solver &solver, const double &v) { solver.setTimeout(v, false); });
 
   m.def_submodule("types_float");
   m.def_submodule("types_double");
@@ -72,105 +81,6 @@ static void pythonizeMain(py::module &m) {
   py::class_<SimpleEngine, std::shared_ptr<SimpleEngine>, Engine>(
       m, "DefaultEngine")
       .def(py::init<>());
-
-  py::class_<PyInstructionList>(m, "InstructionList")
-      .def("__iter__",
-           [](const PyInstructionList &l) {
-             return py::make_iterator(l.begin(), l.end());
-           })
-      .def("__repr__", [](const PyInstructionList &v) {
-        std::stringstream ret;
-        ret << "[";
-        bool first = true;
-        for (const auto &inst : v) {
-          if (!first)
-            ret << ", ";
-          ret << inst.str();
-          first = false;
-        }
-        ret << "]";
-        return ret.str();
-      });
-
-  py::class_<PyInstruction>(m, "Instruction")
-      .def("__repr__", [](const PyInstruction &v) { return v.str(); });
-
-  py::class_<Program::Input>(m, "Input")
-      .def("__repr__", [](const Program::Input &v) {
-        return std::string() + "input(" + v.typeInfo().name() + "," +
-               std::to_string(v.address()) + ")";
-      });
-
-  py::class_<Program::Output>(m, "Output")
-      .def("__repr__", [](const Program::Output &v) {
-        return std::string() + "output(" + v.typeInfo().name() + "," +
-               std::to_string(v.address()) + ")";
-      });
-
-  py::class_<Program::Goal>(m, "Goal");
-
-  py::class_<Program::Parameter>(m, "Parameter");
-
-  py::class_<Program::Constant>(m, "Constant")
-      .def("__repr__", [](const Program::Constant &v) {
-        return std::string() + "const(" + v.typeInfo().name() + "," +
-               std::to_string(v.address()) + ")";
-      });
-
-  py::class_<Program, std::shared_ptr<Program>>(m, "Program")
-      .def_property_readonly("instructions",
-                             [](const std::shared_ptr<Program> &program) {
-                               return PyInstructionList(program);
-                             })
-      .def_property_readonly("inputs",
-                             [](const std::shared_ptr<Program> &program) {
-                               std::vector<Program::Input> ret;
-                               for (auto &v : program->inputs())
-                                 ret.push_back(v);
-                               return ret;
-                             })
-      .def_property_readonly("outputs",
-                             [](const std::shared_ptr<Program> &program) {
-                               std::vector<Program::Output> ret;
-                               for (auto &v : program->outputs())
-                                 ret.push_back(v);
-                               return ret;
-                             })
-      .def_property_readonly("constants",
-                             [](const std::shared_ptr<Program> &program) {
-                               std::vector<Program::Constant> ret;
-                               for (auto &v : program->constants())
-                                 ret.push_back(v);
-                               return ret;
-                             })
-      .def("__repr__", [](const Program &v) {
-        std::stringstream ss;
-        ss << v;
-        std::string s = ss.str();
-        while (!s.empty() && std::isspace(s.back())) {
-          s.pop_back();
-        }
-        return s;
-      });
-  m.def("record", [](const std::function<void()> &f) {
-    return std::make_shared<Program>(f);
-  });
-
-  struct PyDerivatives {
-    Program prepare, forward, reverse, hessian, accumulate;
-  };
-  py::class_<PyDerivatives>(m, "Derivatives")
-      .def_readonly("prepare", &PyDerivatives::prepare)
-      .def_readonly("forward", &PyDerivatives::forward)
-      .def_readonly("reverse", &PyDerivatives::reverse)
-      .def_readonly("hessian", &PyDerivatives::hessian)
-      .def_readonly("accumulate", &PyDerivatives::accumulate);
-  m.def("derive", [](const Program &src) {
-    PyDerivatives ret;
-    buildGradients(src, ret.prepare, &ret.forward, &ret.reverse, &ret.hessian,
-                   &ret.accumulate);
-    return ret;
-  });
 
   for (auto *op : Operator::all()) {
     op->pythonize(m);
