@@ -1,35 +1,19 @@
 // (c) 2022 Philipp Ruppel
 
 #include <tractor/python/common.h>
-#include <tractor/python/geometry.h>
-#include <tractor/python/neural.h>
-#include <tractor/python/robot.h>
-#include <tractor/python/scalar.h>
-#include <tractor/python/solvers.h>
-#include <tractor/python/tensor.h>
 
 #include <tractor/core/constraints.h>
 #include <tractor/core/engine.h>
+#include <tractor/core/gradients.h>
 #include <tractor/core/log.h>
 #include <tractor/core/profiler.h>
-
+#include <tractor/core/solver.h>
 #include <tractor/engines/simple.h>
 #include <tractor/geometry/fast.h>
 #include <tractor/neural/ops.h>
 #include <tractor/tensor/ops.h>
 
 namespace tractor {
-
-template <class Scalar>
-static void pythonizeTemplates(py::module &main_module, const char *name) {
-  auto type_module = main_module.def_submodule(name);
-  pythonizeScalar<Scalar>(main_module, type_module);
-  pythonizeGeometry<Scalar>(main_module, type_module);
-  pythonizeTensor<Scalar>(main_module, type_module);
-  pythonizeSolvers<Scalar>(main_module, type_module);
-  pythonizeNeural<Scalar>(main_module, type_module);
-  pythonizeRobot<Scalar>(main_module, type_module);
-}
 
 static void pythonizeMain(py::module &m) {
 
@@ -38,8 +22,6 @@ static void pythonizeMain(py::module &m) {
       .def_property_static(
           "verbosity", [](py::object) { return getLogVerbosity(); },
           [](py::object, int v) { setLogVerbosity(v); });
-
-  TRACTOR_PYTHONIZE_ENUM(m, ActivationType);
 
   py::class_<Solver>(m, "Solver")
       .def("compile", [](Solver &solver,
@@ -60,8 +42,10 @@ static void pythonizeMain(py::module &m) {
           "timeout", [](const Solver &solver) { return solver.timeout(); },
           [](Solver &solver, const double &v) { solver.setTimeout(v, false); });
 
-  pythonizeTemplates<float>(m, "types_float");
-  pythonizeTemplates<double>(m, "types_double");
+  m.def_submodule("types_float");
+  m.def_submodule("types_double");
+
+  PythonRegistry::instance()->run(m);
 
   py::class_<Memory, std::shared_ptr<Memory>>(m, "Memory");
 
@@ -170,19 +154,6 @@ static void pythonizeMain(py::module &m) {
       });
   m.def("record", [](const std::function<void()> &f) {
     return std::make_shared<Program>(f);
-  });
-
-  m.def("init_ros", [](const std::string &name) {
-    TRACTOR_DEBUG("init_ros " << name);
-    auto args =
-        py::module::import("sys").attr("argv").cast<std::vector<std::string>>();
-    std::vector<char *> argv;
-    for (auto &a : args) {
-      TRACTOR_DEBUG("arg " << a);
-      argv.push_back((char *)a.c_str());
-    }
-    int argc = args.size();
-    ros::init(argc, argv.data(), name);
   });
 
   struct PyDerivatives {

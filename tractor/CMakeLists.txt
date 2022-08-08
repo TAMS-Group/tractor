@@ -23,6 +23,9 @@ find_package(catkin REQUIRED COMPONENTS
     moveit_core
     moveit_ros_planning
     pybind11_catkin
+    eigen_conversions
+    interactive_markers
+    moveit_ros_robot_interaction
 )
 
 set(LIBNAME libtractor)
@@ -35,6 +38,9 @@ catkin_package(
         moveit_core
         moveit_ros_planning
         pybind11_catkin
+        eigen_conversions
+        interactive_markers
+        moveit_ros_robot_interaction
 )
 
 include_directories(
@@ -104,12 +110,24 @@ add_library(${LIBNAME}
     src/robot/jointstate.cpp
     src/robot/jointtypes.cpp
     src/robot/linkstate.cpp
+    src/python/common.cpp
+    src/python/geometry.cpp
     src/python/module.cpp
+    src/python/neural.cpp
+    src/python/robot.cpp
+    src/python/ros.cpp
+    src/python/scalar.cpp
+    src/python/solvers.cpp
+    src/python/tensor.cpp
     src/robot/robot.cpp
     src/robot/robotinfo.cpp
     src/robot/robotmodel.cpp
     src/robot/robotstate.cpp
     src/robot/trajectory.cpp
+    src/ros/interact.cpp
+    src/ros/message.cpp
+    src/ros/publish.cpp
+    src/ros/visualize.cpp
     src/solvers/base.cpp
     src/solvers/ec.cpp
     src/solvers/gd.cpp

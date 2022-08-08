@@ -2,6 +2,9 @@
 
 #include <tractor/python/common.h>
 
+#include <tractor/core/constraints.h>
+#include <tractor/core/ops.h>
+#include <tractor/core/var.h>
 #include <tractor/geometry/fast.h>
 
 namespace tractor {
@@ -53,5 +56,7 @@ static void pythonizeGeometry(py::module &main_module,
       .def(py::self * Var<Scalar>())
       .def(Var<Scalar>() * py::self);
 }
+
+TRACTOR_PYTHON_TYPED(pythonizeGeometry);
 
 } // namespace tractor

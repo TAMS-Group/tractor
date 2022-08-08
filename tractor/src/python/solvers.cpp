@@ -33,4 +33,6 @@ static void pythonizeSolvers(py::module &main_module, py::module &type_module) {
       ;
 }
 
+TRACTOR_PYTHON_TYPED(pythonizeSolvers);
+
 } // namespace tractor

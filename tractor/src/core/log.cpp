@@ -58,7 +58,7 @@ void setLogVerbosity(int verbosity) { refLogVerbosity() = verbosity; }
 int getLogVerbosity() { return refLogVerbosity(); }
 
 bool checkLogVerbosity(LogLevel verbosity) {
-  return (int)verbosity >= refLogVerbosity();
+  return (int)verbosity <= refLogVerbosity();
 }
 
 } // namespace tractor

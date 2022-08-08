@@ -21,8 +21,17 @@
     <build_depend>moveit_ros_planning</build_depend>
     <run_depend>moveit_ros_planning</run_depend>
 
+    <build_depend>eigen_conversions</build_depend>
+    <run_depend>eigen_conversions</run_depend>
+
+    <build_depend>interactive_markers</build_depend>
+    <run_depend>interactive_markers</run_depend>
+
     <build_depend>eigen</build_depend>
     <run_depend>eigen</run_depend>
+
+    <build_depend>moveit_ros_robot_interaction</build_depend>
+    <run_depend>moveit_ros_robot_interaction</run_depend>
 
     <build_depend>pybind11_catkin</build_depend>
     <run_depend>pybind11_catkin</run_depend>

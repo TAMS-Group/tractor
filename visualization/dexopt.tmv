@@ -40,7 +40,7 @@ Display:
           X: 0,000000
           Y: 0,000000
           Z: 0,000000
-      Visible: true
+      Visible: false
       id: 746
       type: RobotTrajectoryDisplay
     - Brightness: 10,000000
@@ -197,7 +197,7 @@ Display:
         Texture: false
         id: 77613
       Name: DisplayRobotStateDisplay1
-      Topic: /dexopt/display_robot_state
+      Topic: /display_robot_state
       Transform:
         Orientation:
           Pitch: 0,000000
@@ -207,7 +207,7 @@ Display:
           X: 0,000000
           Y: 0,000000
           Z: 0,000000
-      Visible: false
+      Visible: true
       id: 77612
       type: DisplayRobotStateDisplay
     - Frame: ""
@@ -318,13 +318,13 @@ Window:
   FieldOfView: 45,000000
   Name: Window
   ViewPosition:
-    X: 0,155211
-    Y: 0,340347
-    Z: 0,124044
+    X: 1,129149
+    Y: 1,424367
+    Z: 1,098231
   ViewTarget:
-    X: -0,017332
-    Y: -0,017374
-    Z: 0,070487
+    X: -0,122942
+    Y: -0,094547
+    Z: 0,646309
   id: 77426
   type: SceneWindow
 id: 6

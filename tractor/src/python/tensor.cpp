@@ -4,6 +4,7 @@
 
 #include <tractor/core/tensor.h>
 #include <tractor/core/var.h>
+#include <tractor/neural/ops.h>
 #include <tractor/tensor/ops.h>
 
 namespace tractor {
@@ -95,5 +96,7 @@ static void pythonizeTensor(py::module &main_module, py::module &type_module) {
         return make_tensor(TensorShape(shape), v);
       });
 }
+
+TRACTOR_PYTHON_TYPED(pythonizeTensor);
 
 } // namespace tractor

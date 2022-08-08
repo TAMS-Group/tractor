@@ -1,0 +1,20 @@
+#!/usr/bin/env python
+
+import time
+import tractor as tr
+import tractor.types_double as tt
+import rospy
+import sys
+import time
+
+print sys.argv
+
+tr.logger.verbosity = 10
+tr.init_ros("test")
+
+v = tt.Vector3(.1,.2,.3)
+
+while True:
+    tr.interact("base_frame", "test", v)
+    print v
+    time.sleep(0.1)

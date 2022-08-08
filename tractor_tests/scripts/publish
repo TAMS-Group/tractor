@@ -6,9 +6,8 @@ import rospy
 import std_msgs.msg
 import io
 
-m = std_msgs.msg.String()
-m.data = "bla"
+tr.init_ros("test")
 
-b = io.BytesIO()
-m.serialize(b)
-print type(b.getvalue())
+while True:
+    tr.publish("/hello_topic", std_msgs.msg.String(data="hello world"))
+    time.sleep(1)

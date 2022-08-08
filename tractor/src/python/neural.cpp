@@ -6,6 +6,20 @@
 
 namespace tractor {
 
+static void pythonizeNeuralGlobal(py::module &m) {
+  {
+    auto e = py::enum_<ActivationType>(m, "ActivationType");
+    for (auto &p : enumerateEachActivationType()) {
+      e.value(p.second.c_str(), p.first);
+    }
+    e.def(
+        py::init([](const std::string &s) { return parseActivationType(s); }));
+    py::implicitly_convertible<std::string, ActivationType>();
+  }
+}
+
+TRACTOR_PYTHON_GLOBAL(pythonizeNeuralGlobal);
+
 template <class Scalar>
 static void pythonizeNeural(py::module &main_module, py::module &type_module) {
 
@@ -90,5 +104,7 @@ static void pythonizeNeural(py::module &main_module, py::module &type_module) {
         return layer.weights();
       });
 }
+
+TRACTOR_PYTHON_TYPED(pythonizeNeural);
 
 } // namespace tractor

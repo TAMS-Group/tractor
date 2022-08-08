@@ -2,7 +2,7 @@
 
 #include <tractor/python/common.h>
 
-#include <tractor/core/var.h>
+#include <tractor/core/ops.h>
 
 namespace tractor {
 
@@ -19,5 +19,7 @@ static void pythonizeScalar(py::module &main_module, py::module &type_module) {
       .def(py::self * py::self)
       .def(py::self / py::self);
 }
+
+TRACTOR_PYTHON_TYPED(pythonizeScalar);
 
 } // namespace tractor

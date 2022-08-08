@@ -3,7 +3,9 @@
 #pragma once
 
 #include <tractor/core/any.h>
+#include <tractor/core/constraints.h>
 #include <tractor/core/operator.h>
+#include <tractor/core/ops.h>
 #include <tractor/core/type.h>
 #include <tractor/core/var.h>
 
@@ -17,16 +19,36 @@ namespace tractor {
 
 namespace py = pybind11;
 
-#define TRACTOR_PYTHONIZE_ENUM(m, Name)                                        \
-  {                                                                            \
-    auto e = py::enum_<ActivationType>(m, "ActivationType");                   \
-    for (auto &p : enumerateEachActivationType()) {                            \
-      e.value(p.second.c_str(), p.first);                                      \
-    }                                                                          \
-    e.def(py::init(                                                            \
-        [](const std::string &s) { return parseActivationType(s); }));         \
-    py::implicitly_convertible<std::string, ActivationType>();                 \
-  }
+class PythonRegistry {
+  std::vector<std::function<void(py::module &)>> _ff;
+
+public:
+  void add(const std::function<void(py::module &)> &f) { _ff.push_back(f); }
+  void run(py::module &m);
+  static const std::shared_ptr<PythonRegistry> &instance();
+};
+
+#define TRACTOR_PYTHON_STRINGIFY(name) #name
+
+#define TRACTOR_PYTHON_GLOBAL(name)                                            \
+  static int _tractor_python_global = []() {                                   \
+    PythonRegistry::instance()->add([](py::module &m) { name(m); });           \
+    return 0;                                                                  \
+  }();
+
+#define TRACTOR_PYTHON_TYPED(name)                                             \
+  static int _tractor_python_typed = []() {                                    \
+    auto reg = PythonRegistry::instance();                                     \
+    reg->add([](py::module m) {                                                \
+      auto t = m.attr("types_float").cast<py::module>();                       \
+      name<float>(m, t);                                                       \
+    });                                                                        \
+    reg->add([](py::module m) {                                                \
+      auto t = m.attr("types_double").cast<py::module>();                      \
+      name<double>(m, t);                                                      \
+    });                                                                        \
+    return 0;                                                                  \
+  }();
 
 template <class Type>
 static auto pythonizeType(py::module &main_module, py::module &type_module,
