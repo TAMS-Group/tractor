@@ -1,0 +1,31 @@
+#!/usr/bin/env python
+
+import time
+import tractor as tr
+import tractor.types_double as tt
+import rospy
+import sys
+
+tr.logger.verbosity = 10
+tr.init_ros("test")
+
+if len(sys.argv) < 2:
+    print ""
+    print "usage: physics <robot description>"
+    exit(-1)
+
+robot_description = sys.argv[1]
+robot_model = tt.RobotModel(robot_description)
+
+object_start_pose = tt.Pose()
+
+while True:
+
+    tr.interact("world", "object", object_start_pose, 0.1)
+
+    joint_states = tt.JointStates(robot_model)
+    joint_states.joint_state("object_joint").pose = object_start_pose
+
+    tr.visualize("/display_robot_state", joint_states)
+
+    time.sleep(0.1)

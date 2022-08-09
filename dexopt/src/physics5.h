@@ -357,9 +357,9 @@ private:
               dynamic_cast<tractor::FloatingJointState<Geometry> *>(
                   &_robot_state.joints().joint(body.joint))) {
         auto &joint_info = _robot_model->info()->joints().info(body.joint);
-        joint_state->pose(body.inverse_anchor *
-                          Geometry::translationPose(body.position) *
-                          Geometry::orientationPose(body.orientation));
+        joint_state->pose() = body.inverse_anchor *
+                              Geometry::translationPose(body.position) *
+                              Geometry::orientationPose(body.orientation);
       }
     }
   }

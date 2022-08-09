@@ -329,7 +329,7 @@ int main(int argc, char **argv) {
     dexlearn.makeSimulator();
     {
       tractor::RobotState<GeometryBatch> robot_state(
-          *dexlearn.simulator()->model());
+          dexlearn.simulator()->model());
       dexlearn.simulator()->model()->computeFK(robot_state.joints(),
                                                robot_state.links());
       dexlearn.simulator()->init(robot_state);

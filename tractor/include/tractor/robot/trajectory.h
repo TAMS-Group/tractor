@@ -11,14 +11,16 @@ template <class Geometry> class RobotTrajectory {
       _states;
 
 public:
-  void init(const RobotModel<Geometry> &robot_model, size_t frame_count) {
+  void init(const std::shared_ptr<RobotModel<Geometry>> &robot_model,
+            size_t frame_count) {
     _states.clear();
     for (size_t i = 0; i < frame_count; i++) {
       _states.emplace_back(robot_model);
     }
   }
   RobotTrajectory() {}
-  RobotTrajectory(const RobotModel<Geometry> &robot_model, size_t frame_count) {
+  RobotTrajectory(const std::shared_ptr<RobotModel<Geometry>> &robot_model,
+                  size_t frame_count) {
     init(robot_model, frame_count);
   }
   size_t size() const { return _states.size(); }

@@ -292,7 +292,7 @@ public:
     _robot_model =
         std::make_shared<tractor::RobotModel<Geometry>>(moveit_robot);
     auto *joint_model_group = moveit_robot.getJointModelGroup(group);
-    _trajectory.init(*_robot_model, frames);
+    _trajectory.init(_robot_model, frames);
 
     _joint_indices.clear();
     for (auto &joint : joint_model_group->getJointModels()) {

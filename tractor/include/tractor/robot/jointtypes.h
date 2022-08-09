@@ -261,7 +261,9 @@ public:
     variable(_pose);
     bool has_trust_region = (options.trust_region > 0);
     if (has_trust_region) {
-      goal(tractor::pose_trust_region_constraint(_pose, options.trust_region));
+      throw std::runtime_error("nyi");
+      // goal(tractor::pose_trust_region_constraint(_pose,
+      // options.trust_region));
     }
   }
   virtual void makeParameters(const JointModelBase<Geometry> &model) override {

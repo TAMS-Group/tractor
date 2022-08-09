@@ -19,6 +19,7 @@ template <class ValueSingle, class ValueBatch> class DexLearn {
   typedef tractor::Var<ValueBatch> ScalarBatch;
   typedef tractor::GeometryFast<ScalarBatch> GeometryBatch;
 
+  std::shared_ptr<RobotModel<GeometryBatch>> _tractor_model;
   size_t _contact_dimensions = 9;
   std::shared_ptr<tractor::Engine> _engine;
   tractor::CollisionRobot<ValueSingle> _collision_robot;
@@ -242,7 +243,9 @@ public:
            std::string group_robot,
            const std::shared_ptr<DexEnv<ValueSingle, ValueBatch>> &env,
            size_t outer_batch_size)
-      : _engine(engine), _robot_model(robot_model), _env(env),
+      : _tractor_model(
+            std::make_shared<RobotModel<GeometryBatch>>(*robot_model)),
+        _engine(engine), _robot_model(robot_model), _env(env),
         _collision_robot(*robot_model, false),
         _allowed_collision_matrix(allowed_collision_matrix),
         _end_effectors(env->info().end_effectors),
@@ -250,7 +253,7 @@ public:
         _joint_names(
             _robot_model->getJointModelGroup(group_robot)->getVariableNames()),
         _robot_state(robot_model),
-        _test_trajectory(*robot_model, env->info().frame_count),
+        _test_trajectory(_tractor_model, env->info().frame_count),
         _outer_batch_size(outer_batch_size),
         _joints(
             _robot_model->getJointModelGroup(_group_robot)->getJointModels()) {
@@ -439,7 +442,7 @@ public:
   auto runBatch(tractor::RobotTrajectory<GeometryBatch> *trajectory,
                 const LayerMode &mode) {
     _viz.clear();
-    trajectory->state(0).joints().init(*_simulator->model());
+    trajectory->state(0).joints().init(_simulator->model());
     _simulator->model()->computeFK(trajectory->state(0).joints(),
                                    trajectory->state(0).links());
     _simulator->init(trajectory->state(0));

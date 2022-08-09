@@ -15,8 +15,15 @@ static void pythonizeROSTyped(py::module &main_module,
 
   main_module.def("interact",
                   [](const std::string &frame, const std::string &name,
-                     Var<Vector3<Scalar>> &point,
-                     double size) { interact(frame, name, point, size); });
+                     Var<Vector3<Scalar>> &point, double size) {
+                    interact(frame, name, point, Scalar(size));
+                  });
+
+  main_module.def("interact",
+                  [](const std::string &frame, const std::string &name,
+                     Var<Pose<Scalar>> &pose, double size) {
+                    interact(frame, name, pose, Scalar(size));
+                  });
 }
 
 TRACTOR_PYTHON_TYPED(pythonizeROSTyped);

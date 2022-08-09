@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<robot
+    name="test"
+    xmlns:xacro="http://www.ros.org/wiki/xacro"
+    xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
+    xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
+    xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface">
+
+    <xacro:include filename="$(find dexopt)/models/simple_box.xacro"/>
+
+    <link name="world"/>
+
+    <xacro:include filename="$(find dexopt)/objects/cube.xacro"/>
+
+    <joint name="object_joint" type="floating">
+      <parent link="world" />
+      <child link="object" />
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <xacro:invisible_box type="fixed" name="floor" parent="world" sx="0.5" sy="0.5" sz="0.4" mass="1">
+        <origin xyz="0 0 -0.2" rpy="0 0 0"/>
+    </xacro:invisible_box>
+
+</robot>

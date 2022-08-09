@@ -171,38 +171,73 @@ public:
   const Eigen::Vector3d &initialPosition() const { return _initial_position; }
 };
 
+const std::shared_ptr<interactive_markers::InteractiveMarkerServer> &
+markerServerInstance() {
+  static auto instance =
+      std::make_shared<interactive_markers::InteractiveMarkerServer>(
+          "/interactive_markers", "", true);
+  return instance;
+}
+
+template <class T> Eigen::Isometry3d poseToEigen(const Pose<T> &pose) {
+  T px, py, pz, qx, qy, qz, qw;
+  GeometryFast<T>::unpack(pose, px, py, pz, qx, qy, qz, qw);
+  auto p = Eigen::Vector3d(px, py, pz);
+  auto q = Eigen::Quaterniond(qw, qx, qy, qz);
+  Eigen::Isometry3d ret = Eigen::Isometry3d(Eigen::AngleAxisd(q));
+  ret.translation() = p;
+  return ret;
+}
+
+template <class T>
+bool interact(const std::string &frame, const std::string &name, Pose<T> &pose,
+              const T &size) {
+  static Factory::Key<std::string>::Value<
+      std::shared_ptr<InteractivePoseMarker>>
+      factory([&](const std::string &name) {
+        return std::make_shared<InteractivePoseMarker>(
+            *markerServerInstance(), frame, poseToEigen(pose), name, size);
+      });
+  auto marker = factory.get(name);
+  bool changed = marker->poll();
+  if (changed) {
+    pose = GeometryFast<T>::import(marker->pose());
+  }
+  return changed;
+}
+
+template bool interact(const std::string &frame, const std::string &name,
+                       Pose<double> &position, const double &size);
+
+template bool interact(const std::string &frame, const std::string &name,
+                       Pose<float> &position, const float &size);
+
+template <class T>
 bool interact(const std::string &frame, const std::string &name,
-              Vector3<double> &position, double size) {
-
-  static interactive_markers::InteractiveMarkerServer server(
-      "/interactive_markers", "", true);
-
+              Vector3<T> &position, const T &size) {
   static Factory::Key<std::string>::Value<
       std::shared_ptr<InteractivePositionMarker>>
       factory([&](const std::string &name) {
         return std::make_shared<InteractivePositionMarker>(
-            server, frame,
+            *markerServerInstance(), frame,
             Eigen::Vector3d(position.x(), position.y(), position.z()), name,
             size);
       });
-
   auto marker = factory.get(name);
-
   bool changed = marker->poll();
-
-  TRACTOR_DEBUG("interact " << (int)changed);
-
   if (changed) {
-
     auto p = marker->position();
     position.x() = p.x();
     position.y() = p.y();
     position.z() = p.z();
-
-    return true;
   }
-
   return changed;
 }
+
+template bool interact(const std::string &frame, const std::string &name,
+                       Vector3<double> &position, const double &size);
+
+template bool interact(const std::string &frame, const std::string &name,
+                       Vector3<float> &position, const float &size);
 
 } // namespace tractor

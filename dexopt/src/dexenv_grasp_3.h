@@ -159,21 +159,12 @@ struct DexEnvGrasp3 : tractor::DexEnv<ValueSingle, ValueBatch> {
             for (size_t i = 0; i < arm_joints.size(); i++) {
               joint_map[arm_joints[i]] = input[iin++];
             }
-            // {
-            //   ScalarBatch f = input[iin++];
-            //   f = f * ValueBatch(2);
-            //   f = (ValueBatch(1.0) + f * ValueBatch(0.5));
-            //   for (size_t i = 0; i < hand_synergies.joints().size(); i++) {
-            //     joint_map[hand_synergies.joints()[i]] =
-            //         f * ValueBatch((double)hand_synergies.data()(0, i));
-            //   }
-            // }
             for (size_t j = 0; j < hand_synergies.components(); j++) {
               ScalarBatch f = input[iin++];
               f = f * ValueBatch(2);
               for (size_t i = 0; i < hand_synergies.joints().size(); i++) {
                 joint_map[hand_synergies.joints()[i]] +=
-                    f * ValueBatch((double)hand_synergies.data()(j, i));
+                    f * ValueBatch((double)hand_synergies.matrix()(j, i));
               }
             }
 
