@@ -16,8 +16,10 @@
     <xacro:simple_box name="object_2" parent="world" sx="0.5" sy="0.5" sz="0.5" mass="1">
       <origin xyz="1 0 0" rpy="0 0 0"/>
     </xacro:simple_box>
+    <!--
     <xacro:simple_box name="object_3" parent="world" sx="0.1" sy="0.1" sz="0.1" mass="1">
       <origin xyz="0 1 0" rpy="0 0 0"/>
     </xacro:simple_box>
+  -->
 
 </robot>

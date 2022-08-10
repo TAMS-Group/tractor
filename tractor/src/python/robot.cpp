@@ -18,7 +18,17 @@ namespace tractor {
 static void pythonizeRobotGlobal(py::module &main_module) {
 
   py::class_<CollisionShape, std::shared_ptr<CollisionShape>>(main_module,
-                                                              "CollisionShape");
+                                                              "CollisionShape")
+      .def("sample", [](const CollisionShape &_this, size_t n) {
+        Eigen::MatrixXd ret(n, 6);
+        for (size_t i = 0; i < n; i++) {
+          Eigen::Vector3d pos, norm;
+          _this.sample(pos, norm);
+          ret.row(i).head(3) = pos;
+          ret.row(i).tail(3) = norm;
+        }
+        return ret;
+      });
 
   py::class_<CollisionLink, std::shared_ptr<CollisionLink>>(main_module,
                                                             "CollisionLink")
@@ -318,6 +328,22 @@ static void pythonizeRobot(py::module &main_module, py::module &type_module) {
                                 const typename Geometry::Pose &pose_b,
                                 const std::shared_ptr<CollisionLink> &link_b) {
     return collide<Geometry>(pose_a, link_a, pose_b, link_b);
+  });
+
+  struct PySurfacePoint {
+    typename Geometry::Vector3 point = Geometry::Vector3Zero();
+    typename Geometry::Vector3 normal = Geometry::Vector3Zero();
+  };
+
+  py::class_<PySurfacePoint>(type_module, "SurfacePoint")
+      .def_readonly("point", &PySurfacePoint::point)
+      .def_readonly("normal", &PySurfacePoint::normal);
+
+  main_module.def("project", [](const typename Geometry::Vector3 &in_point,
+                                const std::shared_ptr<CollisionShape> &shape) {
+    PySurfacePoint ret;
+    project<Geometry>(in_point, shape, ret.point, ret.normal);
+    return ret;
   });
 }
 

@@ -57,6 +57,7 @@ include_directories(
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
 
 add_library(${LIBNAME}
+    src/collision/base.cpp
     src/collision/bullet.cpp
     src/collision/engine.cpp
     src/collision/loader.cpp

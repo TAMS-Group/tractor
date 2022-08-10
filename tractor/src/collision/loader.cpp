@@ -18,9 +18,12 @@ void _loadCollisionLink(CollisionRobot *collision_robot,
                         const Eigen::Isometry3d &link_transform,
                         std::shared_ptr<CollisionLink> collision_link) {
 
+  auto new_collision_link =
+      std::make_shared<CollisionLink>(link_model->getName());
+  collision_robot->addLink(new_collision_link);
+
   if (!collision_link) {
-    collision_link = std::make_shared<CollisionLink>(link_model->getName());
-    collision_robot->addLink(collision_link);
+    collision_link = new_collision_link;
   }
 
   auto &shapes = link_model->getShapes();

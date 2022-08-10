@@ -14,17 +14,18 @@ template <class Scalar>
 static void pythonizeGeometry(py::module &main_module,
                               py::module &type_module) {
 
-  typedef GeometryFast<Var<Scalar>> Geoemtry;
+  typedef GeometryFast<Var<Scalar>> Geometry;
 
   pythonizeType<Var<Twist<Scalar>>>(main_module, type_module, "Twist")
       .def(py::self + py::self);
 
   pythonizeType<Var<Pose<Scalar>>>(main_module, type_module, "Pose")
-      .def(py::init([]() { return Geoemtry::PoseIdentity(); }))
-      .def(py::self * py::self);
+      .def(py::init([]() { return Geometry::PoseIdentity(); }))
+      .def(py::self * py::self)
+      .def(py::self * typename Geometry::Vector3());
 
   pythonizeType<Var<Quaternion<Scalar>>>(main_module, type_module, "Quaternion")
-      .def(py::init([]() { return Geoemtry::OrientationIdentity(); }))
+      .def(py::init([]() { return Geometry::OrientationIdentity(); }))
       .def(py::init([](const Var<Scalar> &x, const Var<Scalar> &y,
                        const Var<Scalar> &z, const Var<Scalar> &w) {
         Var<Quaternion<Scalar>> ret;
@@ -41,6 +42,9 @@ static void pythonizeGeometry(py::module &main_module,
   pythonizeType<Var<Matrix3<Scalar>>>(main_module, type_module, "Matrix3");
 
   pythonizeType<Var<Vector3<Scalar>>>(main_module, type_module, "Vector3")
+      .def(py::init([](const Eigen::Vector3d &v) {
+        return Var<Vector3<Scalar>>(Vector3<Scalar>(v.x(), v.y(), v.z()));
+      }))
       .def(py::init(
           [](const Var<Scalar> &x, const Var<Scalar> &y, const Var<Scalar> &z) {
             Var<Vector3<Scalar>> ret;

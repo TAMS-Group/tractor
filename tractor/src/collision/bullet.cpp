@@ -2,10 +2,14 @@
 
 #include <tractor/collision/bullet.h>
 
+#include <tractor/collision/base.h>
 #include <tractor/core/log.h>
+#include <tractor/geometry/convert.h>
+#include <tractor/geometry/plane.h>
 
 #include <BulletCollision/CollisionShapes/btConvexHullShape.h>
 #include <BulletCollision/CollisionShapes/btConvexShape.h>
+#include <BulletCollision/CollisionShapes/btSphereShape.h>
 #include <BulletCollision/NarrowPhaseCollision/btComputeGjkEpaPenetration.h>
 #include <BulletCollision/NarrowPhaseCollision/btGjkEpa3.h>
 #include <BulletCollision/NarrowPhaseCollision/btMprPenetration.h>
@@ -15,40 +19,88 @@
 
 namespace tractor {
 
-btVector3 toBulletVector3(const Eigen::Vector3d &v) {
+static Vector3<double> toVector3(const btVector3 &v) {
+  return Vector3<double>(v.x(), v.y(), v.z());
+}
+
+static btVector3 toBulletVector3(const Eigen::Vector3d &v) {
   return btVector3(v.x(), v.y(), v.z());
 }
 
-btMatrix3x3 toBulletMatrix3x3(const Eigen::Matrix3d &m) {
+static btMatrix3x3 toBulletMatrix3x3(const Eigen::Matrix3d &m) {
   return btMatrix3x3(m(0, 0), m(0, 1), m(0, 2), m(1, 0), m(1, 1), m(1, 2),
                      m(2, 0), m(2, 1), m(2, 2));
 }
 
-btTransform toBulletTransform(const Eigen::Affine3d &a) {
+static btTransform toBulletTransform(const Eigen::Affine3d &a) {
   btTransform r;
   r.setOrigin(toBulletVector3(a.translation()));
   r.setBasis(toBulletMatrix3x3(a.linear()));
   return r;
 }
 
-btTransform toBulletTransform(const Eigen::Isometry3d &a) {
+static btTransform toBulletTransform(const Eigen::Isometry3d &a) {
   btTransform r;
   r.setOrigin(toBulletVector3(a.translation()));
   r.setBasis(toBulletMatrix3x3(a.linear()));
   return r;
 }
 
-Eigen::Vector3d toEigenVector3d(const btVector3 &v) {
+static Eigen::Vector3d toEigenVector3d(const btVector3 &v) {
   return Eigen::Vector3d(v.x(), v.y(), v.z());
 }
 
-struct BulletCollisionShape : public CollisionShape {
+struct BulletCollisionWrapper {
+  btTransform pose = btTransform::getIdentity();
+  const btConvexShape *shape = nullptr;
+  BulletCollisionWrapper(const btTransform &pose, const btConvexShape *shape)
+      : pose(pose), shape(shape) {}
+  inline btScalar getMargin() const { return shape->getMargin(); }
+  inline btVector3 getObjectCenterInWorld() const { return pose.getOrigin(); }
+  inline const btTransform &getWorldTransform() const { return pose; }
+  inline btVector3 getLocalSupportWithMargin(const btVector3 &dir) const {
+    return shape->localGetSupportingVertex(dir);
+  }
+  inline btVector3 getLocalSupportWithoutMargin(const btVector3 &dir) const {
+    return shape->localGetSupportingVertexWithoutMargin(dir);
+  }
+};
+
+static void bulletCollide(const btTransform &pose_a,
+                          const btConvexShape *shape_a,
+                          const btTransform &pose_b,
+                          const btConvexShape *shape_b,
+                          CollisionResponse &response) {
+  BulletCollisionWrapper wa = BulletCollisionWrapper(pose_a, shape_a);
+  BulletCollisionWrapper wb = BulletCollisionWrapper(pose_b, shape_b);
+  btVector3 guess = btVector3(1, 2, 3).normalized();
+  btGjkEpaSolver3::sResults results;
+  bool ok = btGjkEpaSolver3_Distance(wa, wb, guess, results);
+  if (!ok) {
+    ok = btGjkEpaSolver3_Penetration(wa, wb, guess, results);
+  }
+  if (ok) {
+    response.point_a = toEigenVector3d(results.witnesses[0]);
+    response.point_b = toEigenVector3d(results.witnesses[1]);
+    response.normal = toEigenVector3d(pose_a.getBasis() * results.normal);
+    response.distance = results.distance;
+  } else {
+    TRACTOR_DEBUG("collision detection failed");
+    response = CollisionResponse();
+  }
+}
+
+struct BulletCollisionShape : public MeshCollisionShapeBase {
+
+  const btScalar margin = 0.005;
+  std::vector<Plane<double>> bounding_planes;
   const CollisionEngine *collision_engine = nullptr;
-  // btTransform bullet_pose = toBulletTransform(Eigen::Isometry3d::Identity());
-  std::shared_ptr<btConvexShape> bullet_shape = nullptr;
+  std::shared_ptr<btConvexHullShape> bullet_shape = nullptr;
+
   virtual const CollisionEngine *engine() const override {
     return collision_engine;
   }
+
   BulletCollisionShape(const CollisionEngine *engine,
                        const Eigen::Affine3d &pose, const shapes::Shape *shape)
       : collision_engine(engine) {
@@ -58,6 +110,8 @@ struct BulletCollisionShape : public CollisionShape {
       if (!mesh) {
         mesh_cleanup = mesh = shapes::createMeshFromShape(shape);
       }
+
+      initMeshBase(pose, mesh);
 
       auto sh = std::make_shared<btConvexHullShape>();
 
@@ -72,7 +126,7 @@ struct BulletCollisionShape : public CollisionShape {
 
       btConvexHullComputer hull_computer;
       hull_computer.compute(mesh->vertices, sizeof(double) * 3,
-                            mesh->vertex_count, btScalar(0), btScalar(0));
+                            mesh->vertex_count, btScalar(margin), btScalar(0));
       for (size_t i = 0; i < hull_computer.vertices.size(); i++) {
         auto &v = hull_computer.vertices[i];
         Eigen::Vector3d vertex(v.x(), v.y(), v.z());
@@ -80,31 +134,118 @@ struct BulletCollisionShape : public CollisionShape {
         sh->addPoint(btVector3(vertex.x(), vertex.y(), vertex.z()));
       }
 
+      sh->setMargin(margin);
+
+      // sh->optimizeConvexHull();
+      // sh->initializePolyhedralFeatures();
+
+      // bounding_planes.clear();
+      // for (size_t face_index = 0; face_index < hull_computer.faces.size();
+      //      face_index++) {
+      //   auto *edge1 = &hull_computer.edges[hull_computer.faces[face_index]];
+      //   auto *edge2 = edge1->getNextEdgeOfFace();
+      //   auto *edge3 = edge2->getNextEdgeOfFace();
+      //   auto v0 =
+      //   toVector3(hull_computer.vertices[edge1->getSourceVertex()]); auto v1
+      //   = toVector3(hull_computer.vertices[edge2->getSourceVertex()]); auto
+      //   v2 = toVector3(hull_computer.vertices[edge3->getSourceVertex()]);
+      //   bounding_planes.emplace_back(
+      //       normalized(cross(v1 - v0, v2 - v0) + cross(v2 - v1, v0 - v1)),
+      //       (v0 + v1 + v2) * (1.0 / 3.0));
+      // }
+
+      bounding_planes.clear();
+      for (size_t face_index = 0; face_index < hull_computer.faces.size();
+           face_index++) {
+        auto *edge1 = &hull_computer.edges[hull_computer.faces[face_index]];
+        auto *edge2 = edge1->getNextEdgeOfFace();
+        auto *edge3 = edge2->getNextEdgeOfFace();
+        auto v0 = toVector3<double>(
+            pose *
+            toEigenVector3d(hull_computer.vertices[edge1->getSourceVertex()]));
+        auto v1 = toVector3<double>(
+            pose *
+            toEigenVector3d(hull_computer.vertices[edge2->getSourceVertex()]));
+        auto v2 = toVector3<double>(
+            pose *
+            toEigenVector3d(hull_computer.vertices[edge3->getSourceVertex()]));
+        TRACTOR_DEBUG("vvvc " << v0 << " " << v1 << " " << v2 << " "
+                              << cross(v1 - v0, v2 - v0));
+        bounding_planes.emplace_back(normalized(cross(v1 - v0, v2 - v0)),
+                                     (v0 + v1 + v2) * (1.0 / 3.0));
+      }
+      // exit(-1);
+
+      // bounding_planes.clear();
+      // for (size_t face_index = 0; face_index < hull_computer.faces.size();
+      //      face_index++) {
+      //   auto *edge1 = &hull_computer.edges[hull_computer.faces[face_index]];
+      //   auto *edge2 = edge1->getNextEdgeOfFace();
+      //   auto *edge3 = edge2->getNextEdgeOfFace();
+      //   auto v0 =
+      //       toEigenVector3d(hull_computer.vertices[edge1->getSourceVertex()]);
+      //   auto v1 =
+      //       toEigenVector3d(hull_computer.vertices[edge2->getSourceVertex()]);
+      //   auto v2 =
+      //       toEigenVector3d(hull_computer.vertices[edge3->getSourceVertex()]);
+      //   bounding_planes.emplace_back(((v1 - v0).cross(v2 - v0)).normalized(),
+      //                                (v0 + v1 + v2) * (1.0 / 3.0));
+      // }
+
       bullet_shape = sh;
 
       delete mesh_cleanup;
       return;
     }
   }
-};
 
-struct BulletCollisionWrapper {
-  btConvexShape *shape = nullptr;
-  btTransform pose;
-  BulletCollisionWrapper(const Eigen::Isometry3d &pose,
-                         const BulletCollisionShape *shape)
-      : pose(toBulletTransform(pose)), shape(shape->bullet_shape.get()) {}
-  inline btScalar getMargin() const {
-    return 0.0;
-    // return shape->getMargin();
-  }
-  inline btVector3 getObjectCenterInWorld() const { return pose.getOrigin(); }
-  inline const btTransform &getWorldTransform() const { return pose; }
-  inline btVector3 getLocalSupportWithMargin(const btVector3 &dir) const {
-    return shape->localGetSupportingVertexWithoutMargin(dir);
-  }
-  inline btVector3 getLocalSupportWithoutMargin(const btVector3 &dir) const {
-    return shape->localGetSupportingVertexWithoutMargin(dir);
+  virtual void project(const Eigen::Vector3d &in_point,
+                       Eigen::Vector3d &closest_point,
+                       Eigen::Vector3d &surface_normal) const override {
+
+    btSphereShape point_shape(margin);
+    CollisionResponse response;
+    bulletCollide(
+        btTransform::getIdentity(), bullet_shape.get(),
+        btTransform(btMatrix3x3::getIdentity(), toBulletVector3(in_point)),
+        &point_shape, response);
+    closest_point = response.point_a;
+    surface_normal = -response.normal;
+
+    // bulletCollide(
+    //     btTransform::getIdentity(), bullet_shape.get(),
+    //     btTransform(btMatrix3x3::getIdentity(),
+    //     toBulletVector3(closest_point)), &point_shape, response);
+
+    // double min_dist = -1;
+    // TRACTOR_DEBUG("plane count " << bullet_shape->getNumPlanes());
+    // for (size_t i = 0; i < bullet_shape->getNumPlanes(); i++) {
+    //   TRACTOR_DEBUG("plane " << i);
+    //   btVector3 normal;
+    //   btVector3 support;
+    //   bullet_shape->getPlane(normal, support, i);
+    //   double dist =
+    //       std::abs((toBulletVector3(closest_point) - support).dot(normal));
+    //   if (min_dist < 0 || dist < min_dist) {
+    //     min_dist = dist;
+    //     surface_normal = toEigenVector3d(normal);
+    //   }
+    // }
+
+    auto closest_point_t = toVector3<double>(closest_point);
+    double min_dist = -1;
+    TRACTOR_DEBUG("closest point " << closest_point_t);
+    for (size_t i = 0; i < bounding_planes.size(); i++) {
+      auto &plane = bounding_planes[i];
+      double dist = std::abs(plane.signedDistance(closest_point_t) - margin);
+      // double dist = std::abs((closest_point - toEigenVector3d(plane.point()))
+      //                            .dot(toEigenVector3d(plane.normal())));
+      TRACTOR_DEBUG("plane " << i << " " << plane << " dist " << dist);
+      if (min_dist < -0.5 || dist < min_dist) {
+        min_dist = dist;
+        surface_normal = toEigenVector3d(plane.normal());
+      }
+    }
   }
 };
 
@@ -116,34 +257,11 @@ BulletCollisionEngine::create(const Eigen::Affine3d &pose,
 
 void BulletCollisionEngine::collide(const CollisionRequest &request,
                                     CollisionResponse &response) const {
-
-  auto wa = BulletCollisionWrapper(
-      request.pose_a, (const BulletCollisionShape *)request.shape_a);
-  auto wb = BulletCollisionWrapper(
-      request.pose_b, (const BulletCollisionShape *)request.shape_b);
-
-  response = CollisionResponse();
-
-  btVector3 guess = btVector3(1, 0, 0);
-
-  btGjkEpaSolver3::sResults results;
-  bool ok = btGjkEpaSolver3_Distance(wa, wb, guess, results);
-  if (!ok) {
-    ok = btGjkEpaSolver3_Penetration(wa, wb, guess, results);
-    if (!ok) {
-      TRACTOR_DEBUG("collision detection failed");
-    }
-  }
-
-  if (ok) {
-    response.point_a = toEigenVector3d(results.witnesses[0]);
-    response.point_b = toEigenVector3d(results.witnesses[1]);
-    response.normal =
-        request.pose_a.rotation() * toEigenVector3d(results.normal);
-    response.distance = results.distance;
-  } else {
-    TRACTOR_ERROR("collision detection failed");
-  }
+  bulletCollide(toBulletTransform(request.pose_a),
+                ((BulletCollisionShape *)request.shape_a)->bullet_shape.get(),
+                toBulletTransform(request.pose_b),
+                ((BulletCollisionShape *)request.shape_b)->bullet_shape.get(),
+                response);
 }
 
 } // namespace tractor

@@ -3,7 +3,10 @@
 #pragma once
 
 #include "collision.h"
-#include <tractor/collision/shape.h>
+#include <tractor/collision/bullet.h>
+#include <tractor/collision/loader.h>
+#include <tractor/collision/ops.h>
+#include <tractor/collision/robot.h>
 
 #include <deque>
 #include <random>
@@ -23,9 +26,7 @@ namespace tractor {
 template <class Geometry> struct PhysicsSimulator {
   RobotState<Geometry> _robot_state, _previous_robot_state;
   std::shared_ptr<tractor::RobotModel<Geometry>> _robot_model;
-  std::shared_ptr<tractor::CollisionRobot<
-      typename BatchScalar<typename Geometry::Value>::Type>>
-      _collision_model;
+  std::shared_ptr<tractor::CollisionRobot> _collision_model;
   // std::deque<
   //     ShapeCollisionPair<typename BatchScalar<typename
   //     Geometry::Value>::Type>> _shape_collision_pairs;
@@ -214,60 +215,71 @@ private:
               auto &pose_a = _robot_state.links().pose(i_link_a);
               auto &pose_b = _robot_state.links().pose(i_link_b);
 
-              for (auto &shape_a : _collision_model->link(i_link_a)->shapes()) {
+              for (auto &shape_a :
+                   _collision_model
+                       ->link(_robot_model->info()->links().name(i_link_a))
+                       ->shapes()) {
                 for (auto &shape_b :
-                     _collision_model->link(i_link_b)->shapes()) {
-                  if (_is_link_dynamic[i_link_a]) {
-#if 1
-                    typename Geometry::Vector3 point_a, point_b, axis, local_a,
-                        local_b;
-                    collision_axes(pose_a, pose_b, uint64_t(shape_a.get()),
-                                   uint64_t(shape_b.get()), point_a, point_b,
-                                   axis, local_a, local_b);
-                    collision_pair_counter++;
-                    point_a = pose_a * local_a;
-                    point_b = pose_b * local_b;
-                    auto distance = dot(axis, point_a - point_b);
-                    _contacts.emplace_back();
-                    auto &contact = _contacts.back();
-                    contact.body_a = i_body_a;
-                    contact.body_b = i_body_b;
-                    contact.point =
-                        (point_a + point_b) * typename Geometry::Value(0.5);
-                    contact.distance = distance;
-                    contact.axis = axis;
-                    contact.link_a = i_link_a;
-                    contact.link_b = i_link_b;
-#endif
-                  } else {
-#if 1
-                    if (auto *polyhedron_b =
-                            dynamic_cast<const ConvexPolyhedralCollisionShape<
-                                typename Geometry::Value> *>(shape_b.get())) {
-                      for (auto &vertex_b : polyhedron_b->points()) {
-                        typename Geometry::Vector3 point = pose_b * vertex_b;
-                        typename Geometry::Vector3 axis;
-                        typename Geometry::Scalar distance;
-                        collision_project(
-                            Geometry::inverse(pose_a) * point,
-                            uint64_t(
-                                (CollisionShape<typename Geometry::Value> *)
-                                    shape_a.get()),
-                            axis, distance);
-                        axis = Geometry::orientation(pose_a) * axis;
-                        _contacts.emplace_back();
-                        auto &contact = _contacts.back();
-                        contact.body_a = i_body_a;
-                        contact.body_b = i_body_b;
-                        contact.point = point;
-                        contact.distance = distance;
-                        contact.axis = axis;
-                        contact.link_a = i_link_a;
-                        contact.link_b = i_link_b;
-                      }
-                    }
-#endif
-                  }
+                     _collision_model
+                         ->link(_robot_model->info()->links().name(i_link_b))
+                         ->shapes()) {
+                  //                   if (_is_link_dynamic[i_link_a]) {
+                  // #if 1
+                  typename Geometry::Vector3 point_a, point_b, axis, local_a,
+                      local_b;
+                  collision_axes(pose_a, pose_b, uint64_t(shape_a.get()),
+                                 uint64_t(shape_b.get()), point_a, point_b,
+                                 axis, local_a, local_b);
+                  collision_pair_counter++;
+                  point_a = pose_a * local_a;
+                  point_b = pose_b * local_b;
+                  auto distance = dot(axis, point_a - point_b);
+                  _contacts.emplace_back();
+                  auto &contact = _contacts.back();
+                  contact.body_a = i_body_a;
+                  contact.body_b = i_body_b;
+                  contact.point =
+                      (point_a + point_b) * typename Geometry::Value(0.5);
+                  contact.distance = distance;
+                  contact.axis = axis;
+                  contact.link_a = i_link_a;
+                  contact.link_b = i_link_b;
+                  // #endif
+                  //                   } else {
+                  // #if 1
+                  //                     if (auto *polyhedron_b =
+                  //                             dynamic_cast<const
+                  //                             ConvexPolyhedralCollisionShape<
+                  //                                 typename Geometry::Value>
+                  //                                 *>(shape_b.get())) {
+                  //                       for (auto &vertex_b :
+                  //                       polyhedron_b->points()) {
+                  //                         typename Geometry::Vector3 point
+                  //                         = pose_b * vertex_b; typename
+                  //                         Geometry::Vector3 axis; typename
+                  //                         Geometry::Scalar distance;
+                  //                         collision_project(
+                  //                             Geometry::inverse(pose_a) *
+                  //                             point, uint64_t(
+                  //                                 (CollisionShape<typename
+                  //                                 Geometry::Value> *)
+                  //                                     shape_a.get()),
+                  //                             axis, distance);
+                  //                         axis =
+                  //                         Geometry::orientation(pose_a) *
+                  //                         axis; _contacts.emplace_back();
+                  //                         auto &contact = _contacts.back();
+                  //                         contact.body_a = i_body_a;
+                  //                         contact.body_b = i_body_b;
+                  //                         contact.point = point;
+                  //                         contact.distance = distance;
+                  //                         contact.axis = axis;
+                  //                         contact.link_a = i_link_a;
+                  //                         contact.link_b = i_link_b;
+                  //                       }
+                  //                     }
+                  // #endif
+                  //}
                 }
               }
             }
@@ -491,9 +503,6 @@ private:
 #endif
   }
 
-  typedef CollisionRobot<typename BatchScalar<typename Geometry::Value>::Type>
-      CollisionRobotType;
-
 public:
   PhysicsSimulator(const moveit::core::RobotModel &robot_model,
                    const collision_detection::AllowedCollisionMatrix &acm =
@@ -507,12 +516,8 @@ public:
                   robot_model, false))
                   */
 
-        _collision_model(
-            std::allocate_shared<CollisionRobotType
-                                 // AlignedStdAlloc<CollisionRobotType>,
-
-                                 >(AlignedStdAlloc<CollisionRobotType>(),
-                                   robot_model, false))
+        _collision_model(loadCollisionRobot(
+            std::make_shared<BulletCollisionEngine>(), robot_model))
 
   // std::allocate_shared<T, AlignedStdAlloc<T>, const T &>(
   //    AlignedStdAlloc<T>(), *std::dynamic_pointer_cast<T>(instance));

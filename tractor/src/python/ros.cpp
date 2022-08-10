@@ -34,6 +34,8 @@ static void pythonizeROS(py::module &m) {
 
   m.def("visualize_points", &visualizePoints);
 
+  m.def("visualize_lines", &visualizeLines);
+
   m.def("init_ros", [](const std::string &name) {
     TRACTOR_DEBUG("init_ros " << name);
     auto args =

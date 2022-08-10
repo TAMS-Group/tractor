@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <tractor/collision/query.h>
+//#include <tractor/collision/query.h>
 #include <tractor/core/eigen.h>
 #include <tractor/core/operator.h>
 #include <tractor/core/recorder.h>
@@ -31,83 +31,85 @@ TRACTOR_D(reverse, acos, (const T &p, T &da, const T &dx), { da = dx * p; })
 
 // ------------------------------------------
 
-template <class T>
-static void collision_project_2(const Vector3<T> &point,
-                                const uint64_t &shape_id, Vector3<T> &normal,
-                                T &distance) {
-  auto &shape = *(CollisionShape<T> *)shape_id;
-  shape.project(point, normal, distance);
-}
-
-template <class T, size_t S>
-static void
-collision_project_2(const Vector3<Batch<T, S>> &point, const uint64_t &shape_id,
-                    Vector3<Batch<T, S>> &normal, Batch<T, S> &distance) {
-  auto &shape = *(CollisionShape<T> *)shape_id;
-  for (size_t i = 0; i < S; i++) {
-    Vector3<T> n;
-    shape.project(Vector3<T>(point.x()[i], point.y()[i], point.z()[i]), n,
-                  distance[i]);
-    normal.x()[i] = n.x();
-    normal.y()[i] = n.y();
-    normal.z()[i] = n.z();
-  }
-}
-
-TRACTOR_OP(collision_project_2,
-           (const Vector3<T> &point, const uint64_t &shape_id,
-            Vector3<T> &normal, T &distance),
-           { collision_project_2(point, shape_id, normal, distance); })
-TRACTOR_D(prepare, collision_project_2,
-          (const Vector3<T> &point, const uint64_t &shape_id,
-           const Vector3<T> &normal, const T &distance, Vector3<T> &n),
-          { n = normal; })
-TRACTOR_D(forward, collision_project_2,
-          (const Vector3<T> &n, const Vector3<T> &point,
-           const uint64_t &shape_id, Vector3<T> &normal, T &distance),
-          {
-            normal.setZero();
-            distance = -dot(n, point);
-          })
-TRACTOR_D(reverse, collision_project_2,
-          (const Vector3<T> &n, Vector3<T> &point, uint64_t &shape_id,
-           const Vector3<T> &normal, const T &distance),
-          {
-            point = n * -distance;
-            shape_id = 0;
-          })
+// template <class T>
+// static void collision_project_2(const Vector3<T> &point,
+//                                 const uint64_t &shape_id, Vector3<T> &normal,
+//                                 T &distance) {
+//   auto &shape = *(CollisionShape<T> *)shape_id;
+//   shape.project(point, normal, distance);
+// }
+//
+// template <class T, size_t S>
+// static void
+// collision_project_2(const Vector3<Batch<T, S>> &point, const uint64_t
+// &shape_id,
+//                     Vector3<Batch<T, S>> &normal, Batch<T, S> &distance) {
+//   auto &shape = *(CollisionShape<T> *)shape_id;
+//   for (size_t i = 0; i < S; i++) {
+//     Vector3<T> n;
+//     shape.project(Vector3<T>(point.x()[i], point.y()[i], point.z()[i]), n,
+//                   distance[i]);
+//     normal.x()[i] = n.x();
+//     normal.y()[i] = n.y();
+//     normal.z()[i] = n.z();
+//   }
+// }
+//
+// TRACTOR_OP(collision_project_2,
+//            (const Vector3<T> &point, const uint64_t &shape_id,
+//             Vector3<T> &normal, T &distance),
+//            { collision_project_2(point, shape_id, normal, distance); })
+// TRACTOR_D(prepare, collision_project_2,
+//           (const Vector3<T> &point, const uint64_t &shape_id,
+//            const Vector3<T> &normal, const T &distance, Vector3<T> &n),
+//           { n = normal; })
+// TRACTOR_D(forward, collision_project_2,
+//           (const Vector3<T> &n, const Vector3<T> &point,
+//            const uint64_t &shape_id, Vector3<T> &normal, T &distance),
+//           {
+//             normal.setZero();
+//             distance = -dot(n, point);
+//           })
+// TRACTOR_D(reverse, collision_project_2,
+//           (const Vector3<T> &n, Vector3<T> &point, uint64_t &shape_id,
+//            const Vector3<T> &normal, const T &distance),
+//           {
+//             point = n * -distance;
+//             shape_id = 0;
+//           })
 
 // ------------------------------------------
 
-template <class T>
-static void collision_project(const Vector3<T> &point, const uint64_t &shape_id,
-                              Vector3<T> &normal, T &distance) {
-  // auto &shape = *(CollisionShape<T> *)shape_id;
-  // shape.project(point, normal, distance);
-  throw std::runtime_error("collision_project NYI");
-}
-TRACTOR_OP(collision_project,
-           (const Vector3<T> &point, const uint64_t &shape_id,
-            Vector3<T> &normal, T &distance),
-           { collision_project(point, shape_id, normal, distance); })
-TRACTOR_D(prepare, collision_project,
-          (const Vector3<T> &point, const uint64_t &shape_id,
-           const Vector3<T> &normal, const T &distance),
-          {})
-TRACTOR_D(forward, collision_project,
-          (const Vector3<T> &point, const uint64_t &shape_id,
-           Vector3<T> &normal, T &distance),
-          {
-            normal.setZero();
-            distance = T(0);
-          })
-TRACTOR_D(reverse, collision_project,
-          (Vector3<T> & point, uint64_t &shape_id, const Vector3<T> &normal,
-           const T &distance),
-          {
-            point.setZero();
-            shape_id = 0;
-          })
+// template <class T>
+// static void collision_project(const Vector3<T> &point, const uint64_t
+// &shape_id,
+//                               Vector3<T> &normal, T &distance) {
+//   // auto &shape = *(CollisionShape<T> *)shape_id;
+//   // shape.project(point, normal, distance);
+//   throw std::runtime_error("collision_project NYI");
+// }
+// TRACTOR_OP(collision_project,
+//            (const Vector3<T> &point, const uint64_t &shape_id,
+//             Vector3<T> &normal, T &distance),
+//            { collision_project(point, shape_id, normal, distance); })
+// TRACTOR_D(prepare, collision_project,
+//           (const Vector3<T> &point, const uint64_t &shape_id,
+//            const Vector3<T> &normal, const T &distance),
+//           {})
+// TRACTOR_D(forward, collision_project,
+//           (const Vector3<T> &point, const uint64_t &shape_id,
+//            Vector3<T> &normal, T &distance),
+//           {
+//             normal.setZero();
+//             distance = T(0);
+//           })
+// TRACTOR_D(reverse, collision_project,
+//           (Vector3<T> & point, uint64_t &shape_id, const Vector3<T> &normal,
+//            const T &distance),
+//           {
+//             point.setZero();
+//             shape_id = 0;
+//           })
 
 // ------------------------------------------
 

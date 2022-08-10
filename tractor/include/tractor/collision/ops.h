@@ -143,4 +143,73 @@ collide(const typename Geometry::Pose &pose_a,
   return ret;
 }
 
+// -------------------------------------------------------------
+
+template <class T>
+static void collision_project(const Vector3<T> &point, const uint64_t &shape_id,
+                              Vector3<T> &closest_point,
+                              Vector3<T> &surface_normal) {
+  auto *shape = (CollisionShape *)shape_id;
+  Eigen::Vector3d i_p = Eigen::Vector3d(point.x(), point.y(), point.z());
+  Eigen::Vector3d o_p, o_n;
+  shape->project(i_p, o_p, o_n);
+  closest_point.x() = o_p.x();
+  closest_point.y() = o_p.y();
+  closest_point.z() = o_p.z();
+  surface_normal.x() = o_n.x();
+  surface_normal.y() = o_n.y();
+  surface_normal.z() = o_n.z();
+}
+
+template <class T, size_t S>
+static void collision_project(const Vector3<Batch<T, S>> &point,
+                              const uint64_t &shape_id,
+                              Vector3<Batch<T, S>> &closest_point,
+                              Vector3<Batch<T, S>> &surface_normal) {
+  auto *shape = (CollisionShape *)shape_id;
+  for (size_t i = 0; i < S; i++) {
+    Eigen::Vector3d i_p =
+        Eigen::Vector3d(point.x()[i], point.y()[i], point.z()[i]);
+    Eigen::Vector3d o_p, o_n;
+    shape->project(i_p, o_p, o_n);
+    closest_point.x()[i] = o_p.x();
+    closest_point.y()[i] = o_p.y();
+    closest_point.z()[i] = o_p.z();
+    surface_normal.x()[i] = o_n.x();
+    surface_normal.y()[i] = o_n.y();
+    surface_normal.z()[i] = o_n.z();
+  }
+}
+
+TRACTOR_OP(collision_project,
+           (const Vector3<T> &point, const uint64_t &shape_id,
+            Vector3<T> &out_point, Vector3<T> &out_normal),
+           { collision_project(point, shape_id, out_point, out_normal); })
+TRACTOR_D(prepare, collision_project,
+          (const Vector3<T> &point, const uint64_t &shape_id,
+           const Vector3<T> &out_point, const Vector3<T> &out_normal),
+          {})
+TRACTOR_D(forward, collision_project,
+          (const Vector3<T> &point, const uint64_t &shape_id,
+           Vector3<T> &out_point, Vector3<T> &out_normal),
+          {
+            out_point.setZero();
+            out_normal.setZero();
+          })
+TRACTOR_D(reverse, collision_project,
+          (Vector3<T> & point, uint64_t &shape_id, const Vector3<T> &out_point,
+           const Vector3<T> &out_normal),
+          {
+            point.setZero();
+            shape_id = 0;
+          })
+
+template <class Geometry>
+void project(const typename Geometry::Vector3 &point,
+             const std::shared_ptr<const CollisionShape> &shape,
+             typename Geometry::Vector3 &out_point,
+             typename Geometry::Vector3 &out_normal) {
+  collision_project(point, (uint64_t)shape.get(), out_point, out_normal);
+}
+
 } // namespace tractor

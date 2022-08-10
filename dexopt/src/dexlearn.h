@@ -22,7 +22,7 @@ template <class ValueSingle, class ValueBatch> class DexLearn {
   std::shared_ptr<RobotModel<GeometryBatch>> _tractor_model;
   size_t _contact_dimensions = 9;
   std::shared_ptr<tractor::Engine> _engine;
-  tractor::CollisionRobot<ValueSingle> _collision_robot;
+  std::shared_ptr<tractor::CollisionRobot> _collision_robot;
   robot_model::RobotModelConstPtr _robot_model;
   std::shared_ptr<tractor::PhysicsSimulator<GeometryBatch>> _simulator;
   std::vector<std::string> _end_effectors;
@@ -80,8 +80,8 @@ template <class ValueSingle, class ValueBatch> class DexLearn {
           if (allowed == collision_detection::AllowedCollision::NEVER) {
             auto &pose_a = _simulator->state().links().pose(link_a);
             auto &pose_b = _simulator->state().links().pose(link_b);
-            for (auto &shape_a : _collision_robot.link(link_a)->shapes()) {
-              for (auto &shape_b : _collision_robot.link(link_b)->shapes()) {
+            for (auto &shape_a : _collision_robot->link(link_a)->shapes()) {
+              for (auto &shape_b : _collision_robot->link(link_b)->shapes()) {
                 typename GeometryBatch::Vector3 point_a, point_b, axis, local_a,
                     local_b;
                 collision_axes(pose_a, pose_b, uint64_t(shape_a.get()),
@@ -150,59 +150,66 @@ template <class ValueSingle, class ValueBatch> class DexLearn {
                      const typename GeometryBatch::Vector3 &contact_point) {
     auto object_pose = _simulator->state().links().pose(object_name);
     auto p = GeometryBatch::inverse(object_pose) * contact_point;
-    auto &shapes = _collision_robot.link(object_name)->shapes();
-    if (shapes.size() != 1) {
-      throw std::runtime_error("invalid number of collision shapes");
-    }
 
-    auto *shape = shapes.at(0).get();
+    goal(p); // TODO: proper capture op
 
-    auto f = ValueBatch(_env->info().shape_penalty);
+    // auto &shapes = _collision_robot->link(object_name)->shapes();
+    // if (shapes.size() != 1) {
+    //   throw std::runtime_error("invalid number of collision shapes");
+    // }
+    //
+    // auto *shape = shapes.at(0).get();
+    //
+    // auto f = ValueBatch(_env->info().shape_penalty);
 
-    if (auto *cylinder =
-            dynamic_cast<const CollisionCylinderShape<ValueSingle> *>(shape)) {
+    // if (auto *cylinder =
+    //         dynamic_cast<const CollisionCylinderShape<ValueSingle> *>(shape))
+    //         {
+    //
+    //   ScalarBatch px, py, pz;
+    //   GeometryBatch::unpack(p, px, py, pz);
+    //
+    //   goal(f * (relu(pz - ValueBatch(cylinder->length() * 0.5)) +
+    //             relu(-pz - ValueBatch(cylinder->length() * 0.5))));
+    //
+    //   // goal(f * relu(sqrt(px * px + py * py) -
+    //   // ValueBatch(cylinder->radius())));
+    //
+    //   size_t n = 8;
+    //   for (size_t i = 0; i < n; i++) {
+    //     double angle = i * M_PI / n;
+    //     auto v =
+    //         px * ValueBatch(std::sin(angle)) + py *
+    //         ValueBatch(std::cos(angle));
+    //     goal(f * (relu(v - ValueBatch(cylinder->radius())) +
+    //               relu(-v - ValueBatch(cylinder->length()))));
+    //   }
+    //
+    //   return;
+    // }
+    //
+    // if (auto *poly =
+    //         dynamic_cast<const ConvexPolyhedralCollisionShape<ValueSingle>
+    //         *>(
+    //             shape)) {
+    //
+    //   // ROS_INFO_STREAM("plane count " << poly->planes().size());
+    //   for (auto &plane : poly->planes()) {
+    //     auto plane_normal =
+    //     GeometryBatch::pack(ValueBatch(plane.normal().x()),
+    //                                             ValueBatch(plane.normal().y()),
+    //                                             ValueBatch(plane.normal().z()));
+    //     auto plane_offset = ValueBatch(plane.offset());
+    //     auto dist = dot(plane_normal, p) + plane_offset;
+    //     goal(f * relu(dist));
+    //   }
+    //
+    //   return;
+    // }
 
-      ScalarBatch px, py, pz;
-      GeometryBatch::unpack(p, px, py, pz);
-
-      goal(f * (relu(pz - ValueBatch(cylinder->length() * 0.5)) +
-                relu(-pz - ValueBatch(cylinder->length() * 0.5))));
-
-      // goal(f * relu(sqrt(px * px + py * py) -
-      // ValueBatch(cylinder->radius())));
-
-      size_t n = 8;
-      for (size_t i = 0; i < n; i++) {
-        double angle = i * M_PI / n;
-        auto v =
-            px * ValueBatch(std::sin(angle)) + py * ValueBatch(std::cos(angle));
-        goal(f * (relu(v - ValueBatch(cylinder->radius())) +
-                  relu(-v - ValueBatch(cylinder->length()))));
-      }
-
-      return;
-    }
-
-    if (auto *poly =
-            dynamic_cast<const ConvexPolyhedralCollisionShape<ValueSingle> *>(
-                shape)) {
-
-      // ROS_INFO_STREAM("plane count " << poly->planes().size());
-      for (auto &plane : poly->planes()) {
-        auto plane_normal = GeometryBatch::pack(ValueBatch(plane.normal().x()),
-                                                ValueBatch(plane.normal().y()),
-                                                ValueBatch(plane.normal().z()));
-        auto plane_offset = ValueBatch(plane.offset());
-        auto dist = dot(plane_normal, p) + plane_offset;
-        goal(f * relu(dist));
-      }
-
-      return;
-    }
-
-    throw std::runtime_error(
-        std::string() +
-        "collision shape not yet supported: " + typeid(*shape).name());
+    // throw std::runtime_error(std::string() + "collision shape not yet
+    // supported: " +
+    //                          typeid(*shape).name());
   }
 
   void _applyFrictionConePenalties(
@@ -246,7 +253,8 @@ public:
       : _tractor_model(
             std::make_shared<RobotModel<GeometryBatch>>(*robot_model)),
         _engine(engine), _robot_model(robot_model), _env(env),
-        _collision_robot(*robot_model, false),
+        _collision_robot(loadCollisionRobot(
+            std::make_shared<BulletCollisionEngine>(), *robot_model)),
         _allowed_collision_matrix(allowed_collision_matrix),
         _end_effectors(env->info().end_effectors),
         _frames(env->info().frame_count), _group_robot(group_robot),
@@ -291,18 +299,27 @@ public:
 
     // contact_point_1 = object_position + contact_point_1;
 
-    {
-      auto &shapes = _collision_robot.link(object_name)->shapes();
-      if (shapes.size() != 1) {
-        throw std::runtime_error("invalid number of collision shapes");
-      }
-      auto *shape = shapes.at(0).get();
-      contact_point_1 =
-          object_pose * GeometryBatch::pack(ValueBatch(shape->center().x()),
-                                            ValueBatch(shape->center().y()),
-                                            ValueBatch(shape->center().z())) +
-          contact_point_1;
-    }
+    // {
+    //   auto &shapes = _collision_robot->link(object_name)->shapes();
+    //   if (shapes.size() != 1) {
+    //     throw std::runtime_error("invalid number of collision shapes");
+    //   }
+    //   auto *shape = shapes.at(0).get();
+    //   // contact_point_1 =
+    //   //     object_pose *
+    //   GeometryBatch::pack(ValueBatch(shape->center().x()),
+    //   // ValueBatch(shape->center().y()),
+    //   // ValueBatch(shape->center().z()))
+    //   //                                       +
+    //   //     contact_point_1;
+    //
+    //   // TODO: center? (see above)
+    //   contact_point_1 =
+    //       object_pose *
+    //           GeometryBatch::pack(ValueBatch(0), ValueBatch(0),
+    //           ValueBatch(0)) +
+    //       contact_point_1;
+    // }
 
     auto contact_point_2 =
         (GeometryBatch::pack(contact_parameters[3], contact_parameters[4],
@@ -316,19 +333,25 @@ public:
 
     // contact_point_2 = end_effector_position + contact_point_2;
 
-    {
-      auto &shapes = _collision_robot.link(end_effector_name)->shapes();
-      if (shapes.size() != 1) {
-        throw std::runtime_error("invalid number of collision shapes");
-      }
-      auto *shape = shapes.at(0).get();
-      contact_point_2 =
-          end_effector_pose *
-              GeometryBatch::pack(ValueBatch(shape->center().x()),
-                                  ValueBatch(shape->center().y()),
-                                  ValueBatch(shape->center().z())) +
-          contact_point_2;
-    }
+    // {
+    //   auto &shapes = _collision_robot->link(end_effector_name)->shapes();
+    //   if (shapes.size() != 1) {
+    //     throw std::runtime_error("invalid number of collision shapes");
+    //   }
+    //   auto *shape = shapes.at(0).get();
+    //   contact_point_2 =
+    //       end_effector_pose *
+    //
+    //           // TODO: center (see below)
+    //           GeometryBatch::pack(ValueBatch(0), ValueBatch(0),
+    //           ValueBatch(0))
+    //
+    //       // GeometryBatch::pack(ValueBatch(shape->center().x()),
+    //       //                     ValueBatch(shape->center().y()),
+    //       //                     ValueBatch(shape->center().z()))
+    //
+    //       + contact_point_2;
+    // }
 
     auto fx = contact_parameters[6];
     auto fy = contact_parameters[7];
@@ -351,10 +374,12 @@ public:
     _applyShapePenalty(object_name, contact_point_1);
     _applyShapePenalty(end_effector_name, contact_point_2);
 
+    // TODO: implement collision project
+    /*
     // friction cone penalty
     {
       typename GeometryBatch::Vector3 contact_normal;
-      auto *shape = _collision_robot.link(object_name)->shapes().at(0).get();
+      auto *shape = _collision_robot->link(object_name)->shapes().at(0).get();
       auto pos_relative = GeometryBatch::inverse(object_pose) * contact_point_2;
       typename GeometryBatch::Scalar contact_distance;
       collision_project_2(pos_relative, uint64_t(shape), contact_normal,
@@ -376,7 +401,7 @@ public:
     {
       typename GeometryBatch::Vector3 contact_normal;
       auto *shape =
-          _collision_robot.link(end_effector_name)->shapes().at(0).get();
+          _collision_robot->link(end_effector_name)->shapes().at(0).get();
       auto pos_relative =
           GeometryBatch::inverse(end_effector_pose) * contact_point_1;
       typename GeometryBatch::Scalar contact_distance;
@@ -394,6 +419,7 @@ public:
                             indexBatch(value(contact_normal), 0),
                             indexBatch(value(contact_force), 0), 1);
     }
+    */
 
     // _viz.visualizeContact(
     //     indexBatch(value(contact_point_1) + value(contact_point_2), 0) * 0.5,

@@ -5,6 +5,8 @@ import tractor as tr
 import tractor.types_double as tt
 import rospy
 import sys
+import sklearn
+import sklearn.cluster
 
 tr.logger.verbosity = 10
 tr.init_ros("test")
@@ -29,6 +31,9 @@ print name_b, c_link_b
 
 object_pose = tt.Pose()
 
+samples = collision_robot.link("object").shapes[0].sample(500)
+samples = sklearn.cluster.KMeans(n_clusters=50).fit(samples).cluster_centers_
+
 while True:
 
     tr.interact("world", "object", object_pose, 0.1)
@@ -48,8 +53,28 @@ while True:
         print i, c.point_a, c.point_b, c.normal, c.distance
         points.append(c.point_a.value)
         points.append(c.point_b.value)
-    tr.visualize_points("collisions", 0.01, (1,1,0,1), points)
+    tr.visualize_points("collisions", 0.02, (1,0,0,1), points)
+    tr.visualize_lines("collision_lines", 0.005, (0,0,1,1), points)
+
+    points = [ ]
+    for shape_b in c_link_b.shapes:
+        surface_point = tr.project(tr.pose_translation(object_pose), shape_b)
+        points.append(surface_point.point.value)
+        points.append(surface_point.point.value + surface_point.normal.value * 0.1)
+    tr.visualize_points("pp", 0.02, (1,0,0,1), points)
+    tr.visualize_lines("pl", 0.005, (0,1,0,1), points)
+
+    points = [ ]
+    for sample in samples:
+        points.append((object_pose * tt.Vector3(sample[0:3])).value)
+    tr.visualize_points("s", 0.01, (1,0,1,1), points)
+
+    lines = [ ]
+    for sample in samples:
+        lines.append((object_pose * tt.Vector3(sample[0:3])).value)
+        lines.append((object_pose * (tt.Vector3(sample[0:3] + sample[3:6] * 0.03))).value)
+    tr.visualize_lines("sl", 0.005, (1,1,0,1), lines)
 
     tr.visualize("/display_robot_state", joint_states)
 
-    time.sleep(0.1)
+    time.sleep(0.02)
