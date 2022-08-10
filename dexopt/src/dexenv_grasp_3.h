@@ -24,7 +24,7 @@ struct DexEnvGrasp3 : tractor::DexEnv<ValueSingle, ValueBatch> {
 
   DexEnvGrasp3() {
 
-    this->_info.name = "grasp2";
+    this->_info.name = "grasp3";
 
     this->_info.frame_count = 20;
 

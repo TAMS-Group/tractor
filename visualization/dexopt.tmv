@@ -298,14 +298,14 @@ Display:
   FixedFrame: base_frame
   Name: Document
   Rendering:
-    BlackLevel: 0,000000
-    Exposure: 1,500000
+    BlackLevel: 0,010000
+    Exposure: 1,540000
     MultiSampling: 8
     SampleShading: 1
     ShadowCubeResolution: 512
     ShadowMapResolution: 4096
     ToneMapping: true
-    WhiteLevel: 1,000000
+    WhiteLevel: 0,875000
     id: 77222
     type: RenderingComponent
   Republish: true
@@ -318,13 +318,13 @@ Window:
   FieldOfView: 45,000000
   Name: Window
   ViewPosition:
-    X: 0,000380
-    Y: 0,391249
-    Z: 0,208315
+    X: 0,282371
+    Y: 0,326933
+    Z: 0,251372
   ViewTarget:
-    X: -0,023271
-    Y: 0,004550
-    Z: 0,105810
+    X: -0,075316
+    Y: 0,013250
+    Z: 0,082246
   id: 77426
   type: SceneWindow
 id: 6

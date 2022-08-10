@@ -3,6 +3,7 @@
 #pragma once
 
 #include "jointtypes.h"
+#include "linkmodel.h"
 #include "robotinfo.h"
 
 #include <deque>
@@ -19,6 +20,7 @@ template <class Geometry> class RobotModel {
   AlignedStdVector<JointVariant<JointStateBase<Geometry>>>
       _default_joint_states;
   AlignedStdVector<typename Geometry::Scalar> _default_positions;
+  // AlignedStdVector<LinkModel<Geometry>> _link_models;
 
   struct JointInfo {
     ssize_t parent_link_index = -1;
@@ -32,6 +34,13 @@ template <class Geometry> class RobotModel {
 
     Model joint_model = joint_model_in;
     State joint_state = joint_state_in;
+
+    joint_model.inertia() = Inertia<Geometry>(
+        Geometry::import(robot_joint_info.inertia().center()),
+        Geometry::import(robot_joint_info.inertia().mass()),
+        Geometry::import(robot_joint_info.inertia().massInverse()),
+        Geometry::import(robot_joint_info.inertia().moment()),
+        Geometry::import(robot_joint_info.inertia().momentInverse()));
 
     joint_model.origin() = Geometry::import(robot_joint_info.origin());
     _joint_models.emplace_back(joint_model);
@@ -56,6 +65,10 @@ public:
     for (auto &p : _robot_info->joints().defaultPositions()) {
       _default_positions.push_back(typename Geometry::Value(p));
     }
+
+    // for (auto &m_link : moveit_robot->getLinkModels()) {
+    //   _link_models.emplace_back(m_link->getName(), )
+    // }
 
     for (size_t joint_index = 0; joint_index < _robot_info->joints().size();
          joint_index++) {
@@ -114,6 +127,9 @@ public:
         throw std::runtime_error("joint type not yet implemented");
       }
     }
+
+    //_importBodyInertia(robot_model, robot_model.getRootJoint(),
+    //                   Eigen::Isometry3d::Identity());
   }
 
   auto &joint(size_t i) const { return *_joint_models.at(i); }

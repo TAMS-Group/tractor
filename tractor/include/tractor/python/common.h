@@ -55,47 +55,43 @@ public:
   }();
 
 template <class Type>
+static auto pythonizeTypeBase(py::module &main_module, py::module &type_module,
+                              const char *name) {
+  main_module.def("goal", [](const std::shared_ptr<Type> &var) { goal(*var); });
+  return ptr_class<Type>(type_module, name)
+      .def(py::init<>())
+      .def("__repr__",
+           [name](const Type &v) {
+             std::stringstream ss;
+             ss << value(v);
+             return ss.str();
+           })
+      .def("_internal_make_variable", [](Type &_this) { variable(_this); })
+      .def("_internal_make_parameter", [](Type &_this) { parameter(_this); })
+      .def("_internal_make_output", [](Type &_this) { output(_this); });
+}
+
+template <class Type> struct TypePythonizer {
+  static auto pythonize(py::module &main_module, py::module &type_module,
+                        const char *name) {
+    return pythonizeTypeBase<Type>(main_module, type_module, name);
+  }
+};
+
+// template <class Type> struct TypePythonizer<Var<Type>> {
+//   static auto pythonize(py::module &main_module, py::module &type_module,
+//                         const char *name) {
+//     return pythonizeTypeBase<Var<Type>>(main_module, type_module, name)
+//         .def_property(
+//             "value", [](const Var<Type> &v) { return (Type)v.value(); },
+//             [](Var<Type> &v, const Type &p) { v.value() = p; });
+//   }
+// };
+
+template <class Type>
 static auto pythonizeType(py::module &main_module, py::module &type_module,
                           const char *name) {
-
-  auto t =
-      // py::class_<Type>(type_module, name)
-      ptr_class<Type>(type_module, name)
-          // py::class_<Type, std::unique_ptr<Type>>(type_module, name)
-          .def(py::init<>())
-          .def("__repr__",
-               [name](const Type &v) {
-                 std::stringstream ss;
-                 ss << value(v);
-                 return ss.str();
-               })
-          .def("_internal_make_variable", [](Type &_this) { variable(_this); })
-          .def("_internal_make_parameter",
-               [](Type &_this) { parameter(_this); })
-          .def("_internal_make_output", [](Type &_this) { output(_this); });
-
-  // main_module.def("parameter", [](const std::shared_ptr<Type> &var) {
-  //   if (auto *rec = Recorder::instance()) {
-  //     rec->reference(var);
-  //   }
-  //   parameter(*var);
-  // });
-  // main_module.def("variable", [](const std::shared_ptr<Type> &var) {
-  //   if (auto *rec = Recorder::instance()) {
-  //     rec->reference(var);
-  //   }
-  //   variable(*var);
-  // });
-  // main_module.def("output", [](const std::shared_ptr<Type> &var) {
-  //   if (auto *rec = Recorder::instance()) {
-  //     rec->reference(var);
-  //   }
-  //   output(*var);
-  // });
-
-  main_module.def("goal", [](const std::shared_ptr<Type> &var) { goal(*var); });
-
-  return t;
+  return TypePythonizer<Type>::pythonize(main_module, type_module, name);
 }
 
 } // namespace tractor

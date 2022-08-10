@@ -3,6 +3,7 @@
 #include <tractor/python/common.h>
 
 #include <tractor/core/constraints.h>
+#include <tractor/core/error.h>
 #include <tractor/core/ops.h>
 #include <tractor/core/var.h>
 #include <tractor/geometry/fast.h>
@@ -33,6 +34,8 @@ static void pythonizeGeometry(py::module &main_module,
       .def(py::self * py::self)
       .def(py::self * Var<Vector3<Scalar>>());
 
+  pythonizeType<Var<Matrix3<Scalar>>>(main_module, type_module, "Matrix3");
+
   pythonizeType<Var<Vector3<Scalar>>>(main_module, type_module, "Vector3")
       .def(py::init(
           [](const Var<Scalar> &x, const Var<Scalar> &y, const Var<Scalar> &z) {
@@ -51,6 +54,23 @@ static void pythonizeGeometry(py::module &main_module,
       .def(py::init([](const Scalar &v) {
         return Var<Vector3<Scalar>>(Vector3<Scalar>(v, v, v));
       }))
+      .def_property(
+          "value",
+          [](const Var<Vector3<Scalar>> &_this) {
+            auto v = value(_this);
+            py::array_t<Scalar> r(3);
+            r.mutable_at(0) = v.x();
+            r.mutable_at(1) = v.y();
+            r.mutable_at(2) = v.z();
+            return r;
+          },
+          [](Var<Vector3<Scalar>> &_this, const py::array_t<Scalar> &array) {
+            TRACTOR_ASSERT(array.ndim() == 1);
+            TRACTOR_ASSERT(array.size() == 3);
+            value(_this).x() = array.at(0);
+            value(_this).y() = array.at(1);
+            value(_this).z() = array.at(2);
+          })
       .def(py::self + py::self)
       .def(py::self - py::self)
       .def(py::self * Var<Scalar>())

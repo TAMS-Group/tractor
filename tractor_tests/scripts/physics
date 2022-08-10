@@ -19,13 +19,27 @@ robot_model = tt.RobotModel(robot_description)
 
 object_start_pose = tt.Pose()
 
+fps = 100
+
 while True:
 
     tr.interact("world", "object", object_start_pose, 0.1)
 
     joint_states = tt.JointStates(robot_model)
-    joint_states.joint_state("object_joint").pose = object_start_pose
 
-    tr.visualize("/display_robot_state", joint_states)
+    object_body = tt.RigidBody(object_start_pose, robot_model.joint_model("object_joint").inertia)
+    print "pose", object_body.pose
+    print "center", object_body.inertia.center
+    print "mass",  object_body.inertia.mass
+    print "moment", object_body.inertia.moment
 
-    time.sleep(0.1)
+    for i in range(fps*2):
+        z = object_body.position.value[2]
+        if z < 0:
+            object_body.apply_force(tt.Vector3(0, 0, -z*10))
+        object_body.apply_damping(tt.Scalar(5), tt.Scalar(1))
+        object_body.apply_acceleration(tt.Vector3(0, 0, -9.81))
+        joint_states.joint_state("object_joint").pose = object_body.pose
+        tr.visualize("/display_robot_state", joint_states)
+        object_body.integrate(1.0/fps)
+        time.sleep(1.0/fps)

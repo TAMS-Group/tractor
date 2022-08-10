@@ -6,6 +6,8 @@
 #include <vector>
 
 #include <tractor/core/eigen.h>
+#include <tractor/dynamics/inertia.h>
+#include <tractor/geometry/eigen.h>
 
 namespace moveit {
 namespace core {
@@ -54,6 +56,7 @@ public:
 };
 
 class RobotJointInfo {
+  typedef GeometryEigenQuat<double> Geometry;
   size_t _index = 0;
   std::string _name;
   bool _is_mimic = false;
@@ -69,9 +72,11 @@ class RobotJointInfo {
   Eigen::Vector3d _axis = Eigen::Vector3d::Zero();
   ssize_t _parent_link_index = -1;
   size_t _child_link_index = -1;
+  Inertia<Geometry> _inertia;
 
 public:
-  RobotJointInfo(const moveit::core::JointModel &moveit_joint);
+  RobotJointInfo(const moveit::core::RobotModel &moveit_robot,
+                 const moveit::core::JointModel &moveit_joint);
   bool isMimicJoint() const { return _is_mimic; }
   size_t mimicIndex() const { return _mimic_index; }
   double mimicFactor() const { return _mimic_factor; }
@@ -87,6 +92,7 @@ public:
   auto parentLinkIndex() const { return _parent_link_index; }
   auto &name() const { return _name; }
   bool hasParentLink() const { return (_parent_link_index >= 0); }
+  auto &inertia() const { return _inertia; }
 };
 
 class RobotJointMap : public RobotIndexMap {

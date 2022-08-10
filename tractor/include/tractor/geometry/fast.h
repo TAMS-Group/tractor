@@ -105,9 +105,7 @@ template <class ScalarType> struct GeometryFast : GeometryFastBase<ScalarType> {
     return twist_translation(twist);
   }
 
-  static Vector3 rotation(const Twist &twist) {
-    return twist_rotation(twist);
-  }
+  static Vector3 rotation(const Twist &twist) { return twist_rotation(twist); }
 
   static Vector3 pack(const Scalar &x, const Scalar &y, const Scalar &z) {
     Vector3 ret;
@@ -147,9 +145,7 @@ template <class ScalarType> struct GeometryFast : GeometryFastBase<ScalarType> {
     return q;
   }
 
-  static Orientation inverse(const Orientation &q) {
-    return quat_inverse(q);
-  }
+  static Orientation inverse(const Orientation &q) { return quat_inverse(q); }
 
   static Pose inverse(const Pose &pose) {
     Orientation ret_orientation = inverse(orientation(pose));
@@ -205,6 +201,12 @@ template <class ScalarType> struct GeometryFast : GeometryFastBase<ScalarType> {
                                 Value(pose.translation().z())),
         tractor::Quaternion<Value>(Value(q.x()), Value(q.y()), Value(q.z()),
                                    Value(q.w()))));
+  }
+
+  template <class T>
+  static auto import(const T &value)
+      -> decltype(Scalar(Value(std::declval<T>()))) {
+    return Scalar(Value(value));
   }
 };
 

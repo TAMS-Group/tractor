@@ -42,7 +42,14 @@ static void pythonizeRobot(py::module &main_module, py::module &type_module) {
         return typename Geometry::Scalar(_this.upper());
       });
 
-  ptr_class<JointModelBase<Geometry>>(type_module, "JointModel");
+  ptr_class<JointModelBase<Geometry>>(type_module, "JointModel")
+      .def_property_readonly(
+          "origin",
+          [](const JointModelBase<Geometry> &_this) { return _this.origin(); })
+      .def_property_readonly("inertia",
+                             [](const JointModelBase<Geometry> &_this) {
+                               return _this.inertia();
+                             });
   ptr_class<JointStateBase<Geometry>>(type_module, "JointState");
 
   ptr_class<FixedJointModel<Geometry>, JointModelBase<Geometry>>(

@@ -6,7 +6,7 @@
 #include <memory>
 
 #include <tractor/core/constraints.h>
-#include <tractor/core/eigen.h>
+#include <tractor/dynamics/inertia.h>
 #include <tractor/geometry/ops.h>
 
 namespace tractor {
@@ -18,6 +18,7 @@ template <class Geometry> struct JointVariableOptions {
 template <class Geometry> class alignas(32) JointModelBase {
   typename Geometry::Pose _origin;
   // typename Geometry::Value _trust_region = typename Geometry::Value(-1);
+  Inertia<Geometry> _inertia;
 
 public:
   const typename Geometry::Pose &origin() const { return _origin; }
@@ -28,6 +29,11 @@ public:
   // bool hasTrustRegion() const {
   //    return _trust_region > typename Geometry::Value(0);
   //}
+
+  // combined inertia of all fixed child links, zero for fixed joints,
+  // in the local joint frame
+  auto &inertia() const { return _inertia; }
+  auto &inertia() { return _inertia; }
 };
 template <class Geometry> class alignas(32) JointStateBase {
 public:

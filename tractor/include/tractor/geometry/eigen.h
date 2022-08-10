@@ -12,6 +12,14 @@ template <class ScalarType> struct GeometryEigenMat {
   typedef Eigen::Matrix<Scalar, 3, 1, Eigen::DontAlign> Vector3;
   typedef Eigen::Quaternion<Scalar, Eigen::DontAlign> Orientation;
   typedef Eigen::Transform<Scalar, 3, Eigen::Isometry, Eigen::DontAlign> Pose;
+  typedef Eigen::Matrix<Scalar, 3, 3, Eigen::DontAlign> Matrix3;
+
+  static auto ScalarZero() { return Scalar(0); }
+  static auto Vector3Zero() { return Vector3::Zero(); }
+  static auto OrientationZero() { return Orientation::Zero(); }
+  static auto Matrix3Zero() { return Matrix3::Zero(); }
+
+  static auto import(const Matrix3 &m) { return m; }
 
   static Pose angleAxisPose(const Scalar &angle, const Vector3 &axis) {
     return Pose(Eigen::AngleAxis<Scalar>(angle, axis));
@@ -194,6 +202,14 @@ template <class ScalarType> struct GeometryEigenQuat {
   typedef PoseEigenQuat<ScalarType> Pose;
   typedef typename Pose::Vector3 Vector3;
   typedef typename Pose::Orientation Orientation;
+  typedef Eigen::Matrix<Scalar, 3, 3, Eigen::DontAlign> Matrix3;
+
+  static auto ScalarZero() { return Scalar(0); }
+  static auto Vector3Zero() { return Vector3::Zero(); }
+  static auto OrientationZero() { return Orientation::Zero(); }
+  static auto Matrix3Zero() { return Matrix3::Zero(); }
+
+  static auto import(const Matrix3 &m) { return m; }
 
   static Pose angleAxisPose(const Scalar &angle, const Vector3 &axis) {
     Pose pose;

@@ -36,6 +36,9 @@
     <build_depend>pybind11_catkin</build_depend>
     <run_depend>pybind11_catkin</run_depend>
 
+    <build_depend>kdl_parser</build_depend>
+    <run_depend>kdl_parser</run_depend>
+
     <export>
     </export>
 

@@ -26,6 +26,7 @@ find_package(catkin REQUIRED COMPONENTS
     eigen_conversions
     interactive_markers
     moveit_ros_robot_interaction
+    kdl_parser
 )
 
 set(LIBNAME libtractor)
@@ -41,6 +42,7 @@ catkin_package(
         eigen_conversions
         interactive_markers
         moveit_ros_robot_interaction
+        kdl_parser
 )
 
 include_directories(
@@ -89,6 +91,8 @@ add_library(${LIBNAME}
     src/core/type.cpp
     src/core/var.cpp
     src/core/verify.cpp
+    src/dynamics/inertia.cpp
+    src/dynamics/rigidbody.cpp
     src/engines/base.cpp
     src/engines/jit.cpp
     src/engines/loop.cpp
@@ -109,8 +113,10 @@ add_library(${LIBNAME}
     src/robot/goals.cpp
     src/robot/jointstate.cpp
     src/robot/jointtypes.cpp
+    src/robot/linkmodel.cpp
     src/robot/linkstate.cpp
     src/python/common.cpp
+    src/python/dynamics.cpp
     src/python/geometry.cpp
     src/python/module.cpp
     src/python/neural.cpp

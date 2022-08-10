@@ -155,23 +155,19 @@ static void _loadCollisionRobotImpl(
     auto &shape_origin = origins[shape_index];
     Eigen::Isometry3d shape_pose((transform * shape_origin).matrix());
 
-#if 1
     if (auto *sphere = dynamic_cast<const shapes::Sphere *>(shape.get())) {
       Eigen::Vector3d p = shape_pose.translation();
       collision_link->addSphere(Vector3<double>(p.x(), p.y(), p.z()),
                                 sphere->radius);
-    } else
-#endif
+      continue;
+    }
 
-#if 1
-        if (auto *cylinder =
-                dynamic_cast<const shapes::Cylinder *>(shape.get())) {
+    if (auto *cylinder = dynamic_cast<const shapes::Cylinder *>(shape.get())) {
       collision_link->addCylinder(cylinder->radius, cylinder->length);
-    } else
-#endif
+      continue;
+    }
 
     {
-
       const shapes::Mesh *mesh =
           dynamic_cast<const shapes::Mesh *>(shape.get());
       const shapes::Mesh *mesh_cleanup = nullptr;
@@ -187,12 +183,15 @@ static void _loadCollisionRobotImpl(
         vertex = shape_pose * vertex;
         vertices.emplace_back(vertex.x(), vertex.y(), vertex.z());
       }
-      ConvexHull hull;
-      hull.build(vertices);
       if (!vertices.empty()) {
-        collision_link->addConvexPolyhedron(hull.vertices(), hull.planes());
+        ConvexHull hull;
+        hull.build(vertices);
+        if (!vertices.empty()) {
+          collision_link->addConvexPolyhedron(hull.vertices(), hull.planes());
+        }
       }
       delete mesh_cleanup;
+      continue;
     }
   }
 
