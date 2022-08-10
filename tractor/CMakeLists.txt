@@ -57,12 +57,11 @@ include_directories(
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
 
 add_library(${LIBNAME}
-    src/collision/link.cpp
-    src/collision/query.cpp
+    src/collision/bullet.cpp
+    src/collision/engine.cpp
+    src/collision/loader.cpp
     src/collision/ops.cpp
     src/collision/robot.cpp
-    src/collision/shape.cpp
-    src/collision/types.cpp
     src/core/allocator.cpp
     src/core/any.cpp
     src/core/array.cpp
@@ -98,6 +97,7 @@ add_library(${LIBNAME}
     src/engines/loop.cpp
     src/engines/parallel.cpp
     src/engines/simple.cpp
+    src/geometry/convert.cpp
     src/geometry/eigen.cpp
     src/geometry/fast.cpp
     src/geometry/ops.cpp

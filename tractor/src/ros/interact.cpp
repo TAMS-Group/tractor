@@ -3,6 +3,8 @@
 #include <tractor/ros/interact.h>
 
 #include <tractor/core/factory.h>
+#include <tractor/core/var.h>
+#include <tractor/geometry/convert.h>
 
 #include <eigen_conversions/eigen_msg.h>
 #include <interactive_markers/interactive_marker_server.h>
@@ -179,16 +181,6 @@ markerServerInstance() {
   return instance;
 }
 
-template <class T> Eigen::Isometry3d poseToEigen(const Pose<T> &pose) {
-  T px, py, pz, qx, qy, qz, qw;
-  GeometryFast<T>::unpack(pose, px, py, pz, qx, qy, qz, qw);
-  auto p = Eigen::Vector3d(px, py, pz);
-  auto q = Eigen::Quaterniond(qw, qx, qy, qz);
-  Eigen::Isometry3d ret = Eigen::Isometry3d(Eigen::AngleAxisd(q));
-  ret.translation() = p;
-  return ret;
-}
-
 template <class T>
 bool interact(const std::string &frame, const std::string &name, Pose<T> &pose,
               const T &size) {
@@ -196,7 +188,8 @@ bool interact(const std::string &frame, const std::string &name, Pose<T> &pose,
       std::shared_ptr<InteractivePoseMarker>>
       factory([&](const std::string &name) {
         return std::make_shared<InteractivePoseMarker>(
-            *markerServerInstance(), frame, poseToEigen(pose), name, size);
+            *markerServerInstance(), frame, toEigenIsometry3d(value(pose)),
+            name, size);
       });
   auto marker = factory.get(name);
   bool changed = marker->poll();

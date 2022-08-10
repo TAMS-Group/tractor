@@ -11,6 +11,10 @@
 
 namespace tractor {
 
+void visualizePoints(const std::string &name, double scale,
+                     const Eigen::Vector4d &color,
+                     const std::vector<Eigen::Vector3d> &points);
+
 template <class Geometry>
 void visualize(const std::string &topic, const JointState<Geometry> &state) {
 

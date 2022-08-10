@@ -1,9 +1,11 @@
 // (c) 2022 Philipp Ruppel
 
 #include <tractor/python/common.h>
+
 #include <tractor/ros/interact.h>
 #include <tractor/ros/message.h>
 #include <tractor/ros/publish.h>
+#include <tractor/ros/visualize.h>
 
 #include <ros/ros.h>
 
@@ -29,6 +31,8 @@ static void pythonizeROSTyped(py::module &main_module,
 TRACTOR_PYTHON_TYPED(pythonizeROSTyped);
 
 static void pythonizeROS(py::module &m) {
+
+  m.def("visualize_points", &visualizePoints);
 
   m.def("init_ros", [](const std::string &name) {
     TRACTOR_DEBUG("init_ros " << name);

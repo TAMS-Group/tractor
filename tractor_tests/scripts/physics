@@ -5,6 +5,7 @@ import tractor as tr
 import tractor.types_double as tt
 import rospy
 import sys
+import math
 
 tr.logger.verbosity = 10
 tr.init_ros("test")
@@ -17,29 +18,53 @@ if len(sys.argv) < 2:
 robot_description = sys.argv[1]
 robot_model = tt.RobotModel(robot_description)
 
+collision_robot = tt.CollisionRobot(robot_model)
+
 object_start_pose = tt.Pose()
 
 fps = 100
+substeps = 20
 
 while True:
 
-    tr.interact("world", "object", object_start_pose, 0.1)
+    tr.interact("world", "object", object_start_pose, 0.12)
 
     joint_states = tt.JointStates(robot_model)
 
-    object_body = tt.RigidBody(object_start_pose, robot_model.joint_model("object_joint").inertia)
+    #p = object_start_pose * tr.angle_axis_pose(tt.Scalar(math.pi), tt.Vector3(0,1,0))
+    p = object_start_pose
+
+    object_body = tt.RigidBody(p, robot_model.joint_model("object_joint").inertia)
     print "pose", object_body.pose
     print "center", object_body.inertia.center
     print "mass",  object_body.inertia.mass
     print "moment", object_body.inertia.moment
 
-    for i in range(fps*2):
-        z = object_body.position.value[2]
-        if z < 0:
-            object_body.apply_force(tt.Vector3(0, 0, -z*10))
-        object_body.apply_damping(tt.Scalar(5), tt.Scalar(1))
-        object_body.apply_acceleration(tt.Vector3(0, 0, -9.81))
+    for k in range(fps*1):
+
         joint_states.joint_state("object_joint").pose = object_body.pose
         tr.visualize("/display_robot_state", joint_states)
-        object_body.integrate(1.0/fps)
         time.sleep(1.0/fps)
+
+        for j in range(substeps):
+
+            collisions = tr.collide(object_body.pose, collision_robot.link("object"), tt.Pose(), collision_robot.link("world"))
+
+            for i in range(len(collisions)):
+                c = collisions[i];
+                if c.distance.value < 0:
+                    object_body.apply_force(c.point_a, c.normal * c.distance * tt.Scalar(-2))
+
+            object_body.apply_damping(tt.Scalar(10), tt.Scalar(10))
+
+            object_body.apply_acceleration(tt.Vector3(0, 0, -9.81))
+
+            object_body.integrate(1.0/substeps/fps)
+
+        points = [ ]
+        for i in range(len(collisions)):
+            c = collisions[i];
+            print i, c.point_a, c.point_b, c.normal, c.distance
+            points.append(c.point_a.value)
+            points.append(c.point_b.value)
+        tr.visualize_points("collisions", 0.01, (1,1,0,1), points)

@@ -1,10 +1,12 @@
-// (c) 2020-2022 Philipp Ruppel
+// (c) 2022 Philipp Ruppel
 
 #pragma once
 
-#include <tractor/collision/query.h>
+#include "robot.h"
 
-#include <memory>
+#include <tractor/geometry/convert.h>
+#include <tractor/geometry/pose.h>
+#include <tractor/geometry/vector3.h>
 
 namespace tractor {
 
@@ -13,17 +15,23 @@ void collision_axes(const Pose<T> &pose_a, const Pose<T> &pose_b,
                     const uint64_t &shape_a, const uint64_t &shape_b,
                     Vector3<T> &point_a, Vector3<T> &point_b, Vector3<T> &axis,
                     Vector3<T> &local_a, Vector3<T> &local_b) {
-  auto a = tractor::internal::CollisionShapeSupport<T>(
-      pose_a, (CollisionShape<T> *)shape_a);
-  auto b = tractor::internal::CollisionShapeSupport<T>(
-      pose_b, (CollisionShape<T> *)shape_b);
-  tractor::internal::CollisionResult r;
-  tractor::internal::doCollisionQuery(a, b, r);
-  point_a = Vector3<T>(T(r.ax), T(r.ay), T(r.az));
-  point_b = Vector3<T>(T(r.bx), T(r.by), T(r.bz));
-  axis = normalized(Vector3<T>(T(r.nx), T(r.ny), T(r.nz)));
+
+  CollisionRequest req;
+  req.pose_a = toEigenIsometry3d(pose_a);
+  req.shape_a = (const CollisionShape *)shape_a;
+  req.pose_b = toEigenIsometry3d(pose_b);
+  req.shape_b = (const CollisionShape *)shape_b;
+
+  CollisionResponse res;
+  ((const CollisionShape *)shape_a)->engine()->collide(req, res);
+
+  point_a = toVector3<T>(res.point_a);
+  point_b = toVector3<T>(res.point_b);
+  axis = toVector3<T>(res.normal);
   local_a = pose_a.inverse() * point_a;
   local_b = pose_b.inverse() * point_b;
+  // local_a = point_a;
+  // local_b = point_b;
 }
 
 template <class T, size_t S>
@@ -91,6 +99,48 @@ TRACTOR_D(reverse, collision_axes,
             shape_b = 0;
           })
 
-// ------------------------------------------
+template <class Geometry> struct CollisionResult {
+  typename Geometry::Vector3 point_a;
+  typename Geometry::Vector3 point_b;
+  typename Geometry::Vector3 normal;
+  typename Geometry::Scalar distance;
+};
+
+template <class Geometry>
+CollisionResult<Geometry>
+collide(const typename Geometry::Pose &pose_a,
+        const std::shared_ptr<const CollisionShape> &shape_a,
+        const typename Geometry::Pose &pose_b,
+        const std::shared_ptr<const CollisionShape> &shape_b) {
+  if (auto *rec = Recorder::instance()) {
+    rec->reference(shape_a);
+    rec->reference(shape_b);
+  }
+  typename Geometry::Vector3 global_a, global_b, axis, local_a, local_b;
+  collision_axes(pose_a, pose_b, (uint64_t)shape_a.get(),
+                 (uint64_t)shape_b.get(), global_a, global_b, axis, local_a,
+                 local_b);
+  CollisionResult<Geometry> ret;
+  ret.point_a = pose_a * local_a;
+  ret.point_b = pose_b * local_b;
+  ret.normal = axis;
+  ret.distance = dot(ret.point_a - ret.point_b, axis);
+  return ret;
+}
+
+template <class Geometry>
+std::vector<CollisionResult<Geometry>>
+collide(const typename Geometry::Pose &pose_a,
+        const std::shared_ptr<const CollisionLink> &link_a,
+        const typename Geometry::Pose &pose_b,
+        const std::shared_ptr<const CollisionLink> &link_b) {
+  std::vector<CollisionResult<Geometry>> ret;
+  for (auto &shape_a : link_a->shapes()) {
+    for (auto &shape_b : link_b->shapes()) {
+      ret.push_back(collide<Geometry>(pose_a, shape_a, pose_b, shape_b));
+    }
+  }
+  return ret;
+}
 
 } // namespace tractor

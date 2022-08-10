@@ -8,7 +8,8 @@ namespace tractor {
 
 template <class Geometry> class RigidBody {
   Inertia<Geometry> _inertia;
-  typename Geometry::Pose _pose = Geometry::PoseIdentity();
+  typename Geometry::Vector3 _position = Geometry::Vector3Zero();
+  typename Geometry::Orientation _orientation = Geometry::OrientationIdentity();
   typename Geometry::Vector3 _global_linear_momentum = Geometry::Vector3Zero();
   typename Geometry::Vector3 _global_angular_momentum = Geometry::Vector3Zero();
   bool _has_force = false;
@@ -22,11 +23,15 @@ template <class Geometry> class RigidBody {
 public:
   RigidBody(const typename Geometry::Pose &pose,
             const Inertia<Geometry> &inertia)
-      : _inertia(inertia), _pose(pose) {}
+      : _inertia(inertia), _position(Geometry::translation(pose)),
+        _orientation(Geometry::orientation(pose)) {}
 
   auto &inertia() const { return _inertia; }
 
-  auto &pose() const { return _pose; }
+  auto pose() const {
+    return Geometry::translationPose(_position) *
+           Geometry::orientationPose(_orientation);
+  }
 
   void applyAcceleration(const typename Geometry::Vector3 &acceleration) {
     _has_force = true;
@@ -43,7 +48,7 @@ public:
     _has_force = true;
     _has_torque = true;
     _sum_force += force;
-    _sum_torque += cross(point - Geometry::translation(_pose), force);
+    _sum_torque += cross(point - _position, force);
   }
 
   void applyDamping(const typename Geometry::Scalar &linear_damping,
@@ -76,19 +81,19 @@ public:
       _sum_angular_damping = Geometry::ScalarZero();
     }
 
-    auto orientation = Geometry::orientation(_pose);
     auto local_angular_momentum =
-        Geometry::inverse(orientation) * _global_angular_momentum;
+        Geometry::inverse(_orientation) * _global_angular_momentum;
     auto global_angular_velocity =
-        orientation * (_inertia.momentInverse() * local_angular_momentum);
-    _global_angular_momentum = orientation * local_angular_momentum;
+        _orientation * (_inertia.momentInverse() * local_angular_momentum);
 
     auto global_linear_velocity =
         _global_linear_momentum * _inertia.massInverse() -
-        cross(global_angular_velocity, orientation * _inertia.center());
+        cross(global_angular_velocity, _orientation * _inertia.center());
 
-    _pose += Geometry::twist(global_linear_velocity, global_angular_velocity) *
-             delta_time;
+    _position += global_linear_velocity * delta_time;
+    _orientation += global_angular_velocity * delta_time;
+
+    _global_angular_momentum = _orientation * local_angular_momentum;
   }
 };
 

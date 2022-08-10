@@ -14,13 +14,17 @@ template <class Scalar>
 static void pythonizeGeometry(py::module &main_module,
                               py::module &type_module) {
 
+  typedef GeometryFast<Var<Scalar>> Geoemtry;
+
   pythonizeType<Var<Twist<Scalar>>>(main_module, type_module, "Twist")
       .def(py::self + py::self);
 
   pythonizeType<Var<Pose<Scalar>>>(main_module, type_module, "Pose")
+      .def(py::init([]() { return Geoemtry::PoseIdentity(); }))
       .def(py::self * py::self);
 
   pythonizeType<Var<Quaternion<Scalar>>>(main_module, type_module, "Quaternion")
+      .def(py::init([]() { return Geoemtry::OrientationIdentity(); }))
       .def(py::init([](const Var<Scalar> &x, const Var<Scalar> &y,
                        const Var<Scalar> &z, const Var<Scalar> &w) {
         Var<Quaternion<Scalar>> ret;

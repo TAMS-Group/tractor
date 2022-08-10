@@ -1,47 +1,58 @@
-// (c) 2020-2022 Philipp Ruppel
+// (c) 2022 Philipp Ruppel
 
 #pragma once
 
-#include <tractor/collision/link.h>
-
-#include <unordered_map>
-
-namespace moveit {
-namespace core {
-class RobotModel;
-class LinkModel;
-class RobotState;
-} // namespace core
-} // namespace moveit
+#include "engine.h"
 
 namespace tractor {
 
-class CollisionRobotBase {
-protected:
-  void _load(const moveit::core::RobotModel &robot_model,
-             bool merge_fixed_links);
+class CollisionLink {
+  std::string _name;
+  std::vector<std::shared_ptr<const CollisionShape>> _shapes;
 
 public:
-  virtual std::shared_ptr<CollisionLinkBase>
-  createLink(const std::string &name) = 0;
+  CollisionLink() {}
+  CollisionLink(const std::string &name) : _name(name) {}
+  CollisionLink(
+      const std::string &name,
+      const std::vector<std::shared_ptr<const CollisionShape>> &shapes)
+      : _name(name), _shapes(shapes) {}
+  const std::string &name() const { return _name; }
+  const std::vector<std::shared_ptr<const CollisionShape>> &shapes() const {
+    return _shapes;
+  }
+  void addShape(const std::shared_ptr<const CollisionShape> &shape) {
+    _shapes.push_back(shape);
+  }
 };
 
-template <class Scalar> class CollisionRobot : public CollisionRobotBase {
-  std::vector<std::shared_ptr<const CollisionLink<Scalar>>> _links;
-  std::unordered_map<std::string, std::shared_ptr<CollisionLink<Scalar>>>
+class CollisionRobot {
+  std::shared_ptr<const CollisionEngine> _engine;
+  std::vector<std::shared_ptr<const CollisionLink>> _links;
+  std::unordered_map<std::string, std::shared_ptr<const CollisionLink>>
       _link_map;
 
 public:
-  CollisionRobot() {}
-  CollisionRobot(const moveit::core::RobotModel &robot_model,
-                 bool merge_fixed_links = true) {
-    _load(robot_model, merge_fixed_links);
+  CollisionRobot(const std::shared_ptr<const CollisionEngine> &engine)
+      : _engine(engine) {}
+  const std::shared_ptr<const CollisionEngine> &engine() const {
+    return _engine;
   }
-  const auto &links() const { return _links; }
-  const std::shared_ptr<CollisionLink<Scalar>> &link(const std::string &name);
-  const auto &link(size_t i) { return _links.at(i); }
-  virtual std::shared_ptr<CollisionLinkBase>
-  createLink(const std::string &name) override;
+  void addLink(const std::shared_ptr<const CollisionLink> &link) {
+    if (_link_map[link->name()]) {
+      throw std::runtime_error(
+          "collision link with the same name already exists " + link->name());
+    }
+    _links.push_back(link);
+    _link_map[link->name()] = link;
+  }
+  const std::vector<std::shared_ptr<const CollisionLink>> &links() const {
+    return _links;
+  }
+  const std::shared_ptr<const CollisionLink> &
+  link(const std::string &name) const {
+    return _link_map.at(name);
+  }
 };
 
 } // namespace tractor
