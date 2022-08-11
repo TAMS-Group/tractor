@@ -176,8 +176,8 @@ void buildGradients(const Program &src, Program &prep, Program *_fprop,
         for (size_t i = 0; i < inst.argumentCount(); i++) {
           auto type_info = op->arg(i).typeInfo();
           TRACTOR_DEBUG("bprop arg "
-                               << i << " " << type_info.name() << " "
-                               << (op->arg(i).isInput() ? "input" : "output"));
+                        << i << " " << type_info.name() << " "
+                        << (op->arg(i).isInput() ? "input" : "output"));
           auto &sum_info = sum_tree[inst.arg(i)];
           if (!sum_info.initialized) {
             sum_info.type_info = type_info;
@@ -408,6 +408,7 @@ void buildGradients(const Program &src, Program &prep, Program *_fprop,
     accu.clear();
     // size_t memory_size = 0;
     Allocator alloc;
+    alloc.keep(src);
     std::vector<Program::Input> aa;
     std::vector<Program::Input> bb;
     std::vector<Program::Output> xx;
