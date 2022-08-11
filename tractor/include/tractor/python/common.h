@@ -42,14 +42,15 @@ public:
 
 #define TRACTOR_PYTHON_TYPED(name)                                             \
   static int _tractor_python_typed = []() {                                    \
-    auto reg = PythonRegistry::instance();                                     \
-    reg->add([](py::module m) {                                                \
-      auto t = m.attr("types_float").cast<py::module>();                       \
-      name<float>(m, t);                                                       \
-    });                                                                        \
-    reg->add([](py::module m) {                                                \
-      auto t = m.attr("types_double").cast<py::module>();                      \
-      name<double>(m, t);                                                      \
+    PythonRegistry::instance()->add([](py::module m) {                         \
+      {                                                                        \
+        auto t = m.attr("types_float").cast<py::module>();                     \
+        name<float>(m, t);                                                     \
+      }                                                                        \
+      {                                                                        \
+        auto t = m.attr("types_double").cast<py::module>();                    \
+        name<double>(m, t);                                                    \
+      }                                                                        \
     });                                                                        \
     return 0;                                                                  \
   }();

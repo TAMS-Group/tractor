@@ -7,7 +7,7 @@
 
 #include <tractor/core/eigen.h>
 #include <tractor/dynamics/inertia.h>
-#include <tractor/geometry/eigen.h>
+#include <tractor/geometry/eigenquat.h>
 
 namespace moveit {
 namespace core {

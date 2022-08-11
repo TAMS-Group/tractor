@@ -1,0 +1,40 @@
+#!/usr/bin/env python
+
+import time
+import math
+import numpy as np
+
+from tractor import *
+from tractor.geometry.vector.double import *
+from tractor.types_double import *
+
+#a = tt.Quaternion(0,1,0,0)
+a = Orientation(math.sqrt(0.5),0,0,math.sqrt(0.5))
+b = Orientation(0,math.sqrt(0.5),math.sqrt(0.5),0)
+
+print b
+print a * b * quat_inverse(a)
+
+print ""
+print "print vector 1,2,3"
+print Vector3(1,2,3)
+print Vector3([1,2,3])
+print Vector3(np.array([1,2,3]))
+print Vector3([Scalar(1),Scalar(2),Scalar(3)])
+print Vector3(np.array([Scalar(1),Scalar(2),Scalar(3)]))
+print type(Vector3([1,2,3]).value)
+print Vector3([1,2,3]).value
+print Vector3([1,2,3])
+
+print ""
+print "Vector3.zero", Vector3.zero
+print "Matrix3.zero", Matrix3.zero
+print "Matrix3.identity", Matrix3.identity
+print "Orientation.identity", Orientation.identity
+print "Pose.identity", Pose.identity
+
+#a = Matrix3([[0,1,0],[1,0,0],[0,0,1]])
+#b = Vector3(1,2,3)
+
+#print b
+#print a * b *

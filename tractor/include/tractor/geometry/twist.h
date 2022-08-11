@@ -89,6 +89,10 @@ template <class T> inline Twist<T> &operator*=(Twist<T> &a, const T &b) {
   return a;
 }
 
+template <class T> inline Twist<T> operator*(const T &a, const Twist<T> &b) {
+  return Twist<T>(a * b.translation(), a * b.rotation());
+}
+
 template <class T>
 Vector3<T> operator*(const Twist<T> &a, const Vector3<T> &p) {
   return p + a.translation() + cross(a.rotation(), p);

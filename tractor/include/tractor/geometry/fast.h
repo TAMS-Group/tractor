@@ -37,15 +37,17 @@ template <class ScalarType> struct GeometryFast : GeometryFastBase<ScalarType> {
   typedef typename GeometryFastBase<ScalarType>::Orientation Orientation;
   typedef typename GeometryFastBase<ScalarType>::Twist Twist;
   typedef typename GeometryFastBase<ScalarType>::Matrix3 Matrix3;
-  // typedef typename GeometryFast<Value> Direct;
 
   static auto Vector3Zero() { return Vector3(tractor::Vector3<Value>::Zero()); }
   static auto TwistZero() { return Twist(tractor::Twist<Value>::Zero()); }
   static auto ScalarZero() { return Scalar(Value(0)); }
   static auto PoseIdentity() { return Pose(tractor::Pose<Value>::Identity()); }
   static auto Matrix3Zero() { return Matrix3(tractor::Matrix3<Value>::Zero()); }
+  static auto Matrix3Identity() {
+    return Matrix3(tractor::Matrix3<Value>::Identity());
+  }
   static auto OrientationIdentity() {
-    return tractor::Quaternion<Value>::Identity();
+    return Orientation(tractor::Quaternion<Value>::Identity());
   }
 
   static Orientation angleAxisOrientation(const Scalar &angle,

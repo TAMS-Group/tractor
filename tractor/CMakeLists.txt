@@ -99,7 +99,8 @@ add_library(${LIBNAME}
     src/engines/parallel.cpp
     src/engines/simple.cpp
     src/geometry/convert.cpp
-    src/geometry/eigen.cpp
+    src/geometry/eigenmat.cpp
+    src/geometry/eigenquat.cpp
     src/geometry/fast.cpp
     src/geometry/ops.cpp
     src/geometry/plane.cpp

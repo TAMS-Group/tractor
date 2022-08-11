@@ -373,7 +373,7 @@ TRACTOR_D_T(prepare, quat, mul,
 TRACTOR_D_T(forward, quat, mul,
             (const Quaternion<T> &va, const Vector3<T> &da,
              const Vector3<T> &db, Vector3<T> &dx),
-            { dx = va * db + da; })
+            { dx = da + va * db; })
 TRACTOR_D_T(reverse, quat, mul,
             (const Quaternion<T> &va, Vector3<T> &da, Vector3<T> &db,
              const Vector3<T> &dx),
@@ -493,6 +493,27 @@ TRACTOR_D_T(reverse, twist_s, mul,
               da = dx * vb;
               db = dot(dx.translation(), va.translation()) +
                    dot(dx.rotation(), va.rotation());
+            })
+
+TRACTOR_OP_T(s_twist, mul, (const T &a, const Twist<T> &b), { return a * b; })
+TRACTOR_D_T(prepare, s_twist, mul,
+            (const T &a, const Twist<T> &b, const Twist<T> &x, T &va,
+             Twist<T> &vb),
+            {
+              va = a;
+              vb = b;
+            })
+TRACTOR_D_T(forward, s_twist, mul,
+            (const T &va, const Twist<T> &vb, const T &da, const Twist<T> &db,
+             Twist<T> &dx),
+            { dx = da * vb + va * db; })
+TRACTOR_D_T(reverse, s_twist, mul,
+            (const T &va, const Twist<T> &vb, T &da, Twist<T> &db,
+             const Twist<T> &dx),
+            {
+              db = dx * va;
+              da = dot(dx.translation(), vb.translation()) +
+                   dot(dx.rotation(), vb.rotation());
             })
 
 TRACTOR_OP_T(twist, sub, (const Twist<T> &a, const Twist<T> &b),

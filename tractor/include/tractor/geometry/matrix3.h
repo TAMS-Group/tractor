@@ -12,6 +12,7 @@ template <class Scalar> class Matrix3 {
   Scalar _data[9];
 
 public:
+  inline Matrix3() { setZero(); }
   inline auto &operator()(size_t row, size_t col) const {
     return _data[row * 3 + col];
   }
@@ -28,6 +29,14 @@ public:
     ret.setZero();
     return ret;
   }
+  static Matrix3 Identity() {
+    Matrix3 ret;
+    ret.setZero();
+    for (size_t i = 0; i < 3; i++) {
+      ret(i, i) = 1;
+    }
+    return ret;
+  }
   // inline const Scalar *data() const { return _data; }
   // inline Scalar *data() { return _data; }
 };
@@ -37,9 +46,15 @@ template <class T> auto &operator<<(std::ostream &stream, const Matrix3<T> &v) {
   for (size_t row = 0; row < 3; row++) {
     stream << "[";
     for (size_t col = 0; col < 3; col++) {
-      stream << v(row, col) << ",";
+      stream << v(row, col);
+      if (col < 2) {
+        stream << ",";
+      }
     }
-    stream << "],";
+    stream << "]";
+    if (row < 2) {
+      stream << ",";
+    }
   }
   stream << "]";
   return stream;
