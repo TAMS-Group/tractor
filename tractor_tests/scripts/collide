@@ -46,13 +46,11 @@ while True:
     pose_a = link_states.link_pose(name_a)
     pose_b = link_states.link_pose(name_b)
 
-    collisions = tr.collide(pose_a, c_link_a, pose_b, c_link_b)
+    collision = tr.collide(pose_a, c_link_a, pose_b, c_link_b)
     points = [ ]
-    for i in range(len(collisions)):
-        c = collisions[i];
-        print i, c.point_a, c.point_b, c.normal, c.distance
-        points.append(c.point_a.value)
-        points.append(c.point_b.value)
+    print "link collision", collision.point_a, collision.point_b, collision.normal, collision.distance
+    points.append(collision.point_a.value)
+    points.append(collision.point_b.value)
     tr.visualize_points("collisions", 0.02, (1,0,0,1), points)
     tr.visualize_lines("collision_lines", 0.005, (0,0,1,1), points)
 

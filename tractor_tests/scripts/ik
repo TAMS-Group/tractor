@@ -52,7 +52,7 @@ solver.compile(prog)
 solver.tolerance = 1e-7
 #solver.adaptive_regularization = True
 solver.timeout = 1.0 / 30
-solver.regularization = 0.01
+solver.regularization = 1
 solver.line_search = False
 #solver.step_scaling = 1.3
 

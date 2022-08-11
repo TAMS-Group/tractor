@@ -29,6 +29,8 @@ void SimpleEngine::ExecutableImpl::_execute(
   auto &temp = *(MemoryImpl *)(memory.get());
   temp.resize(std::max(temp.size(), _memory_size));
 
+  // std::memset(temp.data(), 0, temp.size());
+
   {
     TRACTOR_PROFILER("load constants");
     for (auto &port : _constants) {

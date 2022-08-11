@@ -57,7 +57,9 @@ public:
 template <class Type>
 static auto pythonizeTypeBase(py::module &main_module, py::module &type_module,
                               const char *name) {
-  main_module.def("goal", [](const std::shared_ptr<Type> &var) { goal(*var); });
+  // main_module.def("goal", [](const std::shared_ptr<Type> &var) { goal(*var);
+  // });
+  main_module.def("goal", [](const Type &var) { goal(var); });
   return ptr_class<Type>(type_module, name)
       .def(py::init<>())
       .def("__repr__",

@@ -107,6 +107,10 @@ protected:
       _linear_solution = _linear_solver.solve(_residuals);
     }
 
+    if (_linear_solution.isZero(0)) {
+      TRACTOR_WARN("solution is all zero");
+    }
+
     TRACTOR_CHECK_ALL_FINITE(_linear_solution);
 
     _linear_solution.array() = -_linear_solution.array();
@@ -168,6 +172,14 @@ protected:
         (_previous_nonlinear_solution - _nonlinear_solution).squaredNorm();
     _previous_nonlinear_solution = _nonlinear_solution;
     TRACTOR_DEBUG("sq step " << step);
+    // {
+    //   std::stringstream line;
+    //   line << "sq step " << step << " " << _step_scaling;
+    //   for (size_t i = 0; i < _linear_solution.size(); i++) {
+    //     line << " " << _linear_solution[i];
+    //   }
+    //   TRACTOR_DEBUG(line.str());
+    // }
     return step;
 
     // return 1;
