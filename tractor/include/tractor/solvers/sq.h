@@ -107,9 +107,9 @@ protected:
       _linear_solution = _linear_solver.solve(_residuals);
     }
 
-    if (_linear_solution.isZero(0)) {
-      TRACTOR_WARN("solution is all zero");
-    }
+    // if (_linear_solution.isZero(0)) {
+    //   TRACTOR_WARN("solution is all zero");
+    // }
 
     TRACTOR_CHECK_ALL_FINITE(_linear_solution);
 

@@ -1,0 +1,13 @@
+#!/usr/bin/env python
+
+import time
+import tractor as tr
+import tractor.types_double as tt
+import math
+
+#a = tt.Quaternion(0,1,0,0)
+a = tt.Quaternion(math.sqrt(0.5),0,0,math.sqrt(0.5))
+b = tt.Quaternion(0,math.sqrt(0.5),math.sqrt(0.5),0)
+
+print b
+print a * b * tr.quat_inverse(a)

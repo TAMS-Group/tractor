@@ -36,7 +36,7 @@ samples = sklearn.cluster.KMeans(n_clusters=50).fit(samples).cluster_centers_
 
 while True:
 
-    tr.interact("world", "object", object_pose, 0.1)
+    tr.interact("world", "object", object_pose, 0.05)
 
     joint_states = tt.JointStates(robot_model)
     joint_states.joint_state("object_joint").pose = object_pose
