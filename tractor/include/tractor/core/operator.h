@@ -560,19 +560,21 @@ template <class T> struct OverloadSelector<Var<T>> {
                                                                                \
   struct scalar##postfix##_group;                                              \
                                                                                \
-  const Operator *op_##prefix##name##_##postfix##_inst = OperatorImpl<         \
+  struct op_##prefix##name##_##postfix##_impl_2                                \
+      : op_##prefix##name##_##postfix##_impl_1 {                               \
+    static const Operator *instance();                                         \
+  };                                                                           \
+                                                                               \
+  __attribute__((weak))                                                        \
+  const Operator *op_##prefix##name##_##postfix##_impl_2_x = OperatorImpl<     \
       op_##prefix##name##_##postfix##_impl_1, mode, op_##name,                 \
       std::tuple<op_##name *, scalar##postfix##_group *>,                      \
       scalar>::instance(TRACTOR_STRINGIFY(prefix##name##_##postfix),           \
                         TRACTOR_STRINGIFY(name));                              \
                                                                                \
-  struct op_##prefix##name##_##postfix##_impl_2                                \
-      : op_##prefix##name##_##postfix##_impl_1 {                               \
-    static decltype(op_##prefix##name##_##postfix##_inst) instance();          \
-  };                                                                           \
-  decltype(op_##prefix##name##_##postfix##_inst)                               \
-      op_##prefix##name##_##postfix##_impl_2::instance() {                     \
-    return op_##prefix##name##_##postfix##_inst;                               \
+  __attribute__((weak))                                                        \
+  const Operator *op_##prefix##name##_##postfix##_impl_2::instance() {         \
+    return op_##prefix##name##_##postfix##_impl_2_x;                           \
   }                                                                            \
                                                                                \
   namespace op_##prefix##name##_##postfix##_ns {                               \
@@ -596,11 +598,10 @@ template <class T> struct OverloadSelector<Var<T>> {
                                                                                \
   struct scalar##postfix##_group;                                              \
                                                                                \
-  extern const Operator *op_##prefix##name##_##postfix##_inst;                 \
-                                                                               \
   struct op_##prefix##name##_##postfix##_impl_2                                \
       : op_##prefix##name##_##postfix##_impl_1 {                               \
-    static decltype(op_##prefix##name##_##postfix##_inst) instance();          \
+                                                                               \
+    static const Operator *instance();                                         \
   };                                                                           \
                                                                                \
   namespace op_##prefix##name##_##postfix##_ns {                               \

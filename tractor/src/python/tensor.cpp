@@ -52,36 +52,28 @@ static void pythonizeTensor(py::module &main_module, py::module &type_module) {
       .def_property_readonly(
           "dimensions",
           [](const Tensor<Scalar> &t) { return t.shape().dimensions(); })
-      .def_property(
-          "value",
-          [](const Tensor<Scalar> &tensor) {
-            py::array_t<Scalar> ret;
-            ret.resize(tensor.shape());
-            {
-              auto r = ret.mutable_data();
-              for (size_t i = 0; i < tensor.shape().elementCount(); i++) {
-                *r = tensor.data()[i];
-                r++;
-              }
-            }
-            return ret;
-          },
-          [](Tensor<Scalar> &tensor, const py::array_t<Scalar> &array) {
-            auto tensor_shape = find_shape(array);
-            auto element_count = tensor_shape.elementCount();
-            auto array_data = array.data();
-            if (tensor_shape != tensor.shape()) {
-              tensor = Tensor<Scalar>(tensor_shape);
-            }
-            for (size_t i = 0; i < element_count; i++) {
-              tensor.data()[i] = *array_data;
-              array_data++;
-            }
-          })
+      .def_property_readonly("value",
+                             [](const Tensor<Scalar> &tensor) {
+                               py::array_t<Scalar> ret;
+                               ret.resize(tensor.shape());
+                               {
+                                 auto r = ret.mutable_data();
+                                 for (size_t i = 0;
+                                      i < tensor.shape().elementCount(); i++) {
+                                   *r = tensor.data()[i];
+                                   r++;
+                                 }
+                               }
+                               return ret;
+                             })
       .def(py::self + py::self)
       .def(py::self - py::self)
       .def(py::self * py::self)
-      .def(py::self / py::self);
+      .def(py::self / py::self)
+      .def(py::self += py::self)
+      .def(py::self -= py::self)
+      .def(py::self *= py::self)
+      .def(py::self /= py::self);
 
   main_module.def("unpack",
                   [](const Tensor<Scalar> &tensor) { return unpack(tensor); });

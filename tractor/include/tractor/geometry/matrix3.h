@@ -13,6 +13,14 @@ template <class Scalar> class Matrix3 {
 
 public:
   inline Matrix3() { setZero(); }
+  template <class T, class R = decltype(Scalar(std::declval<T>()))>
+  explicit Matrix3(const Matrix3<T> &other) {
+    for (size_t i = 0; i < 3; i++) {
+      for (size_t j = 0; j < 3; j++) {
+        (*this)(i, j) = Scalar(other(i, j));
+      }
+    }
+  }
   inline auto &operator()(size_t row, size_t col) const {
     return _data[row * 3 + col];
   }
@@ -39,7 +47,43 @@ public:
   }
   // inline const Scalar *data() const { return _data; }
   // inline Scalar *data() { return _data; }
+  Matrix3 operator-() const {
+    Matrix3 ret;
+    for (size_t i = 0; i < 9; i++) {
+      ret._data[i] = -_data[i];
+    }
+    return ret;
+  }
 };
+
+template <class T> void variable(Matrix3<Var<T>> &v) {
+  for (size_t i = 0; i < 3; i++) {
+    for (size_t j = 0; j < 3; j++) {
+      variable(v(i, j));
+    }
+  }
+}
+template <class T> void parameter(Matrix3<Var<T>> &v) {
+  for (size_t i = 0; i < 3; i++) {
+    for (size_t j = 0; j < 3; j++) {
+      parameter(v(i, j));
+    }
+  }
+}
+template <class T> void output(Matrix3<Var<T>> &v) {
+  for (size_t i = 0; i < 3; i++) {
+    for (size_t j = 0; j < 3; j++) {
+      output(v(i, j));
+    }
+  }
+}
+template <class T> void goal(const Matrix3<Var<T>> &v) {
+  for (size_t i = 0; i < 3; i++) {
+    for (size_t j = 0; j < 3; j++) {
+      goal(v(i, j));
+    }
+  }
+}
 
 template <class T> auto &operator<<(std::ostream &stream, const Matrix3<T> &v) {
   stream << "[";
@@ -76,7 +120,7 @@ Matrix3<T> operator+(const Matrix3<T> &a, const Matrix3<T> &b) {
   Matrix3<T> ret;
   for (size_t row = 0; row < 3; row++) {
     for (size_t col = 0; col < 3; col++) {
-      ret(row, col) = a(row, col) * b(row, col);
+      ret(row, col) = a(row, col) + b(row, col);
     }
   }
   return ret;

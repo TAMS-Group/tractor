@@ -15,6 +15,13 @@ public:
   inline Quaternion(const Scalar &x, const Scalar &y, const Scalar &z,
                     const Scalar &w)
       : _x(x), _y(y), _z(z), _w(w) {}
+  template <class T, class R = decltype(Scalar(std::declval<T>()))>
+  explicit Quaternion(const Quaternion<T> &other) {
+    x() = Scalar(other.x());
+    y() = Scalar(other.y());
+    z() = Scalar(other.z());
+    w() = Scalar(other.w());
+  }
   inline auto &x() const { return _x; }
   inline auto &y() const { return _y; }
   inline auto &z() const { return _z; }
@@ -48,6 +55,31 @@ public:
   //   return ss.str();
   // }
 };
+
+template <class T> void variable(Quaternion<Var<T>> &v) {
+  variable(v.x());
+  variable(v.y());
+  variable(v.z());
+  variable(v.w());
+}
+template <class T> void parameter(Quaternion<Var<T>> &v) {
+  parameter(v.x());
+  parameter(v.y());
+  parameter(v.z());
+  parameter(v.w());
+}
+template <class T> void output(Quaternion<Var<T>> &v) {
+  output(v.x());
+  output(v.y());
+  output(v.z());
+  output(v.w());
+}
+template <class T> void goal(const Quaternion<Var<T>> &v) {
+  goal(v.x());
+  goal(v.y());
+  goal(v.z());
+  goal(v.w());
+}
 
 template <class T, size_t S>
 inline Quaternion<T> indexBatch(const Quaternion<Batch<T, S>> &v, size_t i) {
@@ -161,8 +193,8 @@ Vector3<Batch<T, S>> quat_residual(const Quaternion<Batch<T, S>> &a) {
 template <class T>
 Quaternion<T> angle_axis_quat(const T &angle, const Vector3<T> &axis) {
   Quaternion<T> quat;
-  T s = std::sin(angle * T(0.5));
-  T c = std::cos(angle * T(0.5));
+  T s = sin(angle * T(0.5));
+  T c = cos(angle * T(0.5));
   quat.x() = axis.x() * s;
   quat.y() = axis.y() * s;
   quat.z() = axis.z() * s;

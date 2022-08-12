@@ -20,6 +20,11 @@ public:
   inline Pose(const Vector3<Scalar> &translation,
               const Quaternion<Scalar> &orientation)
       : _translation(translation), _orientation(orientation) {}
+  template <class T, class R = decltype(Scalar(std::declval<T>()))>
+  explicit Pose(const Pose<T> &other) {
+    translation() = Vector3<Scalar>(other.translation());
+    orientation() = Quaternion<Scalar>(other.orientation());
+  }
   inline auto &translation() const { return _translation; }
   inline auto &translation() { return _translation; }
   inline auto &orientation() const { return _orientation; }
@@ -53,6 +58,23 @@ template <class T> std::ostream &operator<<(std::ostream &s, const Pose<T> &p) {
   // ")";
 }
 
+template <class T> void variable(Pose<Var<T>> &v) {
+  variable(v.translation());
+  variable(v.orientation());
+}
+template <class T> void parameter(Pose<Var<T>> &v) {
+  parameter(v.translation());
+  parameter(v.orientation());
+}
+template <class T> void output(Pose<Var<T>> &v) {
+  output(v.translation());
+  output(v.orientation());
+}
+template <class T> void goal(const Pose<Var<T>> &v) {
+  goal(v.translation());
+  goal(v.orientation());
+}
+
 template <class T, size_t S>
 inline Pose<T> indexBatch(const Pose<Batch<T, S>> &pose, size_t i) {
   return Pose<T>(indexBatch(pose.translation(), i),
@@ -75,8 +97,8 @@ Pose<T> angle_axis_pose(const T &angle, const Vector3<T> &axis) {
   Pose<T> ret;
   ret.translation().setZero();
   auto &quat = ret.orientation();
-  T s = std::sin(angle * T(0.5));
-  T c = std::cos(angle * T(0.5));
+  T s = sin(angle * T(0.5));
+  T c = cos(angle * T(0.5));
   quat.x() = axis.x() * s;
   quat.y() = axis.y() * s;
   quat.z() = axis.z() * s;
@@ -89,8 +111,8 @@ Pose<T> pose_angle_axis_pose(const Pose<T> &parent, const T &angle,
                              const Vector3<T> &axis) {
 
   Quaternion<T> quat;
-  T s = std::sin(angle * T(0.5));
-  T c = std::cos(angle * T(0.5));
+  T s = sin(angle * T(0.5));
+  T c = cos(angle * T(0.5));
   quat.x() = axis.x() * s;
   quat.y() = axis.y() * s;
   quat.z() = axis.z() * s;

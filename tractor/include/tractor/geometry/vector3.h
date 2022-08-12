@@ -6,8 +6,11 @@
 #include <iostream>
 
 #include <tractor/core/batch.h>
+#include <tractor/core/ops.h>
 
 namespace tractor {
+
+template <class T> class Var;
 
 template <class Scalar> class Vector3 {
   Scalar _data[3];
@@ -22,6 +25,12 @@ public:
     _data[0] = x;
     _data[1] = y;
     _data[2] = z;
+  }
+  template <class T, class R = decltype(Scalar(std::declval<T>()))>
+  explicit Vector3(const Vector3<T> &other) {
+    x() = Scalar(other.x());
+    y() = Scalar(other.y());
+    z() = Scalar(other.z());
   }
   inline auto &x() const { return _data[0]; }
   inline auto &y() const { return _data[1]; }
@@ -72,6 +81,27 @@ public:
   //   return ss.str();
   // }
 };
+
+template <class T> void variable(Vector3<Var<T>> &v) {
+  variable(v.x());
+  variable(v.y());
+  variable(v.z());
+}
+template <class T> void parameter(Vector3<Var<T>> &v) {
+  parameter(v.x());
+  parameter(v.y());
+  parameter(v.z());
+}
+template <class T> void output(Vector3<Var<T>> &v) {
+  output(v.x());
+  output(v.y());
+  output(v.z());
+}
+template <class T> void goal(const Vector3<Var<T>> &v) {
+  goal(v.x());
+  goal(v.y());
+  goal(v.z());
+}
 
 template <class T, size_t S>
 inline Vector3<T> indexBatch(const Vector3<Batch<T, S>> &v, size_t i) {

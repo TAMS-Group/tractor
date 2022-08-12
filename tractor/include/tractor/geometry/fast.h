@@ -28,15 +28,35 @@ template <class ValueType> struct GeometryFastBase<Var<ValueType>> {
   typedef Var<tractor::Matrix3<ValueType>> Matrix3;
 };
 
-template <class ScalarType> struct GeometryFast : GeometryFastBase<ScalarType> {
+template <class ScalarType> struct GeometryScalarBase {
+  typedef ScalarType Scalar;
+  typedef ScalarType Value;
+  typedef tractor::Pose<ScalarType> Pose;
+  typedef tractor::Vector3<ScalarType> Vector3;
+  typedef tractor::Quaternion<ScalarType> Orientation;
+  typedef tractor::Twist<ScalarType> Twist;
+  typedef tractor::Matrix3<ScalarType> Matrix3;
+};
 
-  typedef typename GeometryFastBase<ScalarType>::Scalar Scalar;
-  typedef typename GeometryFastBase<ScalarType>::Value Value;
-  typedef typename GeometryFastBase<ScalarType>::Pose Pose;
-  typedef typename GeometryFastBase<ScalarType>::Vector3 Vector3;
-  typedef typename GeometryFastBase<ScalarType>::Orientation Orientation;
-  typedef typename GeometryFastBase<ScalarType>::Twist Twist;
-  typedef typename GeometryFastBase<ScalarType>::Matrix3 Matrix3;
+template <class ValueType> struct GeometryScalarBase<Var<ValueType>> {
+  typedef Var<ValueType> Scalar;
+  typedef ValueType Value;
+  typedef tractor::Pose<Var<ValueType>> Pose;
+  typedef tractor::Vector3<Var<ValueType>> Vector3;
+  typedef tractor::Quaternion<Var<ValueType>> Orientation;
+  typedef tractor::Twist<Var<ValueType>> Twist;
+  typedef tractor::Matrix3<Var<ValueType>> Matrix3;
+};
+
+template <class Base> struct GeometryImpl : Base {
+
+  typedef typename Base::Scalar Scalar;
+  typedef typename Base::Value Value;
+  typedef typename Base::Pose Pose;
+  typedef typename Base::Vector3 Vector3;
+  typedef typename Base::Orientation Orientation;
+  typedef typename Base::Twist Twist;
+  typedef typename Base::Matrix3 Matrix3;
 
   static auto Vector3Zero() { return Vector3(tractor::Vector3<Value>::Zero()); }
   static auto TwistZero() { return Twist(tractor::Twist<Value>::Zero()); }
@@ -98,6 +118,8 @@ template <class ScalarType> struct GeometryFast : GeometryFastBase<ScalarType> {
   static Vector3 translation(const Pose &pose) {
     return pose_translation(pose);
   }
+
+  static Vector3 position(const Pose &pose) { return pose_translation(pose); }
 
   static Orientation orientation(const Pose &pose) {
     return pose_orientation(pose);
@@ -211,5 +233,11 @@ template <class ScalarType> struct GeometryFast : GeometryFastBase<ScalarType> {
     return Scalar(Value(value));
   }
 };
+
+template <class ScalarType>
+struct GeometryFast : GeometryImpl<GeometryFastBase<ScalarType>> {};
+
+template <class ScalarType>
+struct GeometryScalar : GeometryImpl<GeometryScalarBase<ScalarType>> {};
 
 } // namespace tractor

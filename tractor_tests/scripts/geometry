@@ -3,38 +3,206 @@
 import time
 import math
 import numpy as np
+import importlib
+import tractor as t
+import tractor
+import tractor.types_double as tt
+import tractor.geometry.block.double
+import tractor.geometry.scalar.double
 
-from tractor import *
-from tractor.geometry.vector.double import *
-from tractor.types_double import *
+def test1(g):
 
-#a = tt.Quaternion(0,1,0,0)
-a = Orientation(math.sqrt(0.5),0,0,math.sqrt(0.5))
-b = Orientation(0,math.sqrt(0.5),math.sqrt(0.5),0)
+    #np.random.seed(0)
 
-print b
-print a * b * quat_inverse(a)
+    vec = g.Vector3()
+    t.variable(vec)
 
-print ""
-print "print vector 1,2,3"
-print Vector3(1,2,3)
-print Vector3([1,2,3])
-print Vector3(np.array([1,2,3]))
-print Vector3([Scalar(1),Scalar(2),Scalar(3)])
-print Vector3(np.array([Scalar(1),Scalar(2),Scalar(3)]))
-print type(Vector3([1,2,3]).value)
-print Vector3([1,2,3]).value
-print Vector3([1,2,3])
+    angle = tt.Scalar()
+    t.variable(angle)
+    #t.variable(angle)
 
-print ""
-print "Vector3.zero", Vector3.zero
-print "Matrix3.zero", Matrix3.zero
-print "Matrix3.identity", Matrix3.identity
-print "Orientation.identity", Orientation.identity
-print "Pose.identity", Pose.identity
+    #t.goal(angle)
 
-#a = Matrix3([[0,1,0],[1,0,0],[0,0,1]])
-#b = Vector3(1,2,3)
+    #pose = g.angle_axis_pose(angle, g.Vector3(1,1,0))
+    #pose = g.angle_axis_pose(angle, g.Vector3(math.sqrt(0.5),math.sqrt(0.5),0))
+    pose = g.angle_axis_pose(angle, g.Vector3(1,2,3) * tt.Scalar(1/math.sqrt(1*1+2*2+3*3)))
 
-#print b
-#print a * b *
+    #t.goal(pose * vec)
+
+    angle = tt.Scalar()
+    t.variable(angle)
+    #pose2 = g.angle_axis_pose(angle, g.Vector3(math.sqrt(0.5),0,math.sqrt(0.5)))
+    pose2 = g.angle_axis_pose(angle, g.Vector3(1,0,0))
+
+    #t.goal(pose * (pose2 * vec))
+    #t.goal((pose * pose2) * vec)
+    #t.goal((g.orientation(pose) * g.orientation(pose2)) * vec)
+    for i in range(2):
+        vec = pose * pose2 * g.inverse(pose * pose) * vec + vec
+
+    angle = tt.Scalar()
+    t.variable(angle)
+    orientation = g.angle_axis_orientation(angle, g.Vector3(1,2,3) * tt.Scalar(1/math.sqrt(1*1+2*2+3*3)))
+    for i in range(2):
+        vec = orientation * vec + vec
+
+    #vec = g.Matrix3(np.random.normal(size=[3,3])) * vec
+
+    #mat1 = g.Matrix3(np.random.normal(size=[3,3]))
+    mat1 = g.Matrix3()
+    t.variable(mat1)
+
+    #mat2 = g.Matrix3(np.random.normal(size=[3,3]))
+    mat2 = g.Matrix3()
+    t.variable(mat2)
+
+    vec = (mat1 + mat2) * -vec
+    #vec = mat1 * -vec + -mat2 * -vec
+    #vec = mat1 * (-mat2 * -vec)
+    #vec = -mat2 * -vec
+    #vec = mat2 * -vec
+
+    t.goal(vec)
+
+modules = [
+    tractor.geometry.block.double,
+    tractor.geometry.scalar.double,
+]
+
+engine = tractor.DefaultEngine()
+
+class Variant:
+
+    def __init__(self, function, module):
+        self.program = tractor.record(lambda: function(module))
+        self.derivatives = tractor.derive(self.program)
+        self.x_compute = engine.compile(self.program)
+        self.x_prepare = engine.compile(self.derivatives.prepare)
+        self.x_forward = engine.compile(self.derivatives.forward)
+        self.x_reverse = engine.compile(self.derivatives.reverse)
+        self.scalar_size = 8
+        #print self.program
+        self.memory = engine.createMemory()
+        print ""
+        print self.program
+        print ""
+
+    def make_compute_input(self):
+        return np.random.normal(size=self.x_compute.input_buffer_size/self.scalar_size) * 1
+
+    def make_forward_input(self):
+        return np.random.normal(size=self.x_forward.input_buffer_size/self.scalar_size) * 1
+
+    def make_reverse_input(self):
+        return np.random.normal(size=self.x_reverse.input_buffer_size/self.scalar_size) * 1
+
+    def run_compute(self, input):
+        self.x_compute.input(input, self.memory)
+        self.x_compute.execute(self.memory)
+        self.x_prepare.execute(self.memory)
+        return np.frombuffer(self.x_compute.output(self.memory), dtype=np.double)
+
+    def run_forward(self, input):
+        self.x_forward.input(input, self.memory)
+        self.x_forward.execute(self.memory)
+        return np.frombuffer(self.x_forward.output(self.memory), dtype=np.double)
+
+    def run_reverse(self, input):
+        self.x_reverse.input(input, self.memory)
+        self.x_reverse.execute(self.memory)
+        return np.frombuffer(self.x_reverse.output(self.memory), dtype=np.double)
+
+    def run(self, compute_input, forward_input, reverse_input):
+        ret_compute = self.run_compute(compute_input)
+        ret_forward = self.run_forward(forward_input)
+        ret_reverse = self.run_reverse(reverse_input)
+        return [
+            ret_compute,
+            ret_forward,
+            ret_reverse,
+            ]
+
+def test(f):
+
+    print "compiling"
+
+    variants = [Variant(f, m) for m in modules]
+
+    print "running"
+
+    compute_input = variants[0].make_compute_input()
+    forward_input = variants[0].make_forward_input()
+    reverse_input = variants[0].make_reverse_input()
+
+    outputs = [v.run(compute_input, forward_input, reverse_input) for v in variants]
+
+    #for v in outputs: print v
+    for o in outputs:
+        #print [["%.15f"%w for w in v] for v in o]
+        print [["%.5f"%w for w in v] for v in o]
+
+    for v in variants: print v.x_compute.input_buffer_size
+    for v in variants: print v.x_forward.input_buffer_size
+
+
+
+test(test1)
+
+# def f(m):
+#     v = m.Vector3()
+#     print v
+#
+# def a():
+#     f(tractor.geometry.block.double)
+#
+# def b():
+#     f(tractor.geometry.scalar.double)
+#
+# tractor.record(a)
+#tractor.record(a)
+
+# for m in modules:
+#     def g():
+#         f(m)
+#     tractor.record(g)
+
+#
+# import tractor
+# from tractor import *
+# #from tractor.geometry.block.double import *
+# from tractor.geometry.scalar.double import *
+# from tractor.types_double import *
+#
+# with tractor:
+#     print ""
+#
+# #a = tt.Quaternion(0,1,0,0)
+# a = Orientation(math.sqrt(0.5),0,0,math.sqrt(0.5))
+# b = Orientation(0,math.sqrt(0.5),math.sqrt(0.5),0)
+#
+# print b
+# print "inv", a * b * inverse(a)
+#
+# print ""
+# print "print vector 1,2,3"
+# print Vector3(1,2,3)
+# print Vector3([1,2,3])
+# print Vector3(np.array([1,2,3]))
+# print Vector3([Scalar(1),Scalar(2),Scalar(3)])
+# print Vector3(np.array([Scalar(1),Scalar(2),Scalar(3)]))
+# print type(Vector3([1,2,3]).value)
+# print Vector3([1,2,3]).value
+# print Vector3([1,2,3])
+#
+# print ""
+# print "Vector3.zero", Vector3.zero
+# print "Matrix3.zero", Matrix3.zero
+# print "Matrix3.identity", Matrix3.identity
+# print "Orientation.identity", Orientation.identity
+# print "Pose.identity", Pose.identity
+#
+# #a = Matrix3([[0,1,0],[1,0,0],[0,0,1]])
+# #b = Vector3(1,2,3)
+#
+# #print b
+# #print a * b *

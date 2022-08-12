@@ -15,6 +15,11 @@ public:
   Twist() {}
   Twist(const Vector3<Scalar> &translation, const Vector3<Scalar> &rotation)
       : _translation(translation), _rotation(rotation) {}
+  template <class T, class R = decltype(Scalar(std::declval<T>()))>
+  explicit Twist(const Twist<T> &other) {
+    translation() = Vector3<Scalar>(other.translation());
+    rotation() = Vector3<Scalar>(other.rotation());
+  }
   inline auto &translation() const { return _translation; }
   inline auto &translation() { return _translation; }
   inline auto &rotation() const { return _rotation; }
@@ -33,7 +38,25 @@ public:
   //   ss << "Twist(" << translation() << "," << rotation() << ")";
   //   return ss.str();
   // }
+  Twist operator-() const { return Twist(-_translation, -_rotation); }
 };
+
+template <class T> void variable(Twist<Var<T>> &v) {
+  variable(v.translation());
+  variable(v.rotation());
+}
+template <class T> void parameter(Twist<Var<T>> &v) {
+  parameter(v.translation());
+  parameter(v.rotation());
+}
+template <class T> void output(Twist<Var<T>> &v) {
+  output(v.translation());
+  output(v.rotation());
+}
+template <class T> void goal(const Twist<Var<T>> &v) {
+  goal(v.translation());
+  goal(v.rotation());
+}
 
 template <class T, size_t S>
 inline Twist<T> indexBatch(const Twist<Batch<T, S>> &pose, size_t i) {

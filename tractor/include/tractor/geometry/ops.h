@@ -34,7 +34,7 @@ TRACTOR_OP_T(mat3_vec3, mul, (const Matrix3<T> &a, const Vector3<T> &b), {
   return x;
 })
 TRACTOR_D_T(forward, mat3_vec3, mul,
-            (const Matrix3<T> &pa, const Vector3<T> &pb, const Matrix3<T> &px,
+            (const Matrix3<T> &pa, const Vector3<T> &pb, const Vector3<T> &px,
              const Matrix3<T> &da, const Vector3<T> &db, Vector3<T> &dx),
             {
               // dx = pa * db + da * pb;
@@ -47,7 +47,7 @@ TRACTOR_D_T(forward, mat3_vec3, mul,
               }
             })
 TRACTOR_D_T(reverse, mat3_vec3, mul,
-            (const Matrix3<T> &pa, const Vector3<T> &pb, const Matrix3<T> &px,
+            (const Matrix3<T> &pa, const Vector3<T> &pb, const Vector3<T> &px,
              Matrix3<T> &da, Vector3<T> &db, const Vector3<T> &dx),
             {
               da.setZero();
@@ -77,6 +77,14 @@ TRACTOR_OP_T(mat3, zero, (Matrix3<T> & x), { x.setZero(); })
 TRACTOR_D_T(prepare, mat3, zero, (const Matrix3<T> &x), {})
 TRACTOR_D_T(forward, mat3, zero, (Matrix3<T> & dx), { dx.setZero(); })
 TRACTOR_D_T(reverse, mat3, zero, (const Matrix3<T> &dx), {})
+
+TRACTOR_OP_T(mat3, minus, (const Matrix3<T> &a), { return -a; })
+TRACTOR_D_T(prepare, mat3, minus, (const Matrix3<T> &a, const Matrix3<T> &x),
+            {})
+TRACTOR_D_T(forward, mat3, minus, (const Matrix3<T> &da, Matrix3<T> &dx),
+            { dx = -da; })
+TRACTOR_D_T(reverse, mat3, minus, (Matrix3<T> & da, const Matrix3<T> &dx),
+            { da = -dx; })
 
 // ---------------------------------------------------------
 
@@ -446,6 +454,13 @@ TRACTOR_OP_T(twist, zero, (Twist<T> & x), { x.setZero(); })
 TRACTOR_D_T(prepare, twist, zero, (const Twist<T> &x), {})
 TRACTOR_D_T(forward, twist, zero, (Twist<T> & dx), { dx.setZero(); })
 TRACTOR_D_T(reverse, twist, zero, (const Twist<T> &dx), {})
+
+TRACTOR_OP_T(twist, minus, (const Twist<T> &a), { return -a; })
+TRACTOR_D_T(prepare, twist, minus, (const Twist<T> &a, const Twist<T> &x), {})
+TRACTOR_D_T(forward, twist, minus, (const Twist<T> &da, Twist<T> &dx),
+            { dx = -da; })
+TRACTOR_D_T(reverse, twist, minus, (Twist<T> & da, const Twist<T> &dx),
+            { da = -dx; })
 
 TRACTOR_OP_T(pose, move, (const Pose<T> &v), { return Pose<T>(v); })
 TRACTOR_D_T(prepare, pose, move, (const Pose<T> &a, const Pose<T> &x), {})

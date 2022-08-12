@@ -119,9 +119,11 @@ add_library(${LIBNAME}
     src/robot/linkstate.cpp
     src/python/common.cpp
     src/python/dynamics.cpp
+    src/python/engine.cpp
     src/python/geometry.cpp
     src/python/module.cpp
     src/python/neural.cpp
+    src/python/operators.cpp
     src/python/program.cpp
     src/python/robot.cpp
     src/python/ros.cpp
