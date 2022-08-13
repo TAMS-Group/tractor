@@ -66,6 +66,27 @@ template <class Geometry> struct RotationGoal2 : public MotionGoal<Geometry> {
   }
 };
 
+template <class Geometry> struct NoRotationGoal : public MotionGoal<Geometry> {
+  std::string link;
+  typename Geometry::Scalar weight;
+  NoRotationGoal(const std::string &link,
+                 const typename Geometry::Scalar &weight = 1)
+      : link(link), weight(weight) {}
+  virtual void
+  apply(TrajectoryOptimization<Geometry> &trajectory_opt) override {
+    auto &trajectory = trajectory_opt.trajectory();
+    auto &pa = trajectory.state(0).links().pose(link);
+    auto &pb = trajectory.state(trajectory.size() - 1).links().pose(link);
+    for (auto &axis : {
+             Geometry::import(Eigen::Vector3d(1, 0, 0)),
+             Geometry::import(Eigen::Vector3d(0, 1, 0)),
+             Geometry::import(Eigen::Vector3d(0, 0, 1)),
+         }) {
+      goal((pa * axis - pb * axis) * weight);
+    }
+  }
+};
+
 template <class Geometry>
 struct RelativeOrientationGoal : public MotionGoal<Geometry> {
   std::string link;

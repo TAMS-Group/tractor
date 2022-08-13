@@ -7,9 +7,10 @@
 namespace tractor {
 
 class BulletCollisionEngine : public CollisionEngine {
+
 public:
   virtual std::shared_ptr<CollisionShape>
-  create(const Eigen::Affine3d &pose,
+  create(const std::string &name, const Eigen::Affine3d &pose,
          const shapes::Shape *shape) const override;
 
   virtual void collide(const CollisionRequest &request,

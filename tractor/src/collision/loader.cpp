@@ -2,6 +2,7 @@
 
 #include <tractor/collision/loader.h>
 
+#include <tractor/core/error.h>
 #include <tractor/core/log.h>
 
 #include <geometric_shapes/mesh_operations.h>
@@ -30,10 +31,13 @@ void _loadCollisionLink(CollisionRobot *collision_robot,
   auto &origins = link_model->getCollisionOriginTransforms();
   for (size_t shape_index = 0; shape_index < shapes.size(); shape_index++) {
     auto &shape = shapes[shape_index];
+    TRACTOR_DEBUG("link " << link_model->getName() << " shape "
+                          << typeid(*shape).name());
     auto &shape_origin = origins[shape_index];
     Eigen::Affine3d shape_pose = Eigen::Affine3d(link_transform) * shape_origin;
-    auto collision_shape =
-        collision_robot->engine()->create(shape_pose, shape.get());
+    auto collision_shape = collision_robot->engine()->create(
+        link_model->getName() + "_" + std::to_string(shape_index), shape_pose,
+        shape.get());
     collision_link->addShape(collision_shape);
   }
 
@@ -56,6 +60,8 @@ void _loadCollisionLink(CollisionRobot *collision_robot,
 void loadCollisionRobot(const std::shared_ptr<const CollisionEngine> &engine,
                         const moveit::core::RobotModel &moveit_model,
                         CollisionRobot *collision_robot) {
+
+  TRACTOR_ASSERT(collision_robot->links().empty());
 
   _loadCollisionLink(collision_robot,
                      moveit_model.getRootJoint()->getChildLinkModel(),

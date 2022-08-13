@@ -98,23 +98,24 @@ public:
   void serialize(
       const std::function<void(NeuralBase *, void *, size_t)> &fnc) override {
     for (auto &layer : _findLayerSet()) {
+      TRACTOR_INFO("serializing layer " << typeid(*layer).name());
       layer->serialize(fnc);
     }
   }
   void serializeWeights(std::ostream &stream) {
-    std::cerr << "begin serializing weights" << std::endl;
+    TRACTOR_INFO("begin serializing weights");
     auto callback = [&](NeuralBase *layer, void *ptr, size_t s) {
-      std::cerr << "serializing layer " << typeid(*layer).name() << " " << layer
-                << std::endl;
+      TRACTOR_INFO("serializing layer " << typeid(*layer).name() << " " << layer
+                                        << " " << ptr << " " << s);
       stream.write((const char *)ptr, s);
     };
-    std::cerr << "serializing weights" << std::endl;
+    TRACTOR_INFO("serializing weights");
     serialize(callback);
   }
   void saveWeights(const std::string &filename) {
-    std::cerr << "opening file " << filename << std::endl;
+    TRACTOR_INFO("opening file " << filename);
     std::ofstream s(filename);
-    std::cerr << "serializing" << std::endl;
+    TRACTOR_INFO("serializing");
     serializeWeights(s);
   }
   void deserializeWeights(std::istream &stream) {

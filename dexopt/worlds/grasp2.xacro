@@ -7,6 +7,7 @@
     xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface">
 
     <xacro:include filename="$(find dexopt)/models/simple_box.xacro"/>
+    <xacro:include filename="$(find dexopt)/models/invisible_box.xacro"/>
 
     <link name="world"/>
 

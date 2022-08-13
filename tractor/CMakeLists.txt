@@ -60,9 +60,11 @@ add_library(${LIBNAME}
     src/collision/base.cpp
     src/collision/bullet.cpp
     src/collision/engine.cpp
+    src/collision/link.cpp
     src/collision/loader.cpp
     src/collision/ops.cpp
     src/collision/robot.cpp
+    src/collision/shape.cpp
     src/core/allocator.cpp
     src/core/any.cpp
     src/core/array.cpp

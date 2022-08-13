@@ -1,0 +1,18 @@
+#!/usr/bin/env python
+
+import tractor
+
+print dir(tractor)
+print ""
+print dir(tractor.types_double)
+print ""
+print dir(tractor.types_double_scalar)
+print ""
+
+print "intersection", set(dir(tractor.types_double)).intersection(set(dir(tractor.types_double_scalar)))
+print "intersection", set(dir(tractor)).intersection(set(dir(tractor.types_double_scalar)))
+print "intersection", set(dir(tractor)).intersection(set(dir(tractor.types_double)))
+
+#print tractor.add.__doc__
+
+#print summary(tractor)

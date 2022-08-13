@@ -69,6 +69,10 @@ public:
                                   const LayerMode &mode) override {
     return _layer->evaluate(inputs, mode);
   }
+  virtual void serialize(
+      const std::function<void(NeuralBase *, void *, size_t)> &fnc) override {
+    _layer->serialize(fnc);
+  }
 };
 
 template <class Scalar>
@@ -182,7 +186,10 @@ public:
   auto &bias() const { return _bias; }
   virtual void serialize(
       const std::function<void(NeuralBase *, void *, size_t)> &fnc) override {
-    fnc(this, _bias.data(), _bias.sizeInBytes());
+    TRACTOR_INFO("serializing dense layer " << _weights.shape());
+    if (_use_bias) {
+      fnc(this, _bias.data(), _bias.sizeInBytes());
+    }
     fnc(this, _weights.data(), _weights.sizeInBytes());
   }
 };

@@ -20,32 +20,49 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
   typedef typename Geometry::Matrix3 Matrix3;
   typedef typename Geometry::Pose Pose;
   typedef typename Geometry::Orientation Orientation;
+  typedef typename Geometry::Twist Twist;
 
   // -------------------------------------------------------------
   // Twist
-  pythonizeType<typename Geometry::Twist>(mod_main, mod_type, "Twist")
-      .def_property_readonly_static(
-          "zero", [](const py::object &) { return Geometry::TwistZero(); })
+  pythonizeType<Twist>(mod_main, mod_type, "Twist")
+      // .def_static(
+      //     "translation",
+      //     [](const Vector3 &v) { return Geometry::translationTwist(v); })
+      .def_property_readonly_static("zero",
+                                    [](const py::object &_this) {
+                                      // std::cout << "twist zero" << _this
+                                      //           << std::endl;
+                                      return Geometry::TwistZero();
+                                    })
       .def(py::init([]() { return Geometry::TwistZero(); }))
       .def(py::init([](const Vector3 &translation, const Vector3 &rotation) {
         return Geometry::twist(translation, rotation);
       }))
+      // .def_property_readonly(
+      //     "translation",
+      //     [](const Twist &_this) { return Geometry::translation(_this); })
+      // .def_property_readonly(
+      //     "rotation",
+      //     [](const Twist &_this) { return Geometry::rotation(_this); })
       .def(py::self + py::self)
       .def(py::self - py::self)
       .def(py::self * Scalar())
       .def(Scalar() * py::self)
       .def(-py::self);
-  mod_type.def("translation",
-               py::overload_cast<const typename Geometry::Twist &>(
-                   &Geometry::translation));
-  mod_type.def("rotation", py::overload_cast<const typename Geometry::Twist &>(
-                               &Geometry::rotation));
-  mod_type.def("translation_twist",
-               py::overload_cast<const Vector3 &>(&Geometry::translationTwist));
+  mod_main.def("translation",
+               py::overload_cast<const Twist &>(&Geometry::translation));
+  mod_main.def("rotation",
+               py::overload_cast<const Twist &>(&Geometry::rotation));
+  // mod_main.def("translation_twist",
+  //              py::overload_cast<const Vector3
+  //              &>(&Geometry::translationTwist));
 
   // -------------------------------------------------------------
   // Pose
   pythonizeType<Pose>(mod_main, mod_type, "Pose")
+      .def_static("angle_axis",
+                  py::overload_cast<const Scalar &, const Vector3 &>(
+                      &Geometry::angleAxisPose))
       .def_property_readonly_static(
           "identity",
           [](const py::object &) { return Geometry::PoseIdentity(); })
@@ -57,32 +74,37 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
           }))
       .def(py::self * py::self)
       .def(py::self * Vector3());
-  mod_type.def("inverse", py::overload_cast<const Pose &>(&Geometry::inverse));
-  mod_type.def("translation",
+  mod_main.def("inverse", py::overload_cast<const Pose &>(&Geometry::inverse));
+  mod_main.def("translation",
                py::overload_cast<const Pose &>(&Geometry::translation));
-  mod_type.def("position",
+  mod_main.def("position",
                py::overload_cast<const Pose &>(&Geometry::position));
-  mod_type.def("orientation", &Geometry::orientation);
-  // mod_type.def(
+  mod_main.def("orientation", &Geometry::orientation);
+  // mod_main.def(
   //     "residual",
   //     py::overload_cast<const Pose &,
   //                       const Pose
   //                       &>(&Geometry::residual));
-  mod_type.def("angle_axis_pose",
-               py::overload_cast<const Scalar &, const Vector3 &>(
-                   &Geometry::angleAxisPose));
-  mod_type.def("angle_axis_pose",
-               py::overload_cast<const Pose &, const Scalar &, const Vector3 &>(
-                   &Geometry::angleAxisPose));
-  mod_type.def("translation_pose",
-               py::overload_cast<const Vector3 &>(&Geometry::translationPose));
-  mod_type.def("translation_pose",
-               py::overload_cast<const Pose &, const Vector3 &>(
-                   &Geometry::translationPose));
+  // mod_main.def("angle_axis_pose",
+  //              py::overload_cast<const Scalar &, const Vector3 &>(
+  //                  &Geometry::angleAxisPose));
+  // mod_main.def("angle_axis_pose",
+  //              py::overload_cast<const Pose &, const Scalar &, const Vector3
+  //              &>(
+  //                  &Geometry::angleAxisPose));
+  // mod_main.def("translation_pose",
+  //              py::overload_cast<const Vector3
+  //              &>(&Geometry::translationPose));
+  // mod_main.def("translation_pose",
+  //              py::overload_cast<const Pose &, const Vector3 &>(
+  //                  &Geometry::translationPose));
 
   // -------------------------------------------------------------
   // Orientation
   pythonizeType<Orientation>(mod_main, mod_type, "Orientation")
+      .def_static("angle_axis",
+                  py::overload_cast<const Scalar &, const Vector3 &>(
+                      &Geometry::angleAxisOrientation))
       .def_property_readonly_static(
           "identity",
           [](const py::object &) { return Geometry::OrientationIdentity(); })
@@ -110,18 +132,19 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
                              })
       .def(py::self * py::self)
       .def(py::self * Vector3());
-  mod_type.def("inverse",
+  mod_main.def("inverse",
                py::overload_cast<const Orientation &>(&Geometry::inverse));
-  mod_type.def("pack",
-               py::overload_cast<const Scalar &, const Scalar &, const Scalar &,
-                                 const Scalar &>(&Geometry::pack));
-  // mod_type.def("residual",
+  // mod_main.def("pack",
+  //              py::overload_cast<const Scalar &, const Scalar &, const Scalar
+  //              &,
+  //                                const Scalar &>(&Geometry::pack));
+  // mod_main.def("residual",
   //                 py::overload_cast<const Orientation &,
   //                                   const Orientation &>(
   //                     &Geometry::residual));
-  mod_type.def("angle_axis_orientation",
-               py::overload_cast<const Scalar &, const Vector3 &>(
-                   &Geometry::angleAxisOrientation));
+  // mod_main.def("angle_axis_orientation",
+  //              py::overload_cast<const Scalar &, const Vector3 &>(
+  //                  &Geometry::angleAxisOrientation));
 
   // -------------------------------------------------------------
   // Matrix3
@@ -183,19 +206,20 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
       .def(py::self * Scalar())
       .def(Scalar() * py::self)
       .def(-py::self);
-  mod_type.def("cross", py::overload_cast<const Vector3 &, const Vector3 &>(
+  mod_main.def("cross", py::overload_cast<const Vector3 &, const Vector3 &>(
                             &Geometry::cross));
-  mod_type.def("dot", py::overload_cast<const Vector3 &, const Vector3 &>(
+  mod_main.def("dot", py::overload_cast<const Vector3 &, const Vector3 &>(
                           &Geometry::dot));
-  mod_type.def("norm", py::overload_cast<const Vector3 &>(&Geometry::norm));
-  mod_type.def("squaredNorm",
+  mod_main.def("norm", py::overload_cast<const Vector3 &>(&Geometry::norm));
+  mod_main.def("squaredNorm",
                py::overload_cast<const Vector3 &>(&Geometry::squaredNorm));
-  mod_type.def("normalized",
+  mod_main.def("normalized",
                py::overload_cast<const Vector3 &>(&Geometry::normalized));
-  mod_type.def(
-      "pack", py::overload_cast<const Scalar &, const Scalar &, const Scalar &>(
-                  &Geometry::pack));
-  mod_type.def("unpack", [](const Vector3 &v) {
+  // mod_main.def(
+  //     "pack", py::overload_cast<const Scalar &, const Scalar &, const Scalar
+  //     &>(
+  //                 &Geometry::pack));
+  mod_main.def("unpack", [](const Vector3 &v) {
     std::array<Scalar, 3> ret;
     Geometry::unpack(v, ret[0], ret[1], ret[2]);
     return ret;

@@ -6,6 +6,37 @@
   xmlns:xacro="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface"
   name="object">
 
+  <xacro:macro name="cube_object" params="name sx sy sz mass">
+    <link name="${name}">
+        <inertial>
+            <mass value="${mass}"/>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <inertia
+                ixx="${1.0/12*mass*(sy*sy+sz*sz)}" ixy="0" ixz="0"
+                iyy="${1.0/12*mass*(sx*sx+sz*sz)}" iyz="0"
+                izz="${1.0/12*mass*(sx*sx+sy*sy)}"
+                />
+        </inertial>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <geometry>
+                <box size="${sx} ${sy} ${sz}"/>
+            </geometry>
+        </collision>
+        <visual>
+          <origin rpy="0 0 0" xyz="0 0 0"/>
+          <geometry>
+              <mesh filename="package://dexopt/models/cube02.dae" scale="${sx/2} ${sy/2} ${sz/2}"/>
+          </geometry>
+        </visual>
+    </link>
+  </xacro:macro>
+
+
+  <xacro:cube_object name="object" sx="0.06" sy="0.06" sz="0.06" mass="0.01"/>
+
+
+  <!--
   <xacro:include filename="$(find dexopt)/models/invisible_box.xacro"/>
 
   <xacro:invisible_box_link name="object" sx="0.06" sy="0.06" sz="0.06" mass="0.01"/>
@@ -24,5 +55,6 @@
     <child link="object_visual" />
     <origin xyz="0 0 0" rpy="0 0 0" />
   </joint>
+-->
 
 </robot>

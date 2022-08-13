@@ -7,10 +7,10 @@
 namespace tractor {
 
 static void pythonizeOperators(py::module &m) {
-  auto m_ops = m.def_submodule("ops");
-  for (auto *op : Operator::all()) {
-    op->pythonize(m_ops);
-  }
+  // auto m_ops = m.def_submodule("ops");
+  // for (auto *op : Operator::all()) {
+  //   op->pythonize(m);
+  // }
 }
 
 TRACTOR_PYTHON_GLOBAL(pythonizeOperators);

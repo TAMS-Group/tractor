@@ -9,7 +9,7 @@
     <xacro:include filename="$(find dexopt)/models/simple_box.xacro"/>
 
     <link name="world"/>
-    
+
     <xacro:include filename="$(find sr_description)/hand/xacro/full_hand.urdf.xacro"/>
     <xacro:include filename="$(find sr_description)/other/xacro/gazebo/gazebo.urdf.xacro"/>
 
@@ -18,36 +18,29 @@
     <joint name="hand_world_joint" type="fixed">
       <parent link="world" />
       <child link="forearm" />
-      <origin xyz="-0.01 0.30 0.24" rpy="${pi/2+pi/7} 0.0 0.0" />
-    </joint>
-    
-    <xacro:invisible_cylinder type="floating" name="object" parent="world" radius="0.04" length="0.06" mass="0.1">
-        <origin xyz="0 0 0.025" rpy="0 0 0"/>
-    </xacro:invisible_cylinder>
-    
-    <link name="object_visual">
-        <visual>
-            <geometry>
-                <mesh filename="package://dexopt/models/cylinder02.dae" scale="1 1 1"/>
-            </geometry>
-            <origin rpy="0 0 0" xyz="0 0 0"/>
-        </visual>
-    </link>
-    
-    <joint name="object_visual_joint" type="fixed">
-      <parent link="object" />
-      <child link="object_visual" />
-      <origin xyz="0 0 0" rpy="0 0 0" />
+      <origin xyz="0.0 0.30 0.24" rpy="${pi/2+pi/7} 0.0 0.0" />
     </joint>
 
-    <xacro:macro name="invisible_box" params="name parent sx sy sz mass type:=fixed *origin">
+    <xacro:include filename="$(find dexopt)/objects/cylinder.xacro"/>
+
+    <joint name="object_joint" type="floating">
+      <parent link="world" />
+      <child link="object" />
+      <origin xyz="0 0 0.025" rpy="0 0 0"/>
+    </joint>
+
+    <xacro:simple_box type="fixed" name="floor" parent="world" sx="0.5" sy="0.5" sz="0.2" mass="1">
+        <origin xyz="0 0 -0.09" rpy="0 0 0"/>
+    </xacro:simple_box>
+
+    <!-- <xacro:macro name="invisible_box" params="name parent sx sy sz mass type:=fixed *origin">
         <link name="${name}">
             <inertial>
                 <mass value="${mass}"/>
                 <origin xyz="0 0 0" rpy="0 0 0"/>
-                <inertia 
-                    ixx="${1.0/12*mass*(sy*sy+sz*sz)}" ixy="0" ixz="0" 
-                    iyy="${1.0/12*mass*(sx*sx+sz*sz)}" iyz="0" 
+                <inertia
+                    ixx="${1.0/12*mass*(sy*sy+sz*sz)}" ixy="0" ixz="0"
+                    iyy="${1.0/12*mass*(sx*sx+sz*sz)}" iyz="0"
                     izz="${1.0/12*mass*(sx*sx+sy*sy)}"
                     />
             </inertial>
@@ -67,6 +60,6 @@
 
     <xacro:invisible_box type="fixed" name="floor" parent="world" sx="0.5" sy="0.5" sz="0.2" mass="1">
         <origin xyz="0 0 -0.1" rpy="0 0 0"/>
-    </xacro:invisible_box>
-    
+    </xacro:invisible_box> -->
+
 </robot>

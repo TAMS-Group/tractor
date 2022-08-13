@@ -27,7 +27,7 @@ struct DexEnvTurn : tractor::DexEnv<ValueSingle, ValueBatch> {
     this->_info.slip_avoidance_distance = 0.01;
     this->_info.slip_avoidance_weight = 100;
 
-    this->_info.friction_cone_penalty = 10;
+    this->_info.friction_cone_penalty = 20;
 
     this->_info.contact_distance_penalty = 1000;
     this->_info.contact_slip_penalty = 0;
@@ -41,8 +41,12 @@ struct DexEnvTurn : tractor::DexEnv<ValueSingle, ValueBatch> {
 
     this->_info.collision_penalty = 100;
 
+    // this->_info.end_effectors = {
+    //     "ffdistal", "mfdistal", "thdistal", "rfdistal", "lfdistal",
+    // };
+
     this->_info.end_effectors = {
-        "ffdistal", "mfdistal", "thdistal", "rfdistal", "lfdistal",
+        "thtip", "fftip", "mftip", "rftip", "lftip",
     };
   }
 

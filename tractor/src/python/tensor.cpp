@@ -82,11 +82,12 @@ static void pythonizeTensor(py::module main_module, py::module type_module) {
 
   main_module.def("neural_bias", &neural_bias<Scalar, Scalar>);
 
-  type_module.def(
-      "make_tensor",
-      [](const std::vector<size_t> &shape, const Scalar &v) -> Tensor<Scalar> {
-        return make_tensor(TensorShape(shape), v);
-      });
+  // type_module.def(
+  //     "make_tensor",
+  //     [](const std::vector<size_t> &shape, const Scalar &v) -> Tensor<Scalar>
+  //     {
+  //       return make_tensor(TensorShape(shape), v);
+  //     });
 }
 
 TRACTOR_PYTHON_TYPED(pythonizeTensor);

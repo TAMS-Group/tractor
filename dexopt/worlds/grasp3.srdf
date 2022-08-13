@@ -5,7 +5,12 @@
 
     <joint name="object_joint"/>
 
-    <joint name="hand_joint"/>
+    <!--<joint name="hand_x"/>-->
+    <joint name="hand_y"/>
+    <joint name="hand_z"/>
+
+    <joint name="hand_pan"/>
+    <joint name="hand_tilt"/>
 
     <joint name="FFJ4"/>
     <joint name="FFJ3"/>
@@ -38,7 +43,12 @@
 
   <group name="robot">
 
-    <joint name="hand_joint"/>
+    <!--<joint name="hand_x"/>-->
+    <joint name="hand_y"/>
+    <joint name="hand_z"/>
+
+    <joint name="hand_pan"/>
+    <joint name="hand_tilt"/>
 
     <joint name="FFJ4"/>
     <joint name="FFJ3"/>

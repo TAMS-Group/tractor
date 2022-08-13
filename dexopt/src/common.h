@@ -13,6 +13,16 @@
 #include <tractor/robot/robotstate.h>
 #include <tractor/robot/trajectory.h>
 
+class Destructor {
+  std::function<void()> f;
+
+public:
+  Destructor(const Destructor &) = delete;
+  Destructor &operator=(const Destructor &) = delete;
+  Destructor(const std::function<void()> &f) : f(f) {}
+  ~Destructor() { f(); }
+};
+
 template <class Geometry>
 void toMoveIt(const tractor::RobotState<Geometry> &tractor_state,
               robot_state::RobotState &moveit_state) {
@@ -70,18 +80,14 @@ public:
                const std::string &group,
                const tractor::RobotTrajectory<Geometry> &trajectory) {
     robot_state::RobotState robot_state(robot_model);
-    moveit_msgs::DisplayTrajectory msg;
     robot_trajectory::RobotTrajectory traj(robot_model, group);
+    moveit_msgs::DisplayTrajectory msg;
     for (size_t i = 0; i < trajectory.size(); i++) {
-
-      // trajectory.state(i).toMoveIt(robot_state);
-
       tractor::AlignedStdVector<typename Geometry::Scalar> pp;
       trajectory.state(i).joints().serializePositions(pp);
       for (size_t i = 0; i < pp.size(); i++) {
         robot_state.setVariablePosition(i, firstBatchElement(value(pp[i])));
       }
-
       traj.addSuffixWayPoint(robot_state, 0.1);
       if (i == 0) {
         moveit::core::robotStateToRobotStateMsg(robot_state,
@@ -237,7 +243,7 @@ public:
           if (feedback->marker_name == name &&
               feedback->event_type ==
                   visualization_msgs::InteractiveMarkerFeedback::POSE_UPDATE) {
-            // ROS_INFO_STREAM("goal pose update " << feedback->marker_name);
+            // TRACTOR_DEBUG("goal pose update " << feedback->marker_name);
             std::lock_guard<std::mutex> lock(data->_mutex);
             tf::pointMsgToEigen(feedback->pose.position, data->_position);
           }
@@ -404,7 +410,7 @@ class LogTimer {
 public:
   LogTimer(const char *label) : _label(label), _t0(ros::WallTime::now()) {}
   ~LogTimer() {
-    ROS_INFO_STREAM("timer " << _label << " "
-                             << (ros::WallTime::now() - _t0).toSec());
+    TRACTOR_DEBUG("timer " << _label << " "
+                           << (ros::WallTime::now() - _t0).toSec());
   }
 };

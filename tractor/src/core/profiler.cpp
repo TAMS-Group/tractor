@@ -13,7 +13,9 @@
 
 namespace tractor {
 
-void ProfilerThread::start() { static ProfilerThread instance; }
+void ProfilerThread::start(double interval) {
+  static ProfilerThread instance(interval);
+}
 
 ProfilerData ProfilerTrack::swap() {
   ProfilerData ret;
@@ -74,8 +76,9 @@ Profiler::swap() {
   return data;
 }
 
-ProfilerThread::ProfilerThread(const std::shared_ptr<Profiler> &profiler) {
-  _thread = std::thread([this, profiler]() {
+ProfilerThread::ProfilerThread(double interval,
+                               const std::shared_ptr<Profiler> &profiler) {
+  _thread = std::thread([this, profiler, interval]() {
     auto timeout = std::chrono::steady_clock::now();
     while (true) {
       {
@@ -119,8 +122,11 @@ ProfilerThread::ProfilerThread(const std::shared_ptr<Profiler> &profiler) {
         }
       }
       TRACTOR_INFO(stream.str());
-      timeout = std::max(timeout + std::chrono::seconds(2),
-                         std::chrono::steady_clock::now());
+      timeout = std::max(
+          timeout +
+              std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                  std::chrono::duration<double>(interval)),
+          std::chrono::steady_clock::now());
       TRACTOR_DEBUG("finished printing profiler information");
     }
   });

@@ -34,22 +34,27 @@ struct DexEnvGrasp3 : tractor::DexEnv<ValueSingle, ValueBatch> {
     this->_info.slip_avoidance_distance = 0;
     this->_info.slip_avoidance_weight = 0;
 
-    this->_info.friction_cone_penalty = 1;
+    this->_info.friction_cone_penalty = 0;
 
-    this->_info.contact_distance_penalty = 5;
-    this->_info.contact_slip_penalty = 0.5;
+    this->_info.contact_distance_penalty = 2;
+    this->_info.contact_slip_penalty = 0;
 
     this->_info.joint_limit_penalty = 1;
 
-    this->_info.shape_penalty = 3;
+    this->_info.shape_penalty = 5;
 
     this->_info.contact_point_regularization = 0;
     this->_info.contact_force_regularization = 0;
 
-    this->_info.collision_penalty = 0.5;
+    this->_info.collision_penalty = 1;
+
+    // this->_info.end_effectors = {
+    //     "thdistal", "thdistal", "ffdistal", "mfdistal",
+    //     "rfdistal", "lfdistal", "floor",
+    // };
 
     this->_info.end_effectors = {
-        "ffdistal", "mfdistal", "thdistal", "rfdistal", "lfdistal", "floor",
+        "thtip", "fftip", "mftip", "rftip", "lftip", "floor",
     };
   }
 
@@ -76,21 +81,57 @@ struct DexEnvGrasp3 : tractor::DexEnv<ValueSingle, ValueBatch> {
       neural_input.push_back(pz);
     }
 
-    {
-      ScalarBatch px, py, pz;
-      GeometryBatch::unpack(hand_position, px, py, pz);
-      neural_input.push_back(px);
-      neural_input.push_back(py);
-      neural_input.push_back(pz);
-    }
-
-    {
-      ScalarBatch px, py, pz;
-      GeometryBatch::unpack(object_position - hand_position, px, py, pz);
-      neural_input.push_back(px);
-      neural_input.push_back(py);
-      neural_input.push_back(pz);
-    }
+    // {
+    //   ScalarBatch px, py, pz;
+    //   GeometryBatch::unpack(hand_position, px, py, pz);
+    //   neural_input.push_back(px);
+    //   neural_input.push_back(py);
+    //   neural_input.push_back(pz);
+    // }
+    //
+    // {
+    //   ScalarBatch px, py, pz;
+    //   GeometryBatch::unpack(object_position - hand_position, px, py, pz);
+    //   neural_input.push_back(px);
+    //   neural_input.push_back(py);
+    //   neural_input.push_back(pz);
+    // }
+    //
+    // {
+    //   ScalarBatch x, y, z;
+    //   GeometryBatch::unpack(
+    //       object_orientation *
+    //           GeometryBatch::pack(ValueBatch(1), ValueBatch(0),
+    //           ValueBatch(0)),
+    //       x, y, z);
+    //   neural_input.push_back(x);
+    //   neural_input.push_back(y);
+    //   neural_input.push_back(z);
+    // }
+    //
+    // {
+    //   ScalarBatch x, y, z;
+    //   GeometryBatch::unpack(
+    //       object_orientation *
+    //           GeometryBatch::pack(ValueBatch(0), ValueBatch(1),
+    //           ValueBatch(0)),
+    //       x, y, z);
+    //   neural_input.push_back(x);
+    //   neural_input.push_back(y);
+    //   neural_input.push_back(z);
+    // }
+    //
+    // {
+    //   ScalarBatch x, y, z;
+    //   GeometryBatch::unpack(
+    //       object_orientation *
+    //           GeometryBatch::pack(ValueBatch(0), ValueBatch(0),
+    //           ValueBatch(1)),
+    //       x, y, z);
+    //   neural_input.push_back(x);
+    //   neural_input.push_back(y);
+    //   neural_input.push_back(z);
+    // }
 
     size_t frequencies = 8;
     double t = frame * 1.0 / frame_count;
@@ -132,9 +173,12 @@ struct DexEnvGrasp3 : tractor::DexEnv<ValueSingle, ValueBatch> {
           joint_names.size() + end_effector_count * contact_dimensions;
     }
 
-    for (size_t i = 0; i < 1; i++)
-      policy_net.add(std::make_shared<tractor::DenseLayer<ValueBatch>>(
-          32, tractor::ActivationType::TanH));
+    // policy_net.add(
+    //     std::make_shared<tractor::GaussianNoiseLayer<ValueBatch>>(0.01));
+
+    // for (size_t i = 0; i < 1; i++)
+    //   policy_net.add(std::make_shared<tractor::DenseLayer<ValueBatch>>(
+    //       32, tractor::ActivationType::TanH));
 
     policy_net.add(std::make_shared<tractor::DenseLayer<ValueBatch>>(
         output_dimensions, tractor::ActivationType::Linear));
@@ -158,6 +202,10 @@ struct DexEnvGrasp3 : tractor::DexEnv<ValueSingle, ValueBatch> {
             size_t iin = 0;
             for (size_t i = 0; i < arm_joints.size(); i++) {
               joint_map[arm_joints[i]] = input[iin++];
+            }
+            for (size_t i = 0; i < hand_synergies.joints().size(); i++) {
+              joint_map[hand_synergies.joints()[i]] =
+                  ValueBatch((double)hand_synergies.matrix()(0, i));
             }
             for (size_t j = 0; j < hand_synergies.components(); j++) {
               ScalarBatch f = input[iin++];
@@ -192,20 +240,27 @@ struct DexEnvGrasp3 : tractor::DexEnv<ValueSingle, ValueBatch> {
   init(tractor::DexLearn<ValueSingle, ValueBatch> &dexlearn) override {
     auto &simulator = *dexlearn.simulator();
 
-    // {
-    //   double s = 0.02;
-    //   ScalarBatch px = add_random_uniform(this->makeZero(), s * -0.5, s *
-    //   0.5); ScalarBatch py = add_random_uniform(this->makeZero(), s * -0.5, s
-    //   * 0.5); ScalarBatch pz = ValueBatch(0); simulator.moveBody("object",
-    //   GeometryBatch::pack(px, py, pz));
-    // }
-    //
+    {
+      double s = 0.005;
+      ScalarBatch px = add_random_normal(this->makeZero(), s);
+      ScalarBatch py = add_random_normal(this->makeZero(), s);
+      ScalarBatch pz = ValueBatch(0);
+      simulator.moveBody("object", GeometryBatch::pack(px, py, pz));
+    }
+
     // {
     //   auto rot = GeometryBatch::angleAxisOrientation(
-    //       add_random_uniform(this->makeZero(), 0, M_PI * 2),
+    //       add_random_normal(this->makeZero(), 0.1),
     //       GeometryBatch::import(Eigen::Vector3d(0, 0, 1)));
     //   simulator.rotateBody("object", rot);
     // }
+
+    {
+      auto rot = GeometryBatch::angleAxisOrientation(
+          add_random_uniform(this->makeZero(), 0, M_PI * 2),
+          GeometryBatch::import(Eigen::Vector3d(0, 0, 1)));
+      simulator.rotateBody("object", rot);
+    }
   }
 
   virtual void
@@ -217,14 +272,19 @@ struct DexEnvGrasp3 : tractor::DexEnv<ValueSingle, ValueBatch> {
         GeometryBatch::pack(ValueBatch(0.0), ValueBatch(0.0), ValueBatch(0.1)),
         ValueBatch(1)));
 
+    // dexlearn.addGoal(
+    //     std::allocate_shared<tractor::RelativeOrientationGoal<GeometryBatch>>(
+    //         tractor::AlignedStdAlloc<
+    //             tractor::RelativeOrientationGoal<GeometryBatch>>(),
+    //         "object",
+    //         GeometryBatch::pack(ValueBatch(0.0), ValueBatch(0.0),
+    //                             ValueBatch(0.0)),
+    //         ValueBatch(5)));
+
     dexlearn.addGoal(
-        std::allocate_shared<tractor::RelativeOrientationGoal<GeometryBatch>>(
-            tractor::AlignedStdAlloc<
-                tractor::RelativeOrientationGoal<GeometryBatch>>(),
-            "object",
-            GeometryBatch::pack(ValueBatch(0.0), ValueBatch(0.0),
-                                ValueBatch(0.0)),
-            ValueBatch(1)));
+        std::allocate_shared<tractor::NoRotationGoal<GeometryBatch>>(
+            tractor::AlignedStdAlloc<tractor::NoRotationGoal<GeometryBatch>>(),
+            "object", ValueBatch(1)));
   }
 
   virtual void
@@ -233,10 +293,23 @@ struct DexEnvGrasp3 : tractor::DexEnv<ValueSingle, ValueBatch> {
     auto &_robot_model = dexlearn.robotModel();
     auto &_group_robot = dexlearn.robotJointGroup();
     auto &joint_names = dexlearn.jointNames();
+
     for (size_t i = 0; i < joint_names.size(); i++) {
+      double f = (std::isupper(joint_names[i].front()) ? 3.0 : 1.0);
+      // double f = 3;
       dexlearn.simulator()->controlJointVelocity(
-          joint_names[i], policy_output[i] * ValueBatch(3));
+          joint_names[i], policy_output[i] * ValueBatch(f));
     }
+
+    // for (size_t i = 0; i < joint_names.size(); i++) {
+    //   if (std::isupper(joint_names[i].front())) {
+    //     dexlearn.simulator()->controlJointPosition(
+    //         joint_names[i], policy_output[i] * ValueBatch(1));
+    //   } else {
+    //     dexlearn.simulator()->controlJointVelocity(
+    //         joint_names[i], policy_output[i] * ValueBatch(5));
+    //   }
+    // }
   }
 };
 

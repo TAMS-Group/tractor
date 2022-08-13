@@ -75,9 +75,9 @@ class ProfilerThread {
   std::condition_variable _condition;
 
 public:
-  static void start();
-  ProfilerThread(
-      const std::shared_ptr<Profiler> &profiler = Profiler::instance());
+  static void start(double interval = 10);
+  ProfilerThread(double interval, const std::shared_ptr<Profiler> &profiler =
+                                      Profiler::instance());
   ~ProfilerThread();
 };
 

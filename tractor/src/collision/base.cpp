@@ -77,13 +77,15 @@ struct SurfaceSampler {
   }
 };
 
-void MeshCollisionShapeBase::sample(Eigen::Vector3d &point,
+void ConvexPolyhedralCollisionShape::sample(Eigen::Vector3d &point,
                                     Eigen::Vector3d &normal) const {
   surface_sampler->sample(point, normal);
 }
 
-void MeshCollisionShapeBase::initMeshBase(const Eigen::Affine3d &pose,
+void ConvexPolyhedralCollisionShape::initMeshBase(const std::string &name,
+                                          const Eigen::Affine3d &pose,
                                           const shapes::Mesh *mesh) {
+  _name = name;
   surface_sampler = std::make_shared<SurfaceSampler>(pose, mesh);
 }
 

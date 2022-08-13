@@ -30,9 +30,15 @@ TRACTOR_PYTHON_TYPED(pythonizeGeometryScalar);
 
 static void pythonizeMain(py::module &m) {
 
+  // py::options options;
+  // options.enable_function_signatures();
+
   // auto mod_scalar = m.def_submodule("scalar");
   // pythonizeGeometryScalar<float>(m, mod_scalar.def_submodule("float"));
   // pythonizeGeometryScalar<double>(m, mod_scalar.def_submodule("double"));
+
+  m.attr("__version__") = "dev";
+  // m.doc();
 
   m.def_submodule("types_float");
   m.def_submodule("types_double");
@@ -81,19 +87,14 @@ static void pythonizeMain(py::module &m) {
   auto profiler = m.def_submodule("profiler");
   profiler.def("start", []() { tractor::ProfilerThread::start(); });
 
-  // py::eval("from tractor.types_double import Scalar",
-  //          m["types_double_twist"].attr("__dict__"));
-  // py::eval("from tractor.types_double import Scalar",
-  //          m["types_double_scalar"].attr("__dict__"));
+  // m.attr("types_double_twist").attr("Scalar") =
+  //     m.attr("types_double").attr("Scalar");
+  // m.attr("types_double_scalar").attr("Scalar") =
+  //     m.attr("types_double").attr("Scalar");
 
-  m.attr("types_double_twist").attr("Scalar") =
-      m.attr("types_double").attr("Scalar");
-
-  m.attr("types_double_scalar").attr("Scalar") =
-      m.attr("types_double").attr("Scalar");
-
-  // m["types_double_twist"]["Scalar"] = m["types_double"]["Scalar"];
-  // m["types_double_scalar"]["Scalar"] = m["types_double"]["Scalar"];
+  for (auto *op : Operator::all()) {
+    op->pythonize(m);
+  }
 }
 
 void initTractorPython(pybind11::module &m) {

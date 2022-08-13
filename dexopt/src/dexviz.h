@@ -85,11 +85,29 @@ public:
   }
 
   template <class Vector3>
+  void visualizeContactLine(const Vector3 &point_a, const Vector3 &point_b) {
+
+    // return;
+
+    _line_marker.points.emplace_back();
+    _line_marker.points.back().x = point_a.x();
+    _line_marker.points.back().y = point_a.y();
+    _line_marker.points.back().z = point_a.z();
+
+    _line_marker.points.emplace_back();
+    _line_marker.points.back().x = point_b.x();
+    _line_marker.points.back().y = point_b.y();
+    _line_marker.points.back().z = point_b.z();
+  }
+
+  template <class Vector3>
   void visualizeContact(const Vector3 &point, const Vector3 &normal,
                         const Vector3 &force, size_t i) {
 
-    ROS_INFO_STREAM("viz contact " << point << " " << normal << " " << force
-                                   << " " << i);
+    // return;
+
+    TRACTOR_DEBUG("viz contact " << point << " " << normal << " " << force
+                                 << " " << i);
 
     // static std::vector<Eigen::Vector3d> colors = {
     //     {1, 0, 0}, {0, 1, 0}, {0, 0, 1}, {1, 1, 0}, {0, 1, 1},
@@ -98,12 +116,12 @@ public:
 
     // hue2color
 
-    double len = 2;
+    double len = 10;
     // double len = 0.5;
 
-    if ((norm(force) * len) < 0.01) {
-      return;
-    }
+    // if ((norm(force) * len) < 0.01) {
+    //   return;
+    // }
 
     _line_marker.points.emplace_back();
     _line_marker.points.back().x = point.x() - force.x() * len;

@@ -26,8 +26,8 @@
 #include <tractor/solvers/gd.h>
 #include <tractor/solvers/sq.h>
 
-static constexpr size_t inner_batch_size = 4;
-static constexpr size_t outer_batch_size = 1;
+static const size_t inner_batch_size = 4;
+static size_t outer_batch_size = 4;
 
 typedef double ValueSingle;
 typedef tractor::Batch<ValueSingle, inner_batch_size> ValueBatch;
@@ -44,20 +44,21 @@ makeSolver(const std::shared_ptr<tractor::Engine> &engine,
 
   if (solvername == "sq") {
     auto s = std::make_shared<tractor::LeastSquaresSolver<ValueSingle>>(engine);
-    s->_regularization = 0.1;
+    s->_regularization = 1;
     s->_max_linear_iterations = 100;
     s->_step_scaling = 0.8;
     s->setTimeout(1, false);
-    s->setTolerance(1e-9);
+    s->setTolerance(0);
     return s;
   }
 
   if (solvername == "sq2") {
     auto s = std::make_shared<tractor::LeastSquaresSolver<ValueSingle>>(engine);
-    s->_regularization = 0.01;
-    s->_max_linear_iterations = 100;
-    s->_step_scaling = 2;
-    s->setTolerance(1e-9);
+    s->_regularization = 0.1;
+    s->_max_linear_iterations = 10;
+    s->_step_scaling = 0.2;
+    s->setTimeout(1, false);
+    s->setTolerance(0);
     return s;
   }
 
@@ -85,8 +86,9 @@ int main(int argc, char **argv) {
   std::string command = argv[2];
   std::string solvername = argv[3];
 
-  ros::WallDuration training_time(60 * 5);
-  // ros::WallDuration training_time(60 * 10);
+  // ros::WallDuration training_time(60 * 5);
+  ros::WallDuration training_time(60 * 2);
+  //  ros::WallDuration training_time(60 * 10);
 
   std::string filename = "weights-" + envname + "-" + solvername + ".dat";
 
@@ -102,7 +104,8 @@ int main(int argc, char **argv) {
 
   std::string robot_description = "dexopt_robot_description";
 
-  ros::init(argc, argv, "dexopt", ros::init_options::NoSigintHandler);
+  // ros::init(argc, argv, "dexopt", ros::init_options::NoSigintHandler);
+  ros::init(argc, argv, "dexopt");
   ros::NodeHandle node_handle;
 
   std::string group_robot = "robot";
@@ -117,10 +120,8 @@ int main(int argc, char **argv) {
                                                           false);
   auto robot_model = robot_model_loader.getModel();
 
-  auto engine = std::make_shared<tractor::SimpleEngine>();
-  // auto engine = std::make_shared<tractor::LoopEngine>();
-  // auto engine = std::make_shared<tractor::JITEngine>();
-  // auto engine = std::make_shared<tractor::ParallelEngine>();
+  // auto engine = std::make_shared<tractor::SimpleEngine>();
+  auto engine = std::make_shared<tractor::ParallelEngine>();
 
   ros::Publisher visualization_publisher =
       node_handle.advertise<visualization_msgs::MarkerArray>(
@@ -173,6 +174,10 @@ int main(int argc, char **argv) {
   auto joint_names =
       robot_model->getJointModelGroup(group_robot)->getVariableNames();
 
+  if (command != "train") {
+    outer_batch_size = 1;
+  }
+
   tractor::DexLearn<ValueSingle, ValueBatch> dexlearn(
       engine, robot_model, acm2, group_robot, env, outer_batch_size);
 
@@ -182,22 +187,28 @@ int main(int argc, char **argv) {
 
   auto saveWeights = [&]() {
     if (!filename.empty()) {
-      std::cerr << "saving weights to " << filename << std::endl;
+      TRACTOR_INFO("saving weights to " << filename);
       dexlearn.policyNetwork().saveWeights(filename);
-      std::cerr << "weights saved" << std::endl;
+      TRACTOR_INFO("weights saved");
     }
   };
 
   if (command == "train") {
-    ROS_INFO_STREAM("building solver");
+    TRACTOR_INFO("building solver");
     std::shared_ptr<tractor::Solver> solver = makeSolver(engine, solvername);
     solver->compile(build());
-    ROS_INFO_STREAM("training");
+    TRACTOR_INFO("training");
     ros::WallTime start_time = ros::WallTime::now();
     std::ofstream logfile("log-" + envname + "-" + solvername + ".txt");
+    // Destructor weight_saver([&]() {
+    //   TRACTOR_INFO("saving weights");
+    //   saveWeights();
+    //   TRACTOR_INFO("weights saved");
+    // });
     while (true) {
       if (!ros::ok()) {
-        throw std::runtime_error("aborted");
+        TRACTOR_WARN("aborted");
+        break;
       }
       auto elapsed_time = ros::WallTime::now() - start_time;
       std::cout << "training time " << elapsed_time << " / " << training_time
@@ -209,6 +220,7 @@ int main(int argc, char **argv) {
         std::cerr << "training finished" << std::endl;
         break;
       }
+      solver->parameterize();
       solver->gather();
       solver->solve();
       solver->scatter();
@@ -231,11 +243,11 @@ int main(int argc, char **argv) {
     build();
 
     if (!filename.empty()) {
-      ROS_INFO_STREAM("loading weights from " << filename);
+      TRACTOR_INFO("loading weights from " << filename);
       dexlearn.policyNetwork().loadWeights(filename);
     }
 
-    ROS_INFO_STREAM("testing");
+    TRACTOR_INFO("testing");
     while (ros::ok()) {
       dexlearn.test();
       visualization_publisher.publish(dexlearn.visualization());
@@ -267,11 +279,11 @@ int main(int argc, char **argv) {
     build();
 
     if (!filename.empty()) {
-      ROS_INFO_STREAM("loading weights from " << filename);
+      TRACTOR_INFO("loading weights from " << filename);
       dexlearn.policyNetwork().loadWeights(filename);
     }
 
-    ROS_INFO_STREAM("testing");
+    TRACTOR_INFO("testing");
     while (ros::ok()) {
 
       if (!object_marker.poll()) {
@@ -283,6 +295,63 @@ int main(int argc, char **argv) {
       visualization_publisher.publish(dexlearn.visualization());
       robot_trajectory_publisher.publish(robot_model, group_all,
                                          dexlearn.trajectory());
+    }
+  }
+
+  if (command == "step") {
+
+    DisplayRobotStatePublisher display_robot_state_pub(
+        "/dexopt/display_robot_state");
+
+    JointStatePublisher joint_state_pub("/test_joint_states");
+
+    TRACTOR_INFO("init policy");
+    dexlearn.makeSimulator();
+    {
+      tractor::RobotState<GeometryBatch> robot_state(
+          dexlearn.simulator()->model());
+      dexlearn.simulator()->model()->computeFK(robot_state.joints(),
+                                               robot_state.links());
+      dexlearn.simulator()->init(robot_state);
+    }
+
+    TRACTOR_INFO("init neural network");
+    tractor::LayerMode layer_mode;
+    layer_mode.training = false;
+    dexlearn.runPolicyNetwork(layer_mode, 0);
+
+    TRACTOR_INFO("loading weights from " << filename);
+    dexlearn.policyNetwork().loadWeights(filename);
+
+    TRACTOR_INFO("clear dexviz");
+    dexlearn.dexviz().clear();
+
+    moveit::core::RobotState source_robot_state(robot_model);
+
+    size_t iframe = 0;
+    auto step_policy = [&]() {
+      dexlearn.dexviz().clear();
+      dexlearn.simulator()->step();
+      auto policy_output_vector =
+          dexlearn.runPolicyNetwork(layer_mode, iframe++);
+      TRACTOR_INFO("policy output size " << policy_output_vector.size());
+      TRACTOR_INFO("joints " << dexlearn.jointNames().size());
+      TRACTOR_INFO("eefs " << dexlearn.endEffectors().size());
+      env->controlRobot(dexlearn, policy_output_vector);
+      dexlearn.applyContacts(policy_output_vector);
+      visualization_publisher.publish(dexlearn.visualization());
+      toMoveIt(dexlearn.simulator()->state(), source_robot_state);
+      display_robot_state_pub.publish(source_robot_state);
+      joint_state_pub.publish(source_robot_state);
+    };
+
+    TRACTOR_INFO("init env");
+    env->init(dexlearn);
+
+    TRACTOR_INFO("run loop");
+    while (ros::ok()) {
+      step_policy();
+      ros::Duration(0.1).sleep();
     }
   }
 
@@ -305,14 +374,14 @@ int main(int argc, char **argv) {
 
     tf::TransformListener tf_listener;
     auto getTransform = [&](const std::string &name) {
-      ROS_INFO_STREAM("get transform " << name);
+      TRACTOR_INFO("get transform " << name);
       while (true) {
         tf::StampedTransform transform;
         try {
           tf_listener.lookupTransform("/world", name, ros::Time(0), transform);
           Eigen::Isometry3d pose;
           tf::transformTFToEigen(transform, pose);
-          ROS_INFO_STREAM("transform found " << name);
+          TRACTOR_INFO("transform found " << name);
           return pose;
         } catch (tf::TransformException ex) {
           ROS_ERROR("%s", ex.what());
@@ -322,10 +391,10 @@ int main(int argc, char **argv) {
       }
     };
 
-    ROS_INFO_STREAM("init robot move group");
+    TRACTOR_INFO("init robot move group");
     moveit::planning_interface::MoveGroupInterface target_move_group("arm");
 
-    ROS_INFO_STREAM("init policy");
+    TRACTOR_INFO("init policy");
     dexlearn.makeSimulator();
     {
       tractor::RobotState<GeometryBatch> robot_state(
@@ -335,18 +404,18 @@ int main(int argc, char **argv) {
       dexlearn.simulator()->init(robot_state);
     }
 
-    ROS_INFO_STREAM("init neural network");
+    TRACTOR_INFO("init neural network");
     tractor::LayerMode layer_mode;
     layer_mode.training = false;
     dexlearn.runPolicyNetwork(layer_mode, 0);
 
-    ROS_INFO_STREAM("loading weights from " << filename);
+    TRACTOR_INFO("loading weights from " << filename);
     dexlearn.policyNetwork().loadWeights(filename);
 
-    // ROS_INFO_STREAM("init env");
+    // TRACTOR_INFO("init env");
     // env->init(dexlearn);
 
-    ROS_INFO_STREAM("clear viz");
+    TRACTOR_INFO("clear dexviz");
     dexlearn.dexviz().clear();
 
     moveit::core::RobotState source_robot_state(robot_model);
@@ -357,9 +426,9 @@ int main(int argc, char **argv) {
       dexlearn.simulator()->step();
       auto policy_output_vector =
           dexlearn.runPolicyNetwork(layer_mode, iframe++);
-      ROS_INFO_STREAM("policy output size " << policy_output_vector.size());
-      ROS_INFO_STREAM("joints " << dexlearn.jointNames().size());
-      ROS_INFO_STREAM("eefs " << dexlearn.endEffectors().size());
+      TRACTOR_INFO("policy output size " << policy_output_vector.size());
+      TRACTOR_INFO("joints " << dexlearn.jointNames().size());
+      TRACTOR_INFO("eefs " << dexlearn.endEffectors().size());
       env->controlRobot(dexlearn, policy_output_vector);
       dexlearn.applyContacts(policy_output_vector);
       visualization_publisher.publish(dexlearn.visualization());
@@ -368,14 +437,14 @@ int main(int argc, char **argv) {
       joint_state_pub.publish(source_robot_state);
     };
 
-    ROS_INFO_STREAM("plan to first state");
+    TRACTOR_INFO("plan to first state");
     step_policy();
 
     auto source_object_pose =
         source_robot_state.getGlobalLinkTransform("object");
     auto target_object_pose = getTransform("object");
 
-    ROS_INFO_STREAM(__LINE__);
+    TRACTOR_INFO(__LINE__);
 
     auto mapForearmPose = [&]() {
       Eigen::Isometry3d goal_pose(
@@ -398,25 +467,25 @@ int main(int argc, char **argv) {
 
     {
       bool ok = target_move_group.setPoseTarget(mapForearmPose(), "lh_forearm");
-      ROS_INFO_STREAM("set pose target " << (int)ok);
+      TRACTOR_INFO("set pose target " << (int)ok);
       if (!ok) {
         ROS_ERROR_STREAM("set pose target failed");
         return -1;
       }
     }
 
-    ROS_INFO_STREAM(__LINE__);
+    TRACTOR_INFO(__LINE__);
 
     {
       auto ok = target_move_group.move();
-      ROS_INFO_STREAM("move target " << ok);
+      TRACTOR_INFO("move target " << ok);
       if (!ok) {
         ROS_ERROR_STREAM("move failed");
         return -1;
       }
     }
 
-    ROS_INFO_STREAM(__LINE__);
+    TRACTOR_INFO(__LINE__);
 
     const static std::vector<std::string> source_hand_joint_names = {
         "FFJ4", "FFJ3", "FFJ2", "FFJ1", "LFJ5", "LFJ4", "LFJ3", "LFJ2",
@@ -452,28 +521,28 @@ int main(int argc, char **argv) {
       publisher.publish(traj);
     };
 
-    ROS_INFO_STREAM(__LINE__);
+    TRACTOR_INFO(__LINE__);
 
     robot_state::RobotState target_robot_state =
         *target_move_group.getCurrentState();
 
-    ROS_INFO_STREAM("start main loop");
+    TRACTOR_INFO("start main loop");
     while (true) {
 
-      ROS_INFO_STREAM("loop");
+      TRACTOR_INFO("loop");
 
       {
         bool ok = target_robot_state.setFromIK(
             target_robot_state.getJointModelGroup("arm"), mapForearmPose(),
             "lh_forearm");
-        ROS_INFO_STREAM("ik ok " << (int)ok);
+        TRACTOR_INFO("ik ok " << (int)ok);
       }
 
       for (auto &joint_name : source_hand_joint_names) {
         double p = source_robot_state.getJointPositions(joint_name)[0];
         if (joint_name == "THJ3") {
           p *= 1;
-          ROS_INFO_STREAM("THJ3");
+          TRACTOR_INFO("THJ3");
         }
         target_robot_state.setJointPositions("lh_" + joint_name, &p);
       }

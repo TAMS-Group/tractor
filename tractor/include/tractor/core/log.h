@@ -38,9 +38,9 @@ void logEndLine(std::ostream &s);
 
 #define TRACTOR_LOG_IMPL(level, ...)                                           \
   if (checkLogVerbosity(tractor::LogLevel::level)) {                           \
-    logBeginLine(std::cout, tractor::LogLevel::level);                         \
+    tractor::logBeginLine(std::cout, tractor::LogLevel::level);                \
     std::cout << __VA_ARGS__;                                                  \
-    logEndLine(std::cout);                                                     \
+    tractor::logEndLine(std::cout);                                            \
   }
 #define TRACTOR_DEBUG(...) TRACTOR_LOG_IMPL(Debug, __VA_ARGS__)
 #define TRACTOR_INFO(...) TRACTOR_LOG_IMPL(Info, __VA_ARGS__)
