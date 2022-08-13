@@ -219,10 +219,20 @@ template <class ValueSingle, class ValueBatch> class DexLearn {
       const typename GeometryBatch::Vector3 &contact_normal,
       const ScalarBatch &weight) {
     for (int sign : {-1, +1}) {
-      for (auto v :
-           {GeometryBatch::pack(ValueBatch(1), ValueBatch(0), ValueBatch(0)),
-            GeometryBatch::pack(ValueBatch(0), ValueBatch(1), ValueBatch(0)),
-            GeometryBatch::pack(ValueBatch(0), ValueBatch(0), ValueBatch(1))}) {
+      for (auto v : {
+               GeometryBatch::pack(ValueBatch(+1), ValueBatch(0),
+                                   ValueBatch(0)),
+               GeometryBatch::pack(ValueBatch(0), ValueBatch(+1),
+                                   ValueBatch(0)),
+               GeometryBatch::pack(ValueBatch(0), ValueBatch(0),
+                                   ValueBatch(+1)),
+               GeometryBatch::pack(ValueBatch(-1), ValueBatch(0),
+                                   ValueBatch(0)),
+               GeometryBatch::pack(ValueBatch(0), ValueBatch(-1),
+                                   ValueBatch(0)),
+               GeometryBatch::pack(ValueBatch(0), ValueBatch(0),
+                                   ValueBatch(-1)),
+           }) {
         auto n = contact_normal;
         n += cross(n, v * ValueBatch(sign));
         TRACTOR_GOAL(relu(-dot(n, contact_force)) * weight);
@@ -358,11 +368,13 @@ public:
                              contact_normal);
       contact_normal = object_orientation * contact_normal;
 
-      if (_env->info().friction_cone_penalty) {
-        _applyFrictionConePenalties(
-            contact_force, contact_normal,
-            ValueBatch(_env->info().friction_cone_penalty));
-      }
+      // if (_env->info().friction_cone_penalty) {
+      //   _applyFrictionConePenalties(
+      //       contact_force, contact_normal,
+      //       ValueBatch(_env->info().friction_cone_penalty));
+      // }
+
+      contact_force -= contact_normal * GeometryBatch::norm(contact_force);
 
       _viz.visualizeContact(indexBatch(value(contact_point_1), 0),
                             indexBatch(value(contact_normal), 0),
