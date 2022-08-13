@@ -272,6 +272,8 @@ collide(const typename Geometry::Pose &pose_a,
 
 // -------------------------------------------------------------
 
+// , class X = decltype(decltype(value(std::declval<T>()))(
+//                       std::declval<T>()))
 template <class T>
 static void collision_project(const Vector3<T> &point, const uint64_t &shape_id,
                               Vector3<T> &closest_point,

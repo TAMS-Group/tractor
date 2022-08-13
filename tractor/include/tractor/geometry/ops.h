@@ -976,6 +976,11 @@ Quaternion<T> operator+(const Quaternion<T> &a, const Vector3<T> &b) {
                                              b.z() * T(0.5), T(1.0))) *
                     a);
 }
+template <class T>
+Quaternion<T> &operator+=(Quaternion<T> &a, const Vector3<T> &b) {
+  a = a + b;
+  return a;
+}
 TRACTOR_OP_T(quat_vec3, add, (const Quaternion<T> &a, const Vector3<T> &b),
              { return a + b; })
 TRACTOR_D_T(prepare, quat_vec3, add,
@@ -1151,15 +1156,15 @@ TRACTOR_D(barrier_diagonal, quaternion_trust_region_constraint,
 // -------------------------------------------------------------------------
 
 template <class T> inline auto squaredNorm(const Var<Vector3<T>> &v) {
-  return T(dot(v, v));
+  return Var<T>(dot(v, v));
 }
 
 template <class T> inline auto norm(const Var<Vector3<T>> &v) {
-  return T(sqrt(dot(v, v)));
+  return Var<T>(sqrt(dot(v, v)));
 }
 
 template <class T> inline auto normalized(const Var<Vector3<T>> &v) {
-  return v * (T(1) / norm(v));
+  return v * (Var<T>(T(1)) / norm(v));
 }
 
 } // namespace tractor

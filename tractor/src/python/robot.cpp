@@ -2,10 +2,6 @@
 
 #include <tractor/python/common.h>
 
-#include <tractor/collision/bullet.h>
-#include <tractor/collision/loader.h>
-#include <tractor/collision/ops.h>
-#include <tractor/collision/robot.h>
 #include <tractor/core/factory.h>
 #include <tractor/geometry/fast.h>
 #include <tractor/robot/robot.h>
@@ -15,33 +11,8 @@
 
 namespace tractor {
 
-static void pythonizeRobotGlobal(py::module &main_module) {
-
-  py::class_<CollisionShape, std::shared_ptr<CollisionShape>>(main_module,
-                                                              "CollisionShape")
-      .def("sample", [](const CollisionShape &_this, size_t n) {
-        Eigen::MatrixXd ret(n, 6);
-        for (size_t i = 0; i < n; i++) {
-          Eigen::Vector3d pos, norm;
-          _this.sample(pos, norm);
-          ret.row(i).head(3) = pos;
-          ret.row(i).tail(3) = norm;
-        }
-        return ret;
-      });
-
-  py::class_<CollisionLink, std::shared_ptr<CollisionLink>>(main_module,
-                                                            "CollisionLink")
-      .def_property_readonly("shapes", &CollisionLink::shapes)
-      .def_property_readonly("name", &CollisionLink::name);
-}
-
-TRACTOR_PYTHON_GLOBAL(pythonizeRobotGlobal);
-
-template <class Scalar>
-static void pythonizeRobot(py::module &main_module, py::module &type_module) {
-
-  typedef GeometryFast<Var<Scalar>> Geometry;
+template <class Geometry>
+static void pythonizeRobot(py::module main_module, py::module type_module) {
 
   main_module.def("visualize", [](const std::string &topic,
                                   const JointState<Geometry> &joint_state) {
@@ -147,13 +118,13 @@ static void pythonizeRobot(py::module &main_module, py::module &type_module) {
       .def(py::init<const std::shared_ptr<const RobotModel<Geometry>> &>())
       .def("serialize",
            [](JointState<Geometry> &_this) {
-             AlignedStdVector<Var<Scalar>> positions;
+             AlignedStdVector<typename Geometry::Scalar> positions;
              _this.serializePositions(positions);
              return positions;
            })
       .def("deserialize",
            [](JointState<Geometry> &_this,
-              const AlignedStdVector<Var<Scalar>> &positions) {
+              const AlignedStdVector<typename Geometry::Scalar> &positions) {
              _this.deserializePositions(positions);
            })
       .def(
@@ -190,24 +161,16 @@ static void pythonizeRobot(py::module &main_module, py::module &type_module) {
           [](RobotState<Geometry> &_this) { return &_this.links(); },
           py::return_value_policy::reference_internal);
 
-  struct PyRobotModel : RobotModel<Geometry> {
-    moveit::core::RobotModelConstPtr moveit_model;
-    PyRobotModel(const moveit::core::RobotModelConstPtr &m)
-        : RobotModel<Geometry>(*m), moveit_model(m) {
-      TRACTOR_DEBUG("robot model created");
-    }
-    ~PyRobotModel() { TRACTOR_DEBUG("robot model destroyed"); }
-  }; // namespace tractor
   py::class_<RobotModel<Geometry>, std::shared_ptr<RobotModel<Geometry>>>(
       type_module, "RobotModel")
       .def(py::init([](const std::string &robot_description) {
         return std::static_pointer_cast<RobotModel<Geometry>>(
-            std::make_shared<PyRobotModel>(
+            std::make_shared<PyRobotModel<Geometry>>(
                 robot_model_factory.get(robot_description)));
       }))
       .def(py::init([]() {
         return std::static_pointer_cast<RobotModel<Geometry>>(
-            std::make_shared<PyRobotModel>(
+            std::make_shared<PyRobotModel<Geometry>>(
                 robot_model_factory.get("/robot_description")));
       }))
       .def("forward_kinematics",
@@ -291,62 +254,8 @@ static void pythonizeRobot(py::module &main_module, py::module &type_module) {
             return &_this.joint(name);
           },
           py::return_value_policy::reference_internal);
-
-  static auto engine = std::make_shared<BulletCollisionEngine>();
-
-  struct CollisionRobot : tractor::CollisionRobot {
-    CollisionRobot(const std::shared_ptr<CollisionEngine> &r)
-        : tractor::CollisionRobot(r) {}
-  };
-
-  py::class_<CollisionRobot>(type_module, "CollisionRobot")
-      .def(py::init([](const RobotModel<Geometry> &robot_model) {
-        auto *ret = new CollisionRobot(engine);
-        loadCollisionRobot(
-            engine, *((const PyRobotModel *)&robot_model)->moveit_model, ret);
-        return ret;
-      }))
-      .def_property_readonly("links", &CollisionRobot::links)
-      .def("link", &CollisionRobot::link);
-
-  py::class_<CollisionResult<Geometry>>(type_module, "CollisionResult")
-      .def_readonly("point_a", &CollisionResult<Geometry>::point_a)
-      .def_readonly("point_b", &CollisionResult<Geometry>::point_b)
-      .def_readonly("normal", &CollisionResult<Geometry>::normal)
-      .def_readonly("distance", &CollisionResult<Geometry>::distance);
-
-  main_module.def("collide",
-                  [](const typename Geometry::Pose &pose_a,
-                     const std::shared_ptr<CollisionShape> &shape_a,
-                     const typename Geometry::Pose &pose_b,
-                     const std::shared_ptr<CollisionShape> &shape_b) {
-                    return collide<Geometry>(pose_a, shape_a, pose_b, shape_b);
-                  });
-
-  main_module.def("collide", [](const typename Geometry::Pose &pose_a,
-                                const std::shared_ptr<CollisionLink> &link_a,
-                                const typename Geometry::Pose &pose_b,
-                                const std::shared_ptr<CollisionLink> &link_b) {
-    return collide<Geometry>(pose_a, link_a, pose_b, link_b);
-  });
-
-  struct PySurfacePoint {
-    typename Geometry::Vector3 point = Geometry::Vector3Zero();
-    typename Geometry::Vector3 normal = Geometry::Vector3Zero();
-  };
-
-  py::class_<PySurfacePoint>(type_module, "SurfacePoint")
-      .def_readonly("point", &PySurfacePoint::point)
-      .def_readonly("normal", &PySurfacePoint::normal);
-
-  main_module.def("project", [](const typename Geometry::Vector3 &in_point,
-                                const std::shared_ptr<CollisionShape> &shape) {
-    PySurfacePoint ret;
-    project<Geometry>(in_point, shape, ret.point, ret.normal);
-    return ret;
-  });
 }
 
-TRACTOR_PYTHON_TYPED(pythonizeRobot);
+TRACTOR_PYTHON_GEOMETRY(pythonizeRobot);
 
 } // namespace tractor

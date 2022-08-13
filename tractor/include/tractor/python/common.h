@@ -8,6 +8,7 @@
 #include <tractor/core/ops.h>
 #include <tractor/core/type.h>
 #include <tractor/core/var.h>
+#include <tractor/robot/robot.h>
 
 #include <pybind11/eigen.h>
 #include <pybind11/functional.h>
@@ -15,9 +16,20 @@
 #include <pybind11/stl.h>
 #include <pybind11/stl_bind.h>
 
+#include <moveit/robot_model/robot_model.h>
+
 namespace tractor {
 
 namespace py = pybind11;
+
+template <class Geometry> struct PyRobotModel : RobotModel<Geometry> {
+  moveit::core::RobotModelConstPtr moveit_model;
+  PyRobotModel(const moveit::core::RobotModelConstPtr &m)
+      : RobotModel<Geometry>(*m), moveit_model(m) {
+    TRACTOR_DEBUG("robot model created");
+  }
+  ~PyRobotModel() { TRACTOR_DEBUG("robot model destroyed"); }
+};
 
 template <class T, class... Args>
 using ptr_class = py::class_<T, std::shared_ptr<T>, Args...>;
@@ -43,14 +55,34 @@ public:
 #define TRACTOR_PYTHON_TYPED(name)                                             \
   static int _tractor_python_typed = []() {                                    \
     PythonRegistry::instance()->add([](py::module m) {                         \
-      {                                                                        \
-        auto t = m.attr("types_float").cast<py::module>();                     \
-        name<float>(m, t);                                                     \
-      }                                                                        \
-      {                                                                        \
-        auto t = m.attr("types_double").cast<py::module>();                    \
-        name<double>(m, t);                                                    \
-      }                                                                        \
+      name<float>(m, m.attr("types_float").cast<py::module>());                \
+      name<double>(m, m.attr("types_double").cast<py::module>());              \
+    });                                                                        \
+    return 0;                                                                  \
+  }();
+
+#define TRACTOR_PYTHON_TWIST(name)                                             \
+  static int _tractor_python_twist = []() {                                    \
+    PythonRegistry::instance()->add([](py::module m) {                         \
+      name<GeometryFast<Var<float>>>(                                          \
+          m, m.attr("types_float_twist").cast<py::module>());                  \
+      name<GeometryFast<Var<double>>>(                                         \
+          m, m.attr("types_double_twist").cast<py::module>());                 \
+    });                                                                        \
+    return 0;                                                                  \
+  }();
+
+#define TRACTOR_PYTHON_GEOMETRY(name)                                          \
+  static int _tractor_python_geometry = []() {                                 \
+    PythonRegistry::instance()->add([](py::module m) {                         \
+      name<GeometryFast<Var<float>>>(                                          \
+          m, m.attr("types_float_twist").cast<py::module>());                  \
+      name<GeometryFast<Var<double>>>(                                         \
+          m, m.attr("types_double_twist").cast<py::module>());                 \
+      name<GeometryScalar<Var<float>>>(                                        \
+          m, m.attr("types_float_scalar").cast<py::module>());                 \
+      name<GeometryScalar<Var<double>>>(                                       \
+          m, m.attr("types_double_scalar").cast<py::module>());                \
     });                                                                        \
     return 0;                                                                  \
   }();

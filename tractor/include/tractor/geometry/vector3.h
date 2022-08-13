@@ -165,8 +165,12 @@ inline void vec3_pack(const T &x, const T &y, const T &z, Vector3<T> &vec) {
   vec = Vector3<T>(x, y, z);
 }
 
+template <class T> inline auto squaredNorm(const Vector3<T> &v) {
+  return T(dot(v, v));
+}
+
 template <class T> inline auto norm(const Vector3<T> &v) {
-  return T(std::sqrt(dot(v, v)));
+  return T(sqrt(dot(v, v)));
 }
 
 template <class T> inline auto normalized(const Vector3<T> &v) {

@@ -117,6 +117,7 @@ add_library(${LIBNAME}
     src/robot/jointtypes.cpp
     src/robot/linkmodel.cpp
     src/robot/linkstate.cpp
+    src/python/collision.cpp
     src/python/common.cpp
     src/python/dynamics.cpp
     src/python/engine.cpp
@@ -127,7 +128,6 @@ add_library(${LIBNAME}
     src/python/program.cpp
     src/python/robot.cpp
     src/python/ros.cpp
-    src/python/scalar.cpp
     src/python/solvers.cpp
     src/python/tensor.cpp
     src/robot/robot.cpp

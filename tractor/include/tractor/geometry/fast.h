@@ -185,6 +185,20 @@ template <class Base> struct GeometryImpl : Base {
     return pose_residual(a, b);
   }
 
+  static Scalar dot(const Vector3 &a, const Vector3 &b) {
+    return tractor::dot(a, b);
+  }
+
+  static Vector3 cross(const Vector3 &a, const Vector3 &b) {
+    return tractor::cross(a, b);
+  }
+
+  static Scalar norm(const Vector3 &a) { return tractor::norm(a); }
+  static Vector3 normalized(const Vector3 &a) { return tractor::normalized(a); }
+  static Scalar squaredNorm(const Vector3 &a) {
+    return tractor::squaredNorm(a);
+  }
+
   template <class T, int Flags>
   static Vector3 import(const Eigen::Matrix<T, 3, 1, Flags> &p) {
     return Vector3(

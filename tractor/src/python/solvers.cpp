@@ -9,7 +9,7 @@
 
 namespace tractor {
 
-static void pythonizeProgramGlobal(py::module &m) {
+static void pythonizeProgramGlobal(py::module m) {
 
   py::class_<Solver>(m, "Solver")
       .def("compile", [](Solver &solver,
@@ -34,7 +34,7 @@ static void pythonizeProgramGlobal(py::module &m) {
 TRACTOR_PYTHON_GLOBAL(pythonizeProgramGlobal);
 
 template <class Scalar>
-static void pythonizeSolvers(py::module &main_module, py::module &type_module) {
+static void pythonizeSolvers(py::module main_module, py::module type_module) {
 
   py::class_<LeastSquaresSolver<Scalar>, Solver>(type_module,
                                                  "LeastSquaresSolver")

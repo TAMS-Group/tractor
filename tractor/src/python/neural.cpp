@@ -21,7 +21,7 @@ static void pythonizeNeuralGlobal(py::module &m) {
 TRACTOR_PYTHON_GLOBAL(pythonizeNeuralGlobal);
 
 template <class Scalar>
-static void pythonizeNeural(py::module &main_module, py::module &type_module) {
+static void pythonizeNeural(py::module main_module, py::module type_module) {
 
   py::class_<NeuralNetwork<Scalar>, std::shared_ptr<NeuralNetwork<Scalar>>>(
       type_module, "NeuralNetwork")

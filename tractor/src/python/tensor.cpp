@@ -10,7 +10,7 @@
 namespace tractor {
 
 template <class Scalar>
-static void pythonizeTensor(py::module &main_module, py::module &type_module) {
+static void pythonizeTensor(py::module main_module, py::module type_module) {
 
   static auto find_shape = [](const py::array_t<Scalar> &array) {
     std::vector<size_t> ss;

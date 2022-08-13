@@ -7,11 +7,8 @@
 
 namespace tractor {
 
-template <class Scalar>
-static void pythonizeDynamics(py::module &main_module,
-                              py::module &type_module) {
-
-  typedef GeometryFast<Var<Scalar>> Geometry;
+template <class Geometry>
+static void pythonizeDynamics(py::module main_module, py::module type_module) {
 
   py::class_<Inertia<Geometry>>(type_module, "Inertia")
       .def_property_readonly("center", &Inertia<Geometry>::center)
@@ -47,6 +44,6 @@ static void pythonizeDynamics(py::module &main_module,
       });
 }
 
-TRACTOR_PYTHON_TYPED(pythonizeDynamics);
+TRACTOR_PYTHON_GEOMETRY(pythonizeDynamics);
 
 } // namespace tractor

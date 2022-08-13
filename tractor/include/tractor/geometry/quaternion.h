@@ -96,15 +96,15 @@ auto &operator<<(std::ostream &stream, const Quaternion<T> &v) {
 }
 
 template <class T> T norm(const Quaternion<T> &q) {
-  return std::sqrt(q.x() * q.x() + q.y() * q.y() + q.z() * q.z() +
-                   q.w() * q.w());
+  return sqrt(q.x() * q.x() + q.y() * q.y() + q.z() * q.z() + q.w() * q.w());
 }
 
 template <class T> Quaternion<T> normalized(const Quaternion<T> &q) {
   // T f = T(1) / norm(q);
   T n = norm(q);
   // T f = ((n > T(0)) ? (T(1) / n) : T(1));
-  T f = T(1) / std::max(T(1e-9), n);
+  // T f = T(1) / std::max(T(1e-9), n);
+  T f = T(1) / n;
   return Quaternion<T>(q.x() * f, q.y() * f, q.z() * f, q.w() * f);
 }
 

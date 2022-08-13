@@ -12,8 +12,7 @@
 namespace tractor {
 
 template <class Scalar>
-static void pythonizeROSTyped(py::module &main_module,
-                              py::module &type_module) {
+static void pythonizeROSTyped(py::module main_module, py::module type_module) {
 
   main_module.def("interact",
                   [](const std::string &frame, const std::string &name,
@@ -30,7 +29,7 @@ static void pythonizeROSTyped(py::module &main_module,
 
 TRACTOR_PYTHON_TYPED(pythonizeROSTyped);
 
-static void pythonizeROS(py::module &m) {
+static void pythonizeROS(py::module m) {
 
   m.def("visualize_points", &visualizePoints);
 
