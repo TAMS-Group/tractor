@@ -15,7 +15,7 @@ Display:
             R: 1,000000
           Metallic: 0,000000
           Normals: ""
-          Opacity: 1,000000
+          Opacity: 0,982353
           Roughness: 0,200000
           Texture: ""
           Unlit: false
@@ -40,7 +40,7 @@ Display:
           X: 0,000000
           Y: 0,000000
           Z: 0,000000
-      Visible: true
+      Visible: false
       id: 746
       type: RobotTrajectoryDisplay
     - Brightness: 10,000000
@@ -169,7 +169,7 @@ Display:
       Name: InteractiveMarkerDisplay1
       ShowDescriptions: true
       TopicNamespace: /interactive_markers
-      Visible: true
+      Visible: false
       id: 75321
       type: InteractiveMarkerDisplay
     - Description: /dexopt_robot_description
@@ -197,7 +197,7 @@ Display:
         Texture: false
         id: 77613
       Name: DisplayRobotStateDisplay1
-      Topic: /display_robot_state
+      Topic: /dexopt/display_robot_state
       Transform:
         Orientation:
           Pitch: 0,000000
@@ -207,7 +207,7 @@ Display:
           X: 0,000000
           Y: 0,000000
           Z: 0,000000
-      Visible: false
+      Visible: true
       id: 77612
       type: DisplayRobotStateDisplay
     - Frame: ""
@@ -235,7 +235,7 @@ Display:
           X: 0,000000
           Y: 0,000000
           Z: 0,000000
-      Visible: false
+      Visible: true
       id: 77670
       type: AxesDisplay
     - CellCount: 10
@@ -278,34 +278,54 @@ Display:
       Visible: false
       id: 77877
       type: GridDisplay
+    - Brightness: 1,000000
+      Color:
+        B: 0,800000
+        G: 0,800000
+        R: 0,800000
+      Frame: ""
+      Name: AmbientLight1
+      Transform:
+        Orientation:
+          Pitch: 0,000000
+          Roll: 0,000000
+          Yaw: 0,000000
+        Position:
+          X: 0,000000
+          Y: 0,000000
+          Z: 0,000000
+      ViewSpace: false
+      Visible: true
+      id: 78675
+      type: AmbientLight
   Environment:
     AmbientLighting: 1,000000
     BackgroundBrightness: 3,000000
     BackgroundColor:
       A: 1,000000
-      B: 1,000000
-      G: 1,000000
-      R: 1,000000
+      B: 0,000000
+      G: 0,000000
+      R: 0,000000
     EnvironmentMap: package://tamsviz_media/environments/the_lost_city.jpg
     GroundColor:
-      B: 0,500000
-      G: 0,500000
-      R: 0,500000
+      B: 0,000000
+      G: 0,000000
+      R: 0,000000
     HemisphericLighting: 1,000000
-    UseEnvironmentMap: true
+    UseEnvironmentMap: false
     id: 30
     type: EnvironmentComponent
   FixedFrame: base_frame
   Name: Document
   Rendering:
-    BlackLevel: 0,010000
+    BlackLevel: 0,000000
     Exposure: 1,540000
     MultiSampling: 8
     SampleShading: 1
     ShadowCubeResolution: 512
     ShadowMapResolution: 4096
     ToneMapping: true
-    WhiteLevel: 0,875000
+    WhiteLevel: 1,000000
     id: 77222
     type: RenderingComponent
   Republish: true
@@ -318,13 +338,13 @@ Window:
   FieldOfView: 45,000000
   Name: Window
   ViewPosition:
-    X: 0,085576
-    Y: 0,279162
-    Z: 0,096115
+    X: 0,289436
+    Y: -0,047408
+    Z: 0,193062
   ViewTarget:
-    X: -0,025128
-    Y: 0,018360
-    Z: 0,090823
+    X: 0,014387
+    Y: -0,011197
+    Z: 0,049751
   id: 77426
   type: SceneWindow
 id: 6

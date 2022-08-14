@@ -374,7 +374,8 @@ public:
       //       ValueBatch(_env->info().friction_cone_penalty));
       // }
 
-      contact_force -= contact_normal * GeometryBatch::norm(contact_force);
+      contact_force -= contact_normal * (GeometryBatch::norm(contact_force) *
+                                         typename GeometryBatch::Value(2));
 
       _viz.visualizeContact(indexBatch(value(contact_point_1), 0),
                             indexBatch(value(contact_normal), 0),

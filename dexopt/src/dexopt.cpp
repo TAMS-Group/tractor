@@ -368,6 +368,9 @@ int main(int argc, char **argv) {
     DisplayRobotStatePublisher display_robot_state_pub(
         "/dexopt/display_robot_state");
 
+    DisplayRobotStatePublisher target_display_robot_state(
+        "/display_robot_state");
+
     JointStatePublisher joint_state_pub("/test_joint_states");
 
     tf::TransformBroadcaster tf_br;
@@ -412,8 +415,8 @@ int main(int argc, char **argv) {
     TRACTOR_INFO("loading weights from " << filename);
     dexlearn.policyNetwork().loadWeights(filename);
 
-    // TRACTOR_INFO("init env");
-    // env->init(dexlearn);
+    TRACTOR_INFO("init env");
+    env->init(dexlearn);
 
     TRACTOR_INFO("clear dexviz");
     dexlearn.dexviz().clear();
@@ -442,13 +445,17 @@ int main(int argc, char **argv) {
 
     auto source_object_pose =
         source_robot_state.getGlobalLinkTransform("object");
-    auto target_object_pose = getTransform("object");
+    source_object_pose.linear() = Eigen::Matrix3d::Identity();
+
+    Eigen::Isometry3d target_object_pose = getTransform("object");
+    target_object_pose.linear() = Eigen::Matrix3d::Identity();
 
     TRACTOR_INFO(__LINE__);
 
     auto mapForearmPose = [&]() {
       Eigen::Isometry3d goal_pose(
           (target_object_pose *
+           Eigen::AngleAxisd(M_PI * 1.0, Eigen::Vector3d::UnitZ()) *
            Eigen::Affine3d(Eigen::Scaling(Eigen::Vector3d(1, -1, 1))) *
            source_object_pose.inverse() *
            source_robot_state.getGlobalLinkTransform("forearm") *
@@ -465,23 +472,68 @@ int main(int argc, char **argv) {
       return goal_pose;
     };
 
+    // {
+    //   bool ok = target_move_group.setPoseTarget(mapForearmPose(),
+    //   "lh_forearm"); TRACTOR_INFO("set pose target " << (int)ok); if (!ok) {
+    //     ROS_ERROR_STREAM("set pose target failed");
+    //     return -1;
+    //   }
+    //   target_display_robot_state.publish();
+    // }
+
     {
-      bool ok = target_move_group.setPoseTarget(mapForearmPose(), "lh_forearm");
-      TRACTOR_INFO("set pose target " << (int)ok);
-      if (!ok) {
-        ROS_ERROR_STREAM("set pose target failed");
-        return -1;
+      // robot_state::RobotState target_robot_state =
+      //     *target_move_group.getCurrentState();
+
+      robot_state::RobotState target_robot_state(
+          target_move_group.getRobotModel());
+      target_robot_state.setToDefaultValues();
+      TRACTOR_ASSERT(target_robot_state.setToDefaultValues(
+          target_robot_state.getJointModelGroup("arm"), "ready"));
+
+      while (true) {
+        TRACTOR_INFO("solving start state ik");
+        bool ok = target_robot_state.setFromIK(
+            target_robot_state.getRobotModel()->getJointModelGroup("arm"),
+            mapForearmPose(), "lh_forearm");
+        if (ok) {
+          break;
+        }
+      }
+
+      target_display_robot_state.publish(target_robot_state);
+
+      if (!target_move_group.setJointValueTarget(target_robot_state)) {
+        TRACTOR_FATAL("failed to set joint value target");
+        ros::Duration(1).sleep();
+        throw std::runtime_error("failed to set joint value target");
       }
     }
 
     TRACTOR_INFO(__LINE__);
 
     {
-      auto ok = target_move_group.move();
-      TRACTOR_INFO("move target " << ok);
-      if (!ok) {
-        ROS_ERROR_STREAM("move failed");
-        return -1;
+      moveit::planning_interface::MoveGroupInterface::Plan plan;
+
+      {
+        auto ok = target_move_group.plan(plan);
+        TRACTOR_INFO("plan result " << ok);
+        if (!ok) {
+          TRACTOR_FATAL("plan failed");
+          return -1;
+        }
+      }
+
+      TRACTOR_INFO("press key to execute");
+      getchar();
+
+      {
+        auto ok = target_move_group.execute(plan);
+        TRACTOR_INFO("execute result " << ok);
+        if (!ok) {
+          TRACTOR_FATAL("execute failed");
+          return -1;
+        }
       }
     }
 
@@ -509,10 +561,11 @@ int main(int argc, char **argv) {
 
     auto sendCommands = [](const robot_state::RobotState &robot_state,
                            const std::vector<std::string> &joint_names,
-                           ros::Publisher &publisher) {
+                           ros::Publisher &publisher,
+                           const ros::Duration &time_from_start) {
       trajectory_msgs::JointTrajectory traj;
       traj.points.emplace_back();
-      traj.points.front().time_from_start = ros::Duration(0.1);
+      traj.points.front().time_from_start = time_from_start;
       for (auto &joint_name : joint_names) {
         traj.joint_names.push_back(joint_name);
         traj.points.front().positions.push_back(
@@ -526,11 +579,7 @@ int main(int argc, char **argv) {
     robot_state::RobotState target_robot_state =
         *target_move_group.getCurrentState();
 
-    TRACTOR_INFO("start main loop");
-    while (true) {
-
-      TRACTOR_INFO("loop");
-
+    auto updateTargetRobotState = [&]() {
       {
         bool ok = target_robot_state.setFromIK(
             target_robot_state.getJointModelGroup("arm"), mapForearmPose(),
@@ -546,12 +595,36 @@ int main(int argc, char **argv) {
         }
         target_robot_state.setJointPositions("lh_" + joint_name, &p);
       }
+    };
 
-      getchar();
+    {
+      ros::Duration move_to_start_duration(1);
+      updateTargetRobotState();
+      sendCommands(target_robot_state, target_hand_joint_names,
+                   hand_command_pub, move_to_start_duration);
+      move_to_start_duration.sleep();
+    }
+
+    double fps = 3;
+    ros::Rate control_rate(fps);
+    ros::Duration time_from_start(1.5 / fps);
+
+    TRACTOR_INFO("start main loop");
+    for (size_t i = 0; ros::ok(); i++) {
+
+      TRACTOR_INFO("loop");
+
+      // TRACTOR_INFO("press key to continue");
+      // getchar();
+
+      updateTargetRobotState();
+
+      control_rate.sleep();
 
       sendCommands(target_robot_state, target_hand_joint_names,
-                   hand_command_pub);
-      sendCommands(target_robot_state, arm_joint_names, arm_command_pub);
+                   hand_command_pub, time_from_start);
+      sendCommands(target_robot_state, arm_joint_names, arm_command_pub,
+                   time_from_start);
 
       step_policy();
     }
