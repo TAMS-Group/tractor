@@ -18,17 +18,49 @@ static void pythonizeCollisionGlobal(py::module main_module) {
       .def("sample", [](const CollisionShape &_this, size_t n) {
         Eigen::MatrixXd ret(n, 6);
         for (size_t i = 0; i < n; i++) {
-          Eigen::Vector3d pos, norm;
+          Vec3d pos, norm;
           _this.sample(pos, norm);
-          ret.row(i).head(3) = pos;
-          ret.row(i).tail(3) = norm;
+          ret.row(i).head(3) = toEigenVector3d(pos);
+          ret.row(i).tail(3) = toEigenVector3d(norm);
         }
         return ret;
       });
 
+  py::class_<ConvexCollisionMesh, std::shared_ptr<ConvexCollisionMesh>,
+             CollisionShape>(main_module, "ConvexCollisionMesh")
+      .def_property_readonly("vertices", [](const ConvexCollisionMesh &_this) {
+        auto &verts = _this.vertices();
+        Eigen::MatrixXd ret(verts.size(), 3);
+        for (size_t i = 0; i < verts.size(); i++) {
+          ret.row(i) = toEigenVector3d(verts[i]);
+        }
+        return ret;
+      });
+
+  static auto downcast =
+      [](const std::shared_ptr<const CollisionShape> &shape) {
+        if (auto r =
+                std::dynamic_pointer_cast<const ConvexCollisionMesh>(shape))
+          return py::cast(r);
+        return py::cast(shape);
+      };
+
   py::class_<CollisionLink, std::shared_ptr<CollisionLink>>(main_module,
                                                             "CollisionLink")
-      .def_property_readonly("shapes", &CollisionLink::shapes)
+      //.def_property_readonly("shapes", &CollisionLink::shapes)
+      .def("shape", [](CollisionLink &_this,
+                       size_t i) { return downcast(_this.shapes().at(i)); })
+      .def_property_readonly(
+          "shape_count",
+          [](CollisionLink &_this) { return _this.shapes().size(); })
+      .def_property_readonly("shapes",
+                             [](CollisionLink &_this) {
+                               std::vector<py::object> ret;
+                               for (auto &s : _this.shapes()) {
+                                 ret.push_back(downcast(s));
+                               }
+                               return ret;
+                             })
       .def_property_readonly("name", &CollisionLink::name);
 }
 

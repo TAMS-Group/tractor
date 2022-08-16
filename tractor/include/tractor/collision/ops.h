@@ -17,21 +17,19 @@ void collision_axes(const Pose<T> &pose_a, const Pose<T> &pose_b,
                     Vector3<T> &local_a, Vector3<T> &local_b) {
 
   CollisionRequest req;
-  req.pose_a = toEigenIsometry3d(pose_a);
+  req.pose_a = Pose3d(pose_a);
   req.shape_a = (const CollisionShape *)shape_a;
-  req.pose_b = toEigenIsometry3d(pose_b);
+  req.pose_b = Pose3d(pose_b);
   req.shape_b = (const CollisionShape *)shape_b;
 
   CollisionResponse res;
   ((const CollisionShape *)shape_a)->engine()->collide(req, res);
 
-  point_a = toVector3<T>(res.point_a);
-  point_b = toVector3<T>(res.point_b);
-  axis = toVector3<T>(res.normal);
+  point_a = Vector3<T>(res.point_a);
+  point_b = Vector3<T>(res.point_b);
+  axis = Vector3<T>(res.normal);
   local_a = pose_a.inverse() * point_a;
   local_b = pose_b.inverse() * point_b;
-  // local_a = point_a;
-  // local_b = point_b;
 }
 
 template <class T, size_t S>
@@ -159,9 +157,9 @@ void link_collision_axes(const Pose<T> &pose_a, const Pose<T> &pose_b,
     for (auto &shape_b : ((const CollisionLink *)link_b)->shapes()) {
 
       CollisionRequest req;
-      req.pose_a = toEigenIsometry3d(pose_a);
+      req.pose_a = Pose3d(pose_a);
       req.shape_a = shape_a.get();
-      req.pose_b = toEigenIsometry3d(pose_b);
+      req.pose_b = Pose3d(pose_b);
       req.shape_b = shape_b.get();
 
       CollisionResponse res;
@@ -174,9 +172,9 @@ void link_collision_axes(const Pose<T> &pose_a, const Pose<T> &pose_b,
     }
   }
 
-  point_a = toVector3<T>(best_res.point_a);
-  point_b = toVector3<T>(best_res.point_b);
-  axis = toVector3<T>(best_res.normal);
+  point_a = Vector3<T>(best_res.point_a);
+  point_b = Vector3<T>(best_res.point_b);
+  axis = Vector3<T>(best_res.normal);
   local_a = pose_a.inverse() * point_a;
   local_b = pose_b.inverse() * point_b;
 }
@@ -279,8 +277,8 @@ static void collision_project(const Vector3<T> &point, const uint64_t &shape_id,
                               Vector3<T> &closest_point,
                               Vector3<T> &surface_normal) {
   auto *shape = (CollisionShape *)shape_id;
-  Eigen::Vector3d i_p = Eigen::Vector3d(point.x(), point.y(), point.z());
-  Eigen::Vector3d o_p, o_n;
+  Vec3d i_p = Vec3d(point.x(), point.y(), point.z());
+  Vec3d o_p, o_n;
   shape->project(i_p, o_p, o_n);
   closest_point.x() = o_p.x();
   closest_point.y() = o_p.y();
@@ -297,9 +295,8 @@ static void collision_project(const Vector3<Batch<T, S>> &point,
                               Vector3<Batch<T, S>> &surface_normal) {
   auto *shape = (CollisionShape *)shape_id;
   for (size_t i = 0; i < S; i++) {
-    Eigen::Vector3d i_p =
-        Eigen::Vector3d(point.x()[i], point.y()[i], point.z()[i]);
-    Eigen::Vector3d o_p, o_n;
+    Vec3d i_p = Vec3d(point.x()[i], point.y()[i], point.z()[i]);
+    Vec3d o_p, o_n;
     shape->project(i_p, o_p, o_n);
     closest_point.x()[i] = o_p.x();
     closest_point.y()[i] = o_p.y();

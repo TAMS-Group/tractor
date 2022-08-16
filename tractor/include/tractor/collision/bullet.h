@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "base.h"
 #include "engine.h"
 
 namespace tractor {
@@ -9,9 +10,9 @@ namespace tractor {
 class BulletCollisionEngine : public CollisionEngine {
 
 public:
-  virtual std::shared_ptr<CollisionShape>
-  create(const std::string &name, const Eigen::Affine3d &pose,
-         const shapes::Shape *shape) const override;
+  virtual std::shared_ptr<ConvexCollisionMesh>
+  createConvexMesh(const std::string &name,
+                   const shapes::Mesh *mesh) const override;
 
   virtual void collide(const CollisionRequest &request,
                        CollisionResponse &response) const override;

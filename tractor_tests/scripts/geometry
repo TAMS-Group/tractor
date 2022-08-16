@@ -155,7 +155,7 @@ class GradientTester:
         assert(len(a) == len(b))
         all_ok = True
         for imode in range(len(a)):
-            print np.sqrt(np.mean(np.square(a[imode] - b[imode])))
+            #print np.sqrt(np.mean(np.square(a[imode] - b[imode])))
             ok = np.allclose(a[imode], b[imode])
             #if imode == 0: ok = False
             #print (self.modes[imode].rjust(8)+":"+("\033[92m"+"OK   "+"\033[0m" if ok else "\033[1m"+"\033[91m"+"ERROR"+"\033[0m")),

@@ -205,4 +205,7 @@ Quaternion<T> angle_axis_quat(const T &angle, const Vector3<T> &axis) {
 typedef Quaternion<double> Quatd;
 typedef Quaternion<float> Quatf;
 
+typedef Quaternion<double> Quat3d;
+typedef Quaternion<float> Quat3f;
+
 } // namespace tractor

@@ -14,8 +14,8 @@ namespace tractor {
 
 struct SurfaceSampler {
   struct Triangle {
-    Vector3<double> pa, pb, pc;
-    Vector3<double> normal;
+    Vec3d pa, pb, pc;
+    Vec3d normal;
     double area = 0;
     double area_sum = 0;
     Triangle(const Vector3<double> &pa, const Vector3<double> &pb,
@@ -30,12 +30,10 @@ struct SurfaceSampler {
   std::vector<double> area_sum;
   double total_area = 0;
   SurfaceSampler() {}
-  SurfaceSampler(const Eigen::Affine3d &pose, const shapes::Mesh *mesh) {
+  SurfaceSampler(const shapes::Mesh *mesh) {
     auto getVertex = [&](size_t i) {
-      return toVector3<double>(pose *
-                               Eigen::Vector3d(mesh->vertices[i * 3 + 0],
-                                               mesh->vertices[i * 3 + 1],
-                                               mesh->vertices[i * 3 + 2]));
+      return Vec3d(mesh->vertices[i * 3 + 0], mesh->vertices[i * 3 + 1],
+                   mesh->vertices[i * 3 + 2]);
     };
     for (size_t itri = 0; itri < mesh->triangle_count; itri++) {
       Triangle tri(getVertex(mesh->triangles[itri * 3 + 0]),
@@ -52,7 +50,7 @@ struct SurfaceSampler {
       }
     }
   }
-  void sample(Eigen::Vector3d &point, Eigen::Vector3d &normal) const {
+  void sample(Vec3d &point, Vec3d &normal) const {
     if (area_sum.empty()) {
       throw std::runtime_error("shape is empty");
     }
@@ -71,22 +69,23 @@ struct SurfaceSampler {
       u = 1 - u;
       v = 1 - v;
     }
-    point =
-        toEigenVector3d((tri.pb - tri.pa) * u + (tri.pc - tri.pa) * v + tri.pa);
-    normal = toEigenVector3d(tri.normal);
+    point = ((tri.pb - tri.pa) * u + (tri.pc - tri.pa) * v + tri.pa);
+    normal = tri.normal;
   }
 };
 
-void ConvexPolyhedralCollisionShape::sample(Eigen::Vector3d &point,
-                                    Eigen::Vector3d &normal) const {
+void ConvexCollisionMesh::sample(Vec3d &point, Vec3d &normal) const {
   surface_sampler->sample(point, normal);
 }
 
-void ConvexPolyhedralCollisionShape::initMeshBase(const std::string &name,
-                                          const Eigen::Affine3d &pose,
-                                          const shapes::Mesh *mesh) {
+void ConvexCollisionMesh::initConvexMesh(const std::string &name,
+                                         const shapes::Mesh *mesh) {
   _name = name;
-  surface_sampler = std::make_shared<SurfaceSampler>(pose, mesh);
+  surface_sampler = std::make_shared<SurfaceSampler>(mesh);
+  for (size_t i = 0; i < mesh->vertex_count; i++) {
+    _vertices.emplace_back(mesh->vertices[i * 3 + 0], mesh->vertices[i * 3 + 1],
+                           mesh->vertices[i * 3 + 2]);
+  }
 }
 
 } // namespace tractor

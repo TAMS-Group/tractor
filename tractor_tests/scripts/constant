@@ -14,7 +14,6 @@ def f():
     tr.variable(local_variable)
 
     tr.goal(global_constant + global_variable + local_constant + local_variable)
-    #tr.goal(global_variable + local_constant + local_variable)
 
 prog = tr.record(f)
 print prog

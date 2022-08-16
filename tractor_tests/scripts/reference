@@ -3,6 +3,7 @@
 import time
 import tractor as tr
 import tractor.types_double as tt
+import tractor.types_double_twist as tg
 import sys
 import gc
 
@@ -14,10 +15,10 @@ robot_description = "/robot_description"
 if len(sys.argv) >= 2:
     robot_description = sys.argv[1]
 
-robot = tt.RobotModel(robot_description)
+robot = tg.RobotModel(robot_description)
 print "link names:", robot.link_names
 
-state = tt.RobotState(robot)
+state = tg.RobotState(robot)
 
 joint_states = state.joint_states
 

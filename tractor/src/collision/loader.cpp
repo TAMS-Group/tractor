@@ -2,15 +2,15 @@
 
 #include <tractor/collision/loader.h>
 
+#include <tractor/collision/base.h>
+#include <tractor/collision/shape.h>
+
 #include <tractor/core/error.h>
 #include <tractor/core/log.h>
 
 #include <geometric_shapes/mesh_operations.h>
 #include <moveit/robot_model/robot_model.h>
 #include <moveit/robot_state/robot_state.h>
-
-#include <LinearMath/btConvexHullComputer.h>
-#include <LinearMath/btGeometryUtil.h>
 
 namespace tractor {
 
@@ -35,10 +35,27 @@ void _loadCollisionLink(CollisionRobot *collision_robot,
                           << typeid(*shape).name());
     auto &shape_origin = origins[shape_index];
     Eigen::Affine3d shape_pose = Eigen::Affine3d(link_transform) * shape_origin;
-    auto collision_shape = collision_robot->engine()->create(
-        link_model->getName() + "_" + std::to_string(shape_index), shape_pose,
-        shape.get());
-    collision_link->addShape(collision_shape);
+
+    const shapes::Mesh *mesh = dynamic_cast<const shapes::Mesh *>(shape.get());
+    const shapes::Mesh *mesh_cleanup = nullptr;
+    if (!mesh) {
+      mesh_cleanup = mesh = shapes::createMeshFromShape(shape.get());
+    }
+
+    for (size_t i = 0; i < mesh->vertex_count; i++) {
+      Eigen::Vector3d &v = ((Eigen::Vector3d *)mesh->vertices)[i];
+      v = shape_pose * v;
+    }
+
+    auto collision_shape = collision_robot->engine()->createConvexMesh(
+        link_model->getName() + "_" + std::to_string(shape_index), mesh);
+
+    collision_link->addShape(
+        std::dynamic_pointer_cast<const CollisionShape>(collision_shape));
+
+    if (mesh_cleanup) {
+      delete mesh_cleanup;
+    }
   }
 
   for (auto *child_joint : link_model->getChildJointModels()) {

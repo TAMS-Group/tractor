@@ -3,6 +3,7 @@
 import time
 import tractor as tr
 import tractor.types_double as tt
+import tractor.types_double_twist as tg
 import rospy
 import sys
 import tams_hand_synergies
@@ -12,7 +13,7 @@ tr.init_ros("test")
 
 if len(sys.argv) >= 2:
     robot_description = sys.argv[1]
-    robot_model = tt.RobotModel(robot_description)
+    robot_model = tg.RobotModel(robot_description)
     print "link names:", robot_model.link_names
 
 if len(sys.argv) < 3:
@@ -27,7 +28,7 @@ end_effectors = sys.argv[2:]
 hand_synergies = tams_hand_synergies.HandSynergies()
 solution = tt.Tensor([0]*hand_synergies.components())
 
-joint_states = tt.JointStates(robot_model)
+joint_states = tg.JointStates(robot_model)
 
 def synergies(solution):
     values = tr.unpack(solution)
@@ -36,7 +37,7 @@ def synergies(solution):
     joint_positions = tr.unpack(tt.Tensor(hand_synergies.center()) + tr.matmul(solution, tt.Tensor(hand_synergies.matrix())))
     for i in range(len(joint_positions)):
         joint_state = joint_states.joint_state(hand_synergies.joints()[i])
-        if isinstance(joint_state, tt.RevoluteJointState):
+        if isinstance(joint_state, tg.RevoluteJointState):
             joint_state.position = joint_positions[i]
     return joint_states
 
@@ -49,11 +50,11 @@ def f():
     for i in range(robot_model.joint_count):
         joint_model = robot_model.joint_model(i)
         joint_state = joint_states.joint_state(i)
-        if isinstance(joint_model, tt.ScalarJointModelBase):
+        if isinstance(joint_model, tg.ScalarJointModelBase):
             if joint_model.limits:
                 tr.goal(tr.relu(joint_model.limits.lower - joint_state.position))
                 tr.goal(tr.relu(joint_state.position - joint_model.limits.upper))
-        if isinstance(joint_model, tt.FloatingJointModel):
+        if isinstance(joint_model, tg.FloatingJointModel):
             tr.variable(joint_state.pose)
     link_states = robot_model.forward_kinematics(joint_states)
     for i in range(len(end_effectors)):

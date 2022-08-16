@@ -27,11 +27,15 @@ static std::mutex &bulletMutex() {
   return m;
 }
 
-static Vector3<double> toVector3(const btVector3 &v) {
+static Vector3<double> toVec3d(const btVector3 &v) {
   return Vector3<double>(v.x(), v.y(), v.z());
 }
 
 static btVector3 toBulletVector3(const Eigen::Vector3d &v) {
+  return btVector3(v.x(), v.y(), v.z());
+}
+
+static btVector3 toBulletVector3(const Vec3d &v) {
   return btVector3(v.x(), v.y(), v.z());
 }
 
@@ -45,6 +49,15 @@ static btTransform toBulletTransform(const Eigen::Affine3d &a) {
   r.setOrigin(toBulletVector3(a.translation()));
   r.setBasis(toBulletMatrix3x3(a.linear()));
   return r;
+}
+
+static btQuaternion toBulletQuaternion(const Quat3d &a) {
+  return btQuaternion(a.x(), a.y(), a.z(), a.w());
+}
+
+static btTransform toBulletTransform(const Pose3d &a) {
+  return btTransform(toBulletQuaternion(a.orientation()),
+                     toBulletVector3(a.translation()));
 }
 
 static btTransform toBulletTransform(const Eigen::Isometry3d &a) {
@@ -89,9 +102,9 @@ static void bulletCollide(const char *name_a, const btTransform &pose_a,
     ok = btGjkEpaSolver3_Penetration(wa, wb, guess, results);
   }
   if (ok) {
-    response.point_a = toEigenVector3d(results.witnesses[0]);
-    response.point_b = toEigenVector3d(results.witnesses[1]);
-    response.normal = toEigenVector3d(pose_a.getBasis() * results.normal);
+    response.point_a = toVec3d(results.witnesses[0]);
+    response.point_b = toVec3d(results.witnesses[1]);
+    response.normal = toVec3d(pose_a.getBasis() * results.normal);
     response.distance = results.distance;
   } else {
     TRACTOR_WARN("collision detection failed " << name_a << " " << name_b);
@@ -99,12 +112,12 @@ static void bulletCollide(const char *name_a, const btTransform &pose_a,
   }
 }
 
-struct BulletCollisionShape : public ConvexPolyhedralCollisionShape {
+struct BulletConvexMesh : public ConvexCollisionMesh {
 
   const btScalar margin = 0.005;
   std::vector<Plane<double>> bounding_planes;
   const CollisionEngine *collision_engine = nullptr;
-  std::shared_ptr<btConvexHullShape> bullet_shape = nullptr;
+  std::shared_ptr<btConvexShape> bullet_shape = nullptr;
 
   virtual const CollisionEngine *engine() const override {
     return collision_engine;
@@ -114,19 +127,13 @@ struct BulletCollisionShape : public ConvexPolyhedralCollisionShape {
     return bounding_planes;
   }
 
-  BulletCollisionShape(const CollisionEngine *engine, const std::string &name,
-                       const Eigen::Affine3d &pose, const shapes::Shape *shape)
+  BulletConvexMesh(const CollisionEngine *engine, const std::string &name,
+                   const shapes::Mesh *mesh)
       : collision_engine(engine) {
     {
-      TRACTOR_DEBUG("bullet collision shape " << typeid(*shape).name());
+      TRACTOR_DEBUG("bullet collision shape " << typeid(*mesh).name());
 
-      const shapes::Mesh *mesh = dynamic_cast<const shapes::Mesh *>(shape);
-      const shapes::Mesh *mesh_cleanup = nullptr;
-      if (!mesh) {
-        mesh_cleanup = mesh = shapes::createMeshFromShape(shape);
-      }
-
-      initMeshBase(name, pose, mesh);
+      initConvexMesh(name, mesh);
 
       auto sh = std::make_shared<btConvexHullShape>();
 
@@ -135,9 +142,7 @@ struct BulletCollisionShape : public ConvexPolyhedralCollisionShape {
                             mesh->vertex_count, btScalar(margin), btScalar(0));
       for (size_t i = 0; i < hull_computer.vertices.size(); i++) {
         auto &v = hull_computer.vertices[i];
-        Eigen::Vector3d vertex(v.x(), v.y(), v.z());
-        vertex = pose * vertex;
-        sh->addPoint(btVector3(vertex.x(), vertex.y(), vertex.z()));
+        sh->addPoint(btVector3(v.x(), v.y(), v.z()));
       }
 
       sh->setMargin(margin);
@@ -148,29 +153,21 @@ struct BulletCollisionShape : public ConvexPolyhedralCollisionShape {
         auto *edge1 = &hull_computer.edges[hull_computer.faces[face_index]];
         auto *edge2 = edge1->getNextEdgeOfFace();
         auto *edge3 = edge2->getNextEdgeOfFace();
-        auto v0 = toVector3<double>(
-            pose *
-            toEigenVector3d(hull_computer.vertices[edge1->getSourceVertex()]));
-        auto v1 = toVector3<double>(
-            pose *
-            toEigenVector3d(hull_computer.vertices[edge2->getSourceVertex()]));
-        auto v2 = toVector3<double>(
-            pose *
-            toEigenVector3d(hull_computer.vertices[edge3->getSourceVertex()]));
+        auto v0 = toVec3d(hull_computer.vertices[edge1->getSourceVertex()]);
+        auto v1 = toVec3d(hull_computer.vertices[edge2->getSourceVertex()]);
+        auto v2 = toVec3d(hull_computer.vertices[edge3->getSourceVertex()]);
         bounding_planes.emplace_back(normalized(cross(v1 - v0, v2 - v0)),
                                      (v0 + v1 + v2) * (1.0 / 3.0));
       }
 
       bullet_shape = sh;
 
-      delete mesh_cleanup;
       return;
     }
   }
 
-  virtual void project(const Eigen::Vector3d &in_point,
-                       Eigen::Vector3d &closest_point,
-                       Eigen::Vector3d &surface_normal) const override {
+  virtual void project(const Vec3d &in_point, Vec3d &closest_point,
+                       Vec3d &surface_normal) const override {
 
     TRACTOR_PROFILER("bullet project");
 
@@ -224,28 +221,22 @@ struct BulletCollisionShape : public ConvexPolyhedralCollisionShape {
   }
 };
 
-std::shared_ptr<CollisionShape>
-BulletCollisionEngine::create(const std::string &name,
-                              const Eigen::Affine3d &pose,
-                              const shapes::Shape *shape) const {
-
+std::shared_ptr<ConvexCollisionMesh>
+BulletCollisionEngine::createConvexMesh(const std::string &name,
+                                        const shapes::Mesh *mesh) const {
   std::lock_guard<std::mutex>(bulletMutex());
-
-  return std::make_shared<BulletCollisionShape>(this, name, pose, shape);
+  return std::make_shared<BulletConvexMesh>(this, name, mesh);
 }
 
 void BulletCollisionEngine::collide(const CollisionRequest &request,
                                     CollisionResponse &response) const {
-
   TRACTOR_PROFILER("bullet collide");
-
   std::lock_guard<std::mutex>(bulletMutex());
-
   bulletCollide(
       request.shape_a->name().c_str(), toBulletTransform(request.pose_a),
-      ((BulletCollisionShape *)request.shape_a)->bullet_shape.get(),
+      ((BulletConvexMesh *)request.shape_a)->bullet_shape.get(),
       request.shape_b->name().c_str(), toBulletTransform(request.pose_b),
-      ((BulletCollisionShape *)request.shape_b)->bullet_shape.get(), response);
+      ((BulletConvexMesh *)request.shape_b)->bullet_shape.get(), response);
 }
 
 } // namespace tractor

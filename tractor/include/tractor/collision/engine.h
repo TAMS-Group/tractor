@@ -4,6 +4,8 @@
 
 #include "shape.h"
 
+#include <tractor/geometry/pose.h>
+
 namespace shapes {
 class Shape;
 class Mesh;
@@ -11,18 +13,19 @@ class Mesh;
 
 namespace tractor {
 
+class ConvexCollisionMesh;
+
 struct CollisionRequest {
-  Eigen::Isometry3d pose_a = Eigen::Isometry3d::Identity();
+  Pose3d pose_a = Pose3d::Identity();
   const CollisionShape *shape_a = nullptr;
-  Eigen::Isometry3d pose_b = Eigen::Isometry3d::Identity();
+  Pose3d pose_b = Pose3d::Identity();
   const CollisionShape *shape_b = nullptr;
 };
 
 class CollisionEngine {
 public:
-  virtual std::shared_ptr<CollisionShape>
-  create(const std::string &name, const Eigen::Affine3d &pose,
-         const shapes::Shape *shape) const = 0;
+  virtual std::shared_ptr<ConvexCollisionMesh>
+  createConvexMesh(const std::string &name, const shapes::Mesh *mesh) const = 0;
 
   virtual void collide(const CollisionRequest &request,
                        CollisionResponse &response) const = 0;

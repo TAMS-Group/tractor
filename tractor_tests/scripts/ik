@@ -5,13 +5,14 @@ import tractor as tr
 import tractor.types_double as tt
 import rospy
 import sys
+import tractor.types_double_twist as tg
 
-tr.logger.verbosity = 10
+#tr.logger.verbosity = 10
 tr.init_ros("test")
 
 if len(sys.argv) >= 2:
     robot_description = sys.argv[1]
-    robot_model = tt.RobotModel(robot_description)
+    robot_model = tg.RobotModel(robot_description)
     print "link names:", robot_model.link_names
 
 if len(sys.argv) < 3:
@@ -23,7 +24,7 @@ if len(sys.argv) < 3:
 
 end_effectors = sys.argv[2:]
 
-joint_states = tt.JointStates(robot_model)
+joint_states = tg.JointStates(robot_model)
 
 link_states = robot_model.forward_kinematics(joint_states)
 goal_positions = [tr.pose_translation(link_states.link_pose(eef)) for eef in end_effectors]
@@ -32,12 +33,12 @@ def f():
     for i in range(robot_model.joint_count):
         joint_model = robot_model.joint_model(i)
         joint_state = joint_states.joint_state(i)
-        if isinstance(joint_model, tt.ScalarJointModelBase):
+        if isinstance(joint_model, tg.ScalarJointModelBase):
             tr.variable(joint_state.position)
             if joint_model.limits:
                 tr.goal(tr.relu(joint_model.limits.lower - joint_state.position))
                 tr.goal(tr.relu(joint_state.position - joint_model.limits.upper))
-        if isinstance(joint_model, tt.FloatingJointModel):
+        if isinstance(joint_model, tg.FloatingJointModel):
             tr.variable(joint_state.pose)
     link_states = robot_model.forward_kinematics(joint_states)
     for i in range(len(end_effectors)):
@@ -57,12 +58,8 @@ solver.line_search = False
 #solver.step_scaling = 1.3
 
 while True:
-
     for i in range(len(end_effectors)):
         tr.interact("base_frame", end_effectors[i], goal_positions[i], 0.05)
-
     solver.solve()
-
     tr.visualize("/display_robot_state", joint_states)
-
-    #time.sleep(0.1)
+    time.sleep(0.01)

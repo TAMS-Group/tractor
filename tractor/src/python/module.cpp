@@ -7,6 +7,10 @@
 
 #include <pybind11/eval.h>
 
+#include <boost/stacktrace.hpp>
+
+#include <signal.h>
+
 namespace tractor {
 
 template <class Scalar>
@@ -36,6 +40,17 @@ static void pythonizeMain(py::module &m) {
   // auto mod_scalar = m.def_submodule("scalar");
   // pythonizeGeometryScalar<float>(m, mod_scalar.def_submodule("float"));
   // pythonizeGeometryScalar<double>(m, mod_scalar.def_submodule("double"));
+
+  static auto printStackTrace = []() {
+    TRACTOR_INFO(boost::stacktrace::stacktrace());
+    TRACTOR_FATAL("fatal error, exiting");
+    exit(-1);
+  };
+  signal(SIGSEGV, [](int sig) {
+    TRACTOR_FATAL("SEGFAULT");
+    printStackTrace();
+  });
+  std::set_terminate(printStackTrace);
 
   m.attr("__version__") = "dev";
   // m.doc();

@@ -3,13 +3,14 @@
 import time
 import tractor as tr
 import tractor.types_double as tt
+import tractor.types_double_twist as tg
 import math
 
-q = tt.Quaternion(0,0,0,1)
+q = tg.Orientation(0,0,0,1)
 
 def f():
     tr.variable(q)
-    tr.goal(q * tt.Vector3(0,0,1) - tt.Vector3(0,1,0))
+    tr.goal(q * tg.Vector3(0,0,1) - tg.Vector3(0,1,0))
 
 prog = tr.record(f)
 print prog
@@ -24,4 +25,4 @@ print q
 solver.solve()
 
 print q
-print q * tt.Vector3(0,0,1)
+print q * tg.Vector3(0,0,1)

@@ -7,46 +7,41 @@ import rospy
 import sys
 import sklearn
 import sklearn.cluster
+import tractor.types_double_twist as tg
 
 tr.logger.verbosity = 10
 tr.init_ros("test")
 
-if len(sys.argv) < 4:
+if len(sys.argv) < 2:
     print ""
-    print "usage: collide <robot description> <link_a> <link_b>"
+    print "usage: collide <robot description>"
     exit(-1)
 
 robot_description = sys.argv[1]
-robot_model = tt.RobotModel(robot_description)
+robot_model = tg.RobotModel(robot_description)
 
-name_a = sys.argv[2]
-name_b = sys.argv[3]
+collision_robot = tg.CollisionRobot(robot_model)
 
-collision_robot = tt.CollisionRobot(robot_model)
-c_link_a = collision_robot.link(name_a)
-c_link_b = collision_robot.link(name_b)
-
-print name_a, c_link_a
-print name_b, c_link_b
-
-object_pose = tt.Pose()
+goal_pose = tg.Pose()
 
 samples = collision_robot.link("object").shapes[0].sample(500)
 samples = sklearn.cluster.KMeans(n_clusters=50).fit(samples).cluster_centers_
 
 while True:
 
-    tr.interact("world", "object", object_pose, 0.05)
+    tr.interact("world", "object", goal_pose, 0.1)
 
-    joint_states = tt.JointStates(robot_model)
-    joint_states.joint_state("object_joint").pose = object_pose
+    joint_states = tg.JointStates(robot_model)
+    joint_states.joint_state("object_joint").pose = goal_pose
 
     link_states = robot_model.forward_kinematics(joint_states)
 
-    pose_a = link_states.link_pose(name_a)
-    pose_b = link_states.link_pose(name_b)
-
-    collision = tr.collide(pose_a, c_link_a, pose_b, c_link_b)
+    collision = tr.collide(
+        link_states.link_pose("object"),
+        collision_robot.link("object"),
+        link_states.link_pose("world"),
+        collision_robot.link("world")
+        )
     points = [ ]
     print "link collision", collision.point_a, collision.point_b, collision.normal, collision.distance
     points.append(collision.point_a.value)
@@ -54,8 +49,10 @@ while True:
     tr.visualize_points("collisions", 0.02, (1,0,0,1), points)
     tr.visualize_lines("collision_lines", 0.005, (0,0,1,1), points)
 
+    object_pose = link_states.link_pose("object")
+
     points = [ ]
-    for shape_b in c_link_b.shapes:
+    for shape_b in collision_robot.link("world").shapes:
         surface_point = tr.project(tr.pose_translation(object_pose), shape_b)
         points.append(surface_point.point.value)
         points.append(surface_point.point.value + surface_point.normal.value * 0.1)
@@ -64,13 +61,13 @@ while True:
 
     points = [ ]
     for sample in samples:
-        points.append((object_pose * tt.Vector3(sample[0:3])).value)
+        points.append((object_pose * tg.Vector3(sample[0:3])).value)
     tr.visualize_points("s", 0.01, (1,0,1,1), points)
 
     lines = [ ]
     for sample in samples:
-        lines.append((object_pose * tt.Vector3(sample[0:3])).value)
-        lines.append((object_pose * (tt.Vector3(sample[0:3] + sample[3:6] * 0.03))).value)
+        lines.append((object_pose * tg.Vector3(sample[0:3])).value)
+        lines.append((object_pose * (tg.Vector3(sample[0:3] + sample[3:6] * 0.03))).value)
     tr.visualize_lines("sl", 0.005, (1,1,0,1), lines)
 
     tr.visualize("/display_robot_state", joint_states)

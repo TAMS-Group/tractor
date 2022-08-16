@@ -14,6 +14,8 @@ class CollisionRobot {
       _link_map;
 
 public:
+  CollisionRobot(const CollisionRobot &) = delete;
+  CollisionRobot &operator=(const CollisionRobot &) = delete;
   CollisionRobot(const std::shared_ptr<const CollisionEngine> &engine)
       : _engine(engine) {}
   const std::shared_ptr<const CollisionEngine> &engine() const {

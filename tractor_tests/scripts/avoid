@@ -10,20 +10,15 @@ import sklearn
 import sklearn.cluster
 
 tr.init_ros("test")
-
 if len(sys.argv) < 2:
-    print ""
     print "usage: collide <robot description>"
     exit(-1)
 
 robot_description = sys.argv[1]
 robot_model = tg.RobotModel(robot_description)
-
 collision_robot = tg.CollisionRobot(robot_model)
-
-object_goal_pose = tg.Pose()
-
 joint_states = tg.JointStates(robot_model)
+object_goal_pose = tg.Pose()
 
 def f():
     tr.parameter(object_goal_pose)
@@ -34,58 +29,35 @@ def f():
             tr.variable(joint_state.pose)
     link_states = robot_model.forward_kinematics(joint_states)
     tr.goal(tr.pose_translation(link_states.link_pose("object")) - tr.pose_translation(object_goal_pose))
-    tr.goal(tr.quat_residual(tr.quat_inverse(tr.pose_orientation(link_states.link_pose("object"))) * tr.pose_orientation(object_goal_pose)) * tt.Scalar(0.1))
+    tr.goal(tr.quat_residual(tr.quat_inverse(tr.pose_orientation(link_states.link_pose("object"))) * tr.pose_orientation(object_goal_pose)) * tt.Scalar(0.05))
     collision = tr.collide(
-        link_states.link_pose("object"), collision_robot.link("object"),
-        link_states.link_pose("world"), collision_robot.link("world")
+        link_states.link_pose("object"), 
+        collision_robot.link("object"),
+        link_states.link_pose("world"),
+        collision_robot.link("world")
         )
-    tr.goal(tr.relu(tt.Scalar(1) * tr.dot(collision.point_b - collision.point_a, collision.normal)))
+    #tr.goal(tr.relu(tt.Scalar(1) * tr.dot(collision.point_b - collision.point_a, collision.normal)))
+    for shape in collision_robot.link("object").shapes:
+        for vertex in shape.vertices:
+            tr.goal(tr.relu(tt.Scalar(2) * tr.dot(collision.point_b - link_states.link_pose("object") * tg.Vector3(vertex), collision.normal)))
     tr.visualize_lines("contacts", 0.01, (1,1,1,1), [ collision.point_b.value, collision.point_a.value ])
 
 prog = tr.record(f)
 diffs = tr.derive(prog)
 
-print ""
-print "prog"
-print prog
-print ""
-print "prepare"
-print diffs.prepare
-print ""
-print "forward"
-print diffs.forward
-print ""
-print "reverse"
-print diffs.reverse
-print ""
-print "accumulate"
-print diffs.accumulate
-print ""
-
 solver = tt.LeastSquaresSolver(tr.DefaultEngine())
 solver.compile(prog)
 solver.tolerance = 1e-12
 solver.adaptive_regularization = False
-solver.timeout = 0.1
+solver.timeout = 0.05
 solver.max_linear_iterations = 20
 solver.regularization = 0.01
 solver.line_search = False
-solver.step_scaling = 0.5
+solver.step_scaling = 1
 
 while True:
-
     tr.interact("world", "object", object_goal_pose, 0.1)
-
-    #solver.solve()
-
-    solver.gather()
-    solver.parameterize()
-    for i in range(1):
-        solver.step()
-    solver.scatter()
-
+    solver.solve()
     tr.visualize("/display_robot_state", joint_states)
-
     f()
-
     time.sleep(0.1)

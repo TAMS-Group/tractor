@@ -9,8 +9,7 @@ tr.logger.verbosity = 5
 a = tt.Scalar(1)
 def f():
     tr.variable(a)
-    #b = a * a
-    b = a
+    b = a * a
     tr.output(b)
     tr.output(b)
     tr.output(b)
