@@ -35,4 +35,7 @@ template <class T> auto &operator<<(std::ostream &stream, const Plane<T> &p) {
                 << " o:" << p.offset() << " ]";
 }
 
+typedef Plane<double> Plane3d;
+typedef Plane<float> Plane3f;
+
 } // namespace tractor

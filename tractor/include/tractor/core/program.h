@@ -304,8 +304,10 @@ public:
 public:
   Program() {}
   Program(const std::shared_ptr<Context> &context) : _context(context) {}
-  Program(const std::function<void()> &function) { record(function); }
-  void record(const std::function<void()> &function);
+  Program(const std::function<void()> &function, bool simplify = true) {
+    record(function, simplify);
+  }
+  void record(const std::function<void()> &function, bool simplify = true);
 };
 
 inline Program::Input::Input(const Program::Output &p)

@@ -6,8 +6,6 @@
 #include <tractor/core/log.h>
 #include <tractor/core/operator.h>
 #include <tractor/core/ops.h>
-#include <tractor/core/simplify.h>
-#include <tractor/core/verify.h>
 
 #include <algorithm>
 #include <unordered_map>
@@ -238,10 +236,6 @@ void Recorder::finish(Program &program) {
     program.setInstructions(prog_insts);
     _alloc.apply(program);
   }
-
-  verify(program);
-  simplify(program);
-  verify(program);
 }
 
 } // namespace tractor

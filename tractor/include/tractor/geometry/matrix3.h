@@ -126,4 +126,7 @@ Matrix3<T> operator+(const Matrix3<T> &a, const Matrix3<T> &b) {
   return ret;
 }
 
+typedef Matrix3<double> Mat3d;
+typedef Matrix3<float> Mat3f;
+
 } // namespace tractor

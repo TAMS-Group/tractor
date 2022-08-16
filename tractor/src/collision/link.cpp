@@ -10,11 +10,6 @@ CollisionLink::CollisionLink() {}
 
 CollisionLink::CollisionLink(const std::string &name) : _name(name) {}
 
-// CollisionLink::CollisionLink(
-//     const std::string &name,
-//     const std::vector<std::shared_ptr<const CollisionShape>> &shapes)
-//     : _name(name), _shapes(shapes) {}
-
 const std::string &CollisionLink::name() const { return _name; }
 
 const std::vector<std::shared_ptr<const CollisionShape>> &

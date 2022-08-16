@@ -1,14 +1,14 @@
-// (c) 2020-2022 Philipp Ruppel
-
-#include <tractor/engines/jit.h>
-
-#include <tractor/core/log.h>
-#include <tractor/core/profiler.h>
-
-#include <sys/mman.h>
-
-namespace tractor {
-
+// // (c) 2020-2022 Philipp Ruppel
+//
+// #include <tractor/engines/jit.h>
+//
+// #include <tractor/core/log.h>
+// #include <tractor/core/profiler.h>
+//
+// #include <sys/mman.h>
+//
+// namespace tractor {
+//
 // /*
 //
 // fnc = (OpFunction)(void*)(uintptr_t)0x124124123300;
@@ -96,7 +96,7 @@ namespace tractor {
 //     (*this) << a;
 //     return *this;
 //   }
-//   template <class S, class... T> JITCode &write(const S &a, const T &... v) {
+//   template <class S, class... T> JITCode &write(const S &a, const T &...v) {
 //     write(a);
 //     write(v...);
 //     return *this;
@@ -182,6 +182,8 @@ namespace tractor {
 //
 // void JITEngine::ExecutableImpl::_compile(const Program &program) {
 //
+//   TRACTOR_ERROR("WARNING, JIT engine not yet finished, unstable");
+//
 //   // TRACTOR_DEBUG(program);
 //
 //   uintptr_t function_base = -1;
@@ -193,8 +195,8 @@ namespace tractor {
 //       _arguments.push_back(arg);
 //       program_size++;
 //     }
-//     function_base =
-//         std::min(function_base, (uintptr_t)instp.op()->functions().indirect);
+//     function_base = std::min(
+//         function_base, (uintptr_t)instp.op()->functionPointers().indirect);
 //   }
 //
 //   {
@@ -227,7 +229,8 @@ namespace tractor {
 //       //
 //       {
 //
-//         uint64_t opfun = uint64_t(uintptr_t(inst.op()->functions().direct));
+//         uint64_t opfun =
+//             uint64_t(uintptr_t(inst.op()->functionPointers().direct));
 //         code.write(uint8_t(0x48), uint8_t(0xb8), opfun); // mov function,%rax
 //
 //         for (ssize_t iarg = inst.argumentCount() - 1; iarg > 5; iarg--) {
@@ -289,7 +292,7 @@ namespace tractor {
 //       } else {
 //
 //         uint64_t opfun =
-//         uint64_t(uintptr_t(inst.op()->functions().indirect));
+//             uint64_t(uintptr_t(inst.op()->functionPointers().indirect));
 //         code.write(uint8_t(0x48), uint8_t(0xb8), opfun); // mov function,%rax
 //
 //         // code.write(uint8_t(0x48), uint8_t(0xbe),
@@ -361,5 +364,5 @@ namespace tractor {
 //     _jit_function.call(temp.data());
 //   }
 // }
-
-} // namespace tractor
+//
+// } // namespace tractor

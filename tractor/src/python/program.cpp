@@ -128,8 +128,13 @@ static void pythonizeProgram(py::module &m) {
         }
         return s;
       });
+
   m.def("record", [](const std::function<void()> &f) {
     return std::make_shared<Program>(f);
+  });
+
+  m.def("record", [](const std::function<void()> &f, bool simplify) {
+    return std::make_shared<Program>(f, simplify);
   });
 
   struct PyDerivatives {

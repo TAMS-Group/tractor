@@ -179,4 +179,7 @@ template <class T> Twist<T> pose_residual(const Pose<T> &a, const Pose<T> &b) {
   return x;
 }
 
+typedef Pose<double> Pose3d;
+typedef Pose<float> Pose3f;
+
 } // namespace tractor

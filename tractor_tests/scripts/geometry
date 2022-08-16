@@ -84,7 +84,7 @@ class Tests:
         angle = tt.Scalar()
         t.variable(angle)
         orientation = tg.Orientation.angle_axis(angle, tg.Vector3(1,2,3) * tt.Scalar(1/math.sqrt(1*1+2*2+3*3)))
-        for i in range(3):
+        for i in range(2):
             vec = orientation * vec + vec
         t.goal(vec)
 
@@ -155,6 +155,7 @@ class GradientTester:
         assert(len(a) == len(b))
         all_ok = True
         for imode in range(len(a)):
+            print np.sqrt(np.mean(np.square(a[imode] - b[imode])))
             ok = np.allclose(a[imode], b[imode])
             #if imode == 0: ok = False
             #print (self.modes[imode].rjust(8)+":"+("\033[92m"+"OK   "+"\033[0m" if ok else "\033[1m"+"\033[91m"+"ERROR"+"\033[0m")),

@@ -159,7 +159,7 @@ struct OperatorFunctions {
   // LoopFunction loop = nullptr;
   LoopFunction iterate = nullptr;
   OpFunction indirect = nullptr;
-  // const void *direct = nullptr;
+  const void *direct = nullptr;
 };
 
 template <class Functor> class RawArgumentTuple {
@@ -402,10 +402,10 @@ class OperatorImpl : public Operator {
             Impl::call(*(typename std::decay<Args>::type
                              *)(void *)((uint8_t *)base + offsets[Indices])...);
       }
-      // static void direct(typename std::decay<Args>::type *...args,
-      //                    Ret *ret) TRACTOR_FAST {
-      //   *ret = Impl::call(*args...);
-      // }
+      static void direct(typename std::decay<Args>::type *...args,
+                         Ret *ret) TRACTOR_FAST {
+        *ret = Impl::call(*args...);
+      }
       static std::vector<Argument> arguments() TRACTOR_SLOW {
         return {Argument::make<Args>()..., Argument::make<Ret &>()};
       }
@@ -440,10 +440,10 @@ class OperatorImpl : public Operator {
             *(typename std::decay<Args>::type *)(void *)((uint8_t *)base +
                                                          offsets[Indices])...);
       }
-      // static void
-      // direct(typename std::decay<Args>::type *...args) TRACTOR_FAST {
-      //   Impl::call(*args...);
-      // }
+      static void
+      direct(typename std::decay<Args>::type *...args) TRACTOR_FAST {
+        Impl::call(*args...);
+      }
       static std::vector<Argument> arguments() TRACTOR_SLOW {
         return {Argument::make<Args>()...};
       }
@@ -458,7 +458,7 @@ class OperatorImpl : public Operator {
     // _functions.loop = &_Loop::loop;
     _functions.iterate = &_Loop::iterate;
     _functions.indirect = &_Loop::indirect;
-    // _functions.direct = reinterpret_cast<const void *>(&_Loop::direct);
+    _functions.direct = reinterpret_cast<const void *>(&_Loop::direct);
     _arguments = _Loop::arguments();
   }
   typedef typename RawArgumentTuple<decltype(&Impl::call)>::Type ArgumentTuple;

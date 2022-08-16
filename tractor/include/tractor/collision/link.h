@@ -13,9 +13,6 @@ class CollisionLink {
 public:
   CollisionLink();
   CollisionLink(const std::string &name);
-  // CollisionLink(
-  //     const std::string &name,
-  //     const std::vector<std::shared_ptr<const CollisionShape>> &shapes);
   const std::string &name() const;
   const std::vector<std::shared_ptr<const CollisionShape>> &shapes() const;
   void addShape(const std::shared_ptr<const CollisionShape> &shape);

@@ -32,7 +32,7 @@ namespace tractor {
 //     //  return ((const Signature *)_data)(args...);
 //     //}
 //
-//     template <class... T> void call(const T &... args) const {
+//     template <class... T> void call(const T &...args) const {
 //       ((const Signature *)_data)(args...);
 //     }
 //   };

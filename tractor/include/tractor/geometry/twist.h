@@ -138,4 +138,7 @@ template <class T> inline Vector3<T> twist_rotation(const Twist<T> &twist) {
   return twist.rotation();
 }
 
+typedef Twist<double> Twist3d;
+typedef Twist<float> Twist3f;
+
 } // namespace tractor

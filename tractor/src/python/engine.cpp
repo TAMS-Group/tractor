@@ -3,6 +3,9 @@
 #include <tractor/python/common.h>
 
 #include <tractor/core/engine.h>
+#include <tractor/core/error.h>
+#include <tractor/engines/jit.h>
+#include <tractor/engines/parallel.h>
 #include <tractor/engines/simple.h>
 
 namespace tractor {
@@ -33,9 +36,12 @@ static void pythonizeEngine(py::module &m) {
       .def("input",
            [](const std::shared_ptr<Executable> &executable, py::array buffer,
               const std::shared_ptr<Memory> &memory) {
+             TRACTOR_ASSERT(buffer.nbytes() >= executable->inputBufferSize());
              Buffer b;
-             b.resize(buffer.nbytes());
-             std::memcpy(b.data(), buffer.data(), buffer.nbytes());
+             b.resize(executable->inputBufferSize());
+             std::memcpy(b.data(), buffer.data(),
+                         executable->inputBufferSize());
+             TRACTOR_DEBUG("input data " << buffer.nbytes());
              executable->input(b, memory);
            })
       // .def("input",
@@ -70,6 +76,13 @@ static void pythonizeEngine(py::module &m) {
   py::class_<SimpleEngine, std::shared_ptr<SimpleEngine>, Engine>(
       m, "DefaultEngine")
       .def(py::init<>());
+
+  py::class_<ParallelEngine, std::shared_ptr<ParallelEngine>, Engine>(
+      m, "ParallelEngine")
+      .def(py::init<>());
+
+  // py::class_<JITEngine, std::shared_ptr<JITEngine>, Engine>(m, "JITEngine")
+  //     .def(py::init<>());
 }
 
 TRACTOR_PYTHON_GLOBAL(pythonizeEngine);

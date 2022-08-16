@@ -130,15 +130,6 @@ struct BulletCollisionShape : public ConvexPolyhedralCollisionShape {
 
       auto sh = std::make_shared<btConvexHullShape>();
 
-      // for (size_t vertex_index = 0; vertex_index < mesh->vertex_count;
-      //      vertex_index++) {
-      //   Eigen::Vector3d vertex(mesh->vertices[vertex_index * 3 + 0],
-      //                          mesh->vertices[vertex_index * 3 + 1],
-      //                          mesh->vertices[vertex_index * 3 + 2]);
-      //   vertex = pose * vertex;
-      //   sh->addPoint(btVector3(vertex.x(), vertex.y(), vertex.z()));
-      // }
-
       btConvexHullComputer hull_computer;
       hull_computer.compute(mesh->vertices, sizeof(double) * 3,
                             mesh->vertex_count, btScalar(margin), btScalar(0));
@@ -150,24 +141,6 @@ struct BulletCollisionShape : public ConvexPolyhedralCollisionShape {
       }
 
       sh->setMargin(margin);
-
-      // sh->optimizeConvexHull();
-      // sh->initializePolyhedralFeatures();
-
-      // bounding_planes.clear();
-      // for (size_t face_index = 0; face_index < hull_computer.faces.size();
-      //      face_index++) {
-      //   auto *edge1 = &hull_computer.edges[hull_computer.faces[face_index]];
-      //   auto *edge2 = edge1->getNextEdgeOfFace();
-      //   auto *edge3 = edge2->getNextEdgeOfFace();
-      //   auto v0 =
-      //   toVector3(hull_computer.vertices[edge1->getSourceVertex()]); auto v1
-      //   = toVector3(hull_computer.vertices[edge2->getSourceVertex()]); auto
-      //   v2 = toVector3(hull_computer.vertices[edge3->getSourceVertex()]);
-      //   bounding_planes.emplace_back(
-      //       normalized(cross(v1 - v0, v2 - v0) + cross(v2 - v1, v0 - v1)),
-      //       (v0 + v1 + v2) * (1.0 / 3.0));
-      // }
 
       bounding_planes.clear();
       for (size_t face_index = 0; face_index < hull_computer.faces.size();
@@ -184,28 +157,9 @@ struct BulletCollisionShape : public ConvexPolyhedralCollisionShape {
         auto v2 = toVector3<double>(
             pose *
             toEigenVector3d(hull_computer.vertices[edge3->getSourceVertex()]));
-        // TRACTOR_DEBUG("vvvc " << v0 << " " << v1 << " " << v2 << " "
-        //                       << cross(v1 - v0, v2 - v0));
         bounding_planes.emplace_back(normalized(cross(v1 - v0, v2 - v0)),
                                      (v0 + v1 + v2) * (1.0 / 3.0));
       }
-      // exit(-1);
-
-      // bounding_planes.clear();
-      // for (size_t face_index = 0; face_index < hull_computer.faces.size();
-      //      face_index++) {
-      //   auto *edge1 = &hull_computer.edges[hull_computer.faces[face_index]];
-      //   auto *edge2 = edge1->getNextEdgeOfFace();
-      //   auto *edge3 = edge2->getNextEdgeOfFace();
-      //   auto v0 =
-      //       toEigenVector3d(hull_computer.vertices[edge1->getSourceVertex()]);
-      //   auto v1 =
-      //       toEigenVector3d(hull_computer.vertices[edge2->getSourceVertex()]);
-      //   auto v2 =
-      //       toEigenVector3d(hull_computer.vertices[edge3->getSourceVertex()]);
-      //   bounding_planes.emplace_back(((v1 - v0).cross(v2 - v0)).normalized(),
-      //                                (v0 + v1 + v2) * (1.0 / 3.0));
-      // }
 
       bullet_shape = sh;
 

@@ -56,9 +56,9 @@ Display:
       ShadowWidth: 1,210000
       Transform:
         Orientation:
-          Pitch: 763,900000
-          Roll: 0,000000
-          Yaw: 326,000000
+          Pitch: 738,250000
+          Roll: 41,400000
+          Yaw: 372,800000
         Position:
           X: 0,000000
           Y: 0,000000
@@ -132,7 +132,7 @@ Display:
             B: 1,000000
             G: 1,000000
             R: 1,000000
-          Metallic: 0,000000
+          Metallic: 1,000000
           Normals: ""
           Opacity: 1,000000
           Roughness: 0,200000
@@ -154,7 +154,7 @@ Display:
           X: 0,000000
           Y: 0,000000
           Z: 0,000000
-      Visible: false
+      Visible: true
       id: 70775
       type: RobotStateDisplay
     - DescriptionColor:
@@ -207,7 +207,7 @@ Display:
           X: 0,000000
           Y: 0,000000
           Z: 0,000000
-      Visible: true
+      Visible: false
       id: 77612
       type: DisplayRobotStateDisplay
     - Frame: ""
@@ -235,7 +235,7 @@ Display:
           X: 0,000000
           Y: 0,000000
           Z: 0,000000
-      Visible: true
+      Visible: false
       id: 77670
       type: AxesDisplay
     - CellCount: 10
@@ -298,14 +298,41 @@ Display:
       Visible: true
       id: 78675
       type: AmbientLight
+    - Description: /dexopt_robot_description
+      DoubleSided: false
+      ImportOptions:
+        RecomputeNormals: false
+        SmoothNormals: false
+      MaterialOverride:
+        Color: false
+        Material:
+          Color:
+            B: 0,800000
+            G: 0,800000
+            R: 0,800000
+          Metallic: 0,000000
+          Normals: ""
+          Opacity: 1,000000
+          Roughness: 0,400000
+          Texture: ""
+          Unlit: false
+          id: 79301
+        Normals: false
+        Parameters: false
+        Texture: false
+        id: 79300
+      Name: RobotModelDisplay4
+      Visible: true
+      id: 79299
+      type: RobotModelDisplay
   Environment:
     AmbientLighting: 1,000000
     BackgroundBrightness: 3,000000
     BackgroundColor:
       A: 1,000000
-      B: 0,000000
-      G: 0,000000
-      R: 0,000000
+      B: 1,000000
+      G: 1,000000
+      R: 1,000000
     EnvironmentMap: package://tamsviz_media/environments/the_lost_city.jpg
     GroundColor:
       B: 0,000000
@@ -320,12 +347,12 @@ Display:
   Rendering:
     BlackLevel: 0,000000
     Exposure: 1,540000
-    MultiSampling: 8
+    MultiSampling: 16
     SampleShading: 1
     ShadowCubeResolution: 512
     ShadowMapResolution: 4096
     ToneMapping: true
-    WhiteLevel: 1,000000
+    WhiteLevel: 0,745000
     id: 77222
     type: RenderingComponent
   Republish: true
@@ -335,16 +362,16 @@ Timeline:
     []
   id: 7
 Window:
-  FieldOfView: 45,000000
+  FieldOfView: 10,000000
   Name: Window
   ViewPosition:
-    X: 0,289436
-    Y: -0,047408
-    Z: 0,193062
+    X: -0,140726
+    Y: 0,145659
+    Z: 3,986826
   ViewTarget:
-    X: 0,014387
-    Y: -0,011197
-    Z: 0,049751
+    X: -0,137748
+    Y: -0,081901
+    Z: 0,189820
   id: 77426
   type: SceneWindow
 id: 6

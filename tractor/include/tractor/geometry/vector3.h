@@ -177,4 +177,7 @@ template <class T> inline auto normalized(const Vector3<T> &v) {
   return v * (T(1) / norm(v));
 }
 
+typedef Vector3<double> Vec3d;
+typedef Vector3<float> Vec3f;
+
 } // namespace tractor

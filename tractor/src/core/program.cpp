@@ -5,6 +5,8 @@
 #include <tractor/core/log.h>
 #include <tractor/core/operator.h>
 #include <tractor/core/recorder.h>
+#include <tractor/core/simplify.h>
+#include <tractor/core/verify.h>
 
 namespace tractor {
 
@@ -45,20 +47,29 @@ void Program::clear() {
   _bound_data.clear();
 }
 
-void Program::record(const std::function<void()> &function) {
+void Program::record(const std::function<void()> &function, bool _simplify) {
   _context = nullptr;
-  struct RecorderImpl : Recorder {
-    RecorderImpl(Program *prog) : Recorder(prog) {}
-  };
-  RecorderImpl rec(this);
-  // try {
-  function();
-  // } catch (const std::exception &ex) {
-  //   TRACTOR_DEBUG(ex.what());
-  //   throw;
-  // }
-  if (Recorder::instance() != &rec) {
-    throw std::runtime_error("recorder not active anymore");
+  {
+    struct RecorderImpl : Recorder {
+      RecorderImpl(Program *prog) : Recorder(prog) {}
+    };
+    RecorderImpl rec(this);
+    // try {
+    function();
+    // } catch (const std::exception &ex) {
+    //   TRACTOR_DEBUG(ex.what());
+    //   throw;
+    // }
+    if (Recorder::instance() != &rec) {
+      throw std::runtime_error("recorder not active anymore");
+    }
+  }
+
+  verify(*this);
+
+  if (_simplify) {
+    simplify(*this);
+    verify(*this);
   }
 }
 
