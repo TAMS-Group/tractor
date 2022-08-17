@@ -23,61 +23,59 @@ class module;
 namespace tractor {
 
 class VarBase {};
+
 template <class T> class alignas(T) Var : public VarBase {
   T _x = T();
 
 public:
   typedef T Value;
-  Var();
-  Var(const T &v);
-  Var(const Var &other);
-  explicit operator T() const;
-  T &value();
-  const T &value() const;
-  Var(Var &&other);
-  Var &operator=(const Var &other);
-  Var &operator=(Var &&other);
+  inline Var() {
+    if (auto *inst = Recorder::instance()) {
+      inst->constant(this);
+    }
+  }
+  inline Var(const T &v) : _x(v) {
+    if (auto *inst = Recorder::instance()) {
+      inst->constant(this);
+    }
+  }
+  inline Var(const Var &other) {
+    _x = other._x;
+    if (auto *inst = Recorder::instance()) {
+      inst->move(&other._x, &_x);
+    }
+  }
+  template <class X, class Y = decltype(T(std::declval<X>()))>
+  explicit inline Var(const X &v) : _x(T(v)) {
+    if (auto *inst = Recorder::instance()) {
+      inst->constant(this);
+    }
+  }
+  // explicit operator T() const { return _x; }
+  inline T &value() { return _x; }
+  inline const T &value() const { return _x; }
+  inline Var(Var &&other) {
+    _x = other._x;
+    if (auto *inst = Recorder::instance()) {
+      inst->rewrite(&other._x, &_x);
+    }
+  }
+  inline Var &operator=(const Var &other) {
+    _x = other._x;
+    if (auto *inst = Recorder::instance()) {
+      inst->move(&other._x, &_x);
+    }
+    return *this;
+  }
+  inline Var &operator=(Var &&other) {
+    _x = other._x;
+    if (auto *inst = Recorder::instance()) {
+      inst->rewrite(&other._x, &_x);
+    }
+    return *this;
+  }
 };
 
-template <class T> Var<T>::Var() {
-  if (auto *inst = Recorder::instance()) {
-    inst->constant(this);
-  }
-}
-template <class T> Var<T>::Var(const T &v) : _x(v) {
-  if (auto *inst = Recorder::instance()) {
-    inst->constant(this);
-  }
-}
-template <class T> Var<T>::Var(const Var &other) {
-  _x = other._x;
-  if (auto *inst = Recorder::instance()) {
-    inst->move(&other._x, &_x);
-  }
-}
-template <class T> Var<T>::operator T() const { return _x; }
-template <class T> T &Var<T>::value() { return _x; }
-template <class T> const T &Var<T>::value() const { return _x; }
-template <class T> Var<T>::Var(Var<T> &&other) {
-  _x = other._x;
-  if (auto *inst = Recorder::instance()) {
-    inst->rewrite(&other._x, &_x);
-  }
-}
-template <class T> Var<T> &Var<T>::operator=(const Var<T> &other) {
-  _x = other._x;
-  if (auto *inst = Recorder::instance()) {
-    inst->move(&other._x, &_x);
-  }
-  return *this;
-}
-template <class T> Var<T> &Var<T>::operator=(Var<T> &&other) {
-  _x = other._x;
-  if (auto *inst = Recorder::instance()) {
-    inst->rewrite(&other._x, &_x);
-  }
-  return *this;
-}
 template <class T> struct MakeVar { typedef const Var<T> Type; };
 template <class T> struct MakeVar<const T> { typedef const Var<T> Type; };
 template <class T> struct MakeVar<const T &> { typedef const Var<T> Type; };
@@ -619,9 +617,10 @@ template <class T> struct OverloadSelector<Var<T>> {
   TRACTOR_OP_TYPED(mode, prefix, name, args, impl, double, postfix##d)         \
   TRACTOR_OP_TYPED(mode, prefix, name, args, impl, uint64_t, postfix##i)       \
   TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch4f, postfix##4f)       \
-  TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch4d, postfix##4d)       \
-  TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch8d, postfix##8d)       \
-  TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch16d, postfix##16d)
+  TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch4d, postfix##4d)
+
+// TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch8d, postfix##8d)
+// TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch16d, postfix##16d)
 
 // template <class T> struct IsBatch { static constexpr bool value = false; };
 

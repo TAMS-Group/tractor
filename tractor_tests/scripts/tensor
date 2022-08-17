@@ -16,9 +16,13 @@ weights = tt.Tensor([[1,2],[2,3],[3,4]])
 
 print "inputs", inputs.value
 print "weights", weights.value
-print "outputs", tr.matmul(inputs, weights).value
 
-print "np", np.matmul(inputs.value, weights.value)
+print "tr matmul", tr.matmul(inputs, weights).value
+print "np matmul", np.matmul(inputs.value, weights.value)
+
+inputs2 = tt.Tensor([[1,2,3],[1,2,3]])
+print "tr matmul 2", tr.matmul(inputs2, weights).value
+print "np matmul 2", np.matmul(inputs2.value, weights.value)
 
 def f():
     #tr.parameter(inputs)

@@ -9,12 +9,6 @@ import tractor
 import inspect
 import tractor.types_double as tt
 
-#print dir(tractor.types_double)
-#print dir(tractor.types_double_scalar)
-#print "intersection", set(dir(tractor.types_double)).intersection(set(dir(tractor.types_double_scalar)))
-#print "intersection", set(dir(tractor)).intersection(set(dir(tractor.types_double_scalar)))
-#print "intersection", set(dir(tractor)).intersection(set(dir(tractor.types_double)))
-
 class Tests:
 
     def twist_properties(self, tg):
@@ -88,7 +82,7 @@ class Tests:
             vec = orientation * vec + vec
         t.goal(vec)
 
-    # def random(self, tg):
+    # def fail(self, tg):
     #     a = tt.Scalar()
     #     b = tt.Scalar()
     #     t.variable(a)

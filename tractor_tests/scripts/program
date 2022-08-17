@@ -13,30 +13,30 @@ def f():
     tr.variable(b)
     x = tr.mul(a, b) + tt.Scalar(0.3)
     x += tt.Scalar(0.2)
-    tr.output(x + x + x)
+    tr.output(x)
 
 prog = tr.record(f)
 
-print ""
-print prog
-print ""
+# print ""
+# print prog
+# print ""
 
-derivatives = tr.derive(prog)
+# derivatives = tr.derive(prog)
 
-print ""
-print "prepare"
-print derivatives.prepare
-print ""
-
-print ""
-print "forward"
-print derivatives.forward
-print ""
-
-print ""
-print "reverse"
-print derivatives.reverse
-print ""
+# print ""
+# print "prepare"
+# print derivatives.prepare
+# print ""
+#
+# print ""
+# print "forward"
+# print derivatives.forward
+# print ""
+#
+# print ""
+# print "reverse"
+# print derivatives.reverse
+# print ""
 
 engine = tr.DefaultEngine()
 memory = engine.createMemory()

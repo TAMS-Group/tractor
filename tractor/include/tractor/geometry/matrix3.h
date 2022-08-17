@@ -41,7 +41,7 @@ public:
     Matrix3 ret;
     ret.setZero();
     for (size_t i = 0; i < 3; i++) {
-      ret(i, i) = 1;
+      ret(i, i) = Scalar(1);
     }
     return ret;
   }

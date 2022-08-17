@@ -18,8 +18,10 @@ static void pythonizeGeometryScalar(py::module main_module,
                                     py::module type_module) {
   pythonizeType<Var<Scalar>>(main_module, type_module, "Scalar")
       .def(py::init<Scalar>())
-      .def_property_readonly(
-          "value", [](const Var<Scalar> &v) { return (Scalar)v.value(); })
+      .def_property(
+          "value",
+          [](const Var<Scalar> &_this) { return (Scalar)_this.value(); },
+          [](Var<Scalar> &_this, const Scalar &v) { _this.value() = v; })
       .def(py::self + py::self)
       .def(py::self - py::self)
       .def(py::self * py::self)
@@ -41,18 +43,35 @@ static void pythonizeMain(py::module &m) {
   // pythonizeGeometryScalar<float>(m, mod_scalar.def_submodule("float"));
   // pythonizeGeometryScalar<double>(m, mod_scalar.def_submodule("double"));
 
-  static auto printStackTrace = []() {
-    TRACTOR_INFO(boost::stacktrace::stacktrace());
-    TRACTOR_FATAL("fatal error, exiting");
-    exit(-1);
-  };
-  signal(SIGSEGV, [](int sig) {
-    TRACTOR_FATAL("SEGFAULT");
-    printStackTrace();
+  m.def("debug", []() {
+    static auto printStackTrace = []() {
+      TRACTOR_INFO(boost::stacktrace::stacktrace());
+    };
+    signal(SIGSEGV, [](int sig) {
+      printStackTrace();
+      TRACTOR_FATAL("SEGFAULT");
+      exit(-1);
+    });
+    signal(SIGFPE, [](int sig) {
+      printStackTrace();
+      TRACTOR_FATAL("SIGFPE");
+      exit(-1);
+    });
+    std::set_terminate([]() {
+      printStackTrace();
+      TRACTOR_FATAL("uncaught exception");
+      exit(-1);
+    });
   });
-  std::set_terminate(printStackTrace);
+  m.def("throw_runtime_error",
+        [](const std::string &s) { throw std::runtime_error(s); });
+  m.def("raise_segfault", []() { raise(SIGSEGV); });
+  m.def("raise_fpe", []() {
+    int a = 0;
+    int c = 1 / a;
+  });
 
-  m.attr("__version__") = "dev";
+  m.attr("__version__") = "0.0.0";
   // m.doc();
 
   m.def_submodule("types_float");
@@ -101,6 +120,9 @@ static void pythonizeMain(py::module &m) {
 
   auto profiler = m.def_submodule("profiler");
   profiler.def("start", []() { tractor::ProfilerThread::start(); });
+  profiler.def("start", [](double interval) {
+    tractor::ProfilerThread::start(interval);
+  });
 
   // m.attr("types_double_twist").attr("Scalar") =
   //     m.attr("types_double").attr("Scalar");

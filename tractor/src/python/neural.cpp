@@ -23,6 +23,8 @@ TRACTOR_PYTHON_GLOBAL(pythonizeNeuralGlobal);
 template <class Scalar>
 static void pythonizeNeural(py::module main_module, py::module type_module) {
 
+  typedef typename BatchScalar<Scalar>::Type WeightScalar;
+
   py::class_<NeuralNetwork<Scalar>, std::shared_ptr<NeuralNetwork<Scalar>>>(
       type_module, "NeuralNetwork")
       .def_property_readonly(
@@ -83,11 +85,11 @@ static void pythonizeNeural(py::module main_module, py::module type_module) {
   py::class_<GaussianNoiseLayer<Scalar>,
              std::shared_ptr<GaussianNoiseLayer<Scalar>>, Layer<Scalar>>(
       type_module, "GaussianNoiseLayer")
-      .def(py::init<Scalar>());
+      .def(py::init<WeightScalar>());
 
   py::class_<DropoutLayer<Scalar>, std::shared_ptr<DropoutLayer<Scalar>>,
              Layer<Scalar>>(type_module, "DropoutLayer")
-      .def(py::init<Scalar>());
+      .def(py::init<WeightScalar>());
 
   py::class_<DenseLayer<Scalar>, std::shared_ptr<DenseLayer<Scalar>>,
              Layer<Scalar>>(type_module, "DenseLayer")

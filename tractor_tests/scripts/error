@@ -1,0 +1,9 @@
+#!/usr/bin/env python
+
+import tractor as tr
+
+tr.debug()
+
+tr.raise_segfault()
+tr.throw_runtime_error("test")
+tr.raise_fpe()

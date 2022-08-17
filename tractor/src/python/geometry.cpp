@@ -119,17 +119,24 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
       .def(py::init([](const std::array<Scalar, 4> &array) {
         return Geometry::pack(array[0], array[1], array[2], array[3]);
       }))
-      .def_property_readonly("value",
-                             [](const Orientation &_this) {
-                               Scalar x, y, z, w;
-                               Geometry::unpack(_this, x, y, z, w);
-                               py::array_t<Value> r(4);
-                               r.mutable_at(0) = value(x);
-                               r.mutable_at(1) = value(y);
-                               r.mutable_at(2) = value(z);
-                               r.mutable_at(3) = value(w);
-                               return r;
-                             })
+      .def_property(
+          "value",
+          [](const Orientation &_this) {
+            py::array_t<Value> r(4);
+            r.mutable_at(0) = value(value(_this).x());
+            r.mutable_at(1) = value(value(_this).y());
+            r.mutable_at(2) = value(value(_this).z());
+            r.mutable_at(3) = value(value(_this).w());
+            return r;
+          },
+          [](Orientation &_this, const py::array_t<Value> &array) {
+            TRACTOR_ASSERT(array.ndim() == 1);
+            TRACTOR_ASSERT(array.size() == 4);
+            value(value(_this).x()) = array.at(0);
+            value(value(_this).y()) = array.at(1);
+            value(value(_this).z()) = array.at(2);
+            value(value(_this).w()) = array.at(3);
+          })
       .def(py::self * py::self)
       .def(py::self * Vector3());
   mod_main.def("inverse",
@@ -161,17 +168,27 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
       .def(py::self * Vector3())
       .def(py::self + py::self)
       .def(-py::self)
-      .def_property_readonly("value",
-                             [](const Matrix3 &_this) {
-                               py::array_t<Value> r({3, 3});
-                               for (size_t i = 0; i < 3; i++) {
-                                 for (size_t j = 0; j < 3; j++) {
-                                   r.mutable_at(i, j) =
-                                       value(value(_this)(i, j));
-                                 }
-                               }
-                               return r;
-                             })
+      .def_property(
+          "value",
+          [](const Matrix3 &_this) {
+            py::array_t<Value> r({3, 3});
+            for (size_t i = 0; i < 3; i++) {
+              for (size_t j = 0; j < 3; j++) {
+                r.mutable_at(i, j) = value(value(_this)(i, j));
+              }
+            }
+            return r;
+          },
+          [](Matrix3 &_this, const py::array_t<Value> &array) {
+            TRACTOR_ASSERT(array.ndim() == 2);
+            TRACTOR_ASSERT(array.shape(0) == 3);
+            TRACTOR_ASSERT(array.shape(1) == 3);
+            for (size_t i = 0; i < 3; i++) {
+              for (size_t j = 0; j < 3; j++) {
+                value(value(_this)(i, j)) = array.at(i, j);
+              }
+            }
+          })
       .def(-py::self);
 
   // -------------------------------------------------------------
@@ -191,16 +208,22 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
       .def(py::init([](const Scalar &x, const Scalar &y, const Scalar &z) {
         return Geometry::pack(x, y, z);
       }))
-      .def_property_readonly("value",
-                             [](const Vector3 &_this) {
-                               Scalar x, y, z;
-                               Geometry::unpack(_this, x, y, z);
-                               py::array_t<Value> r(3);
-                               r.mutable_at(0) = value(x);
-                               r.mutable_at(1) = value(y);
-                               r.mutable_at(2) = value(z);
-                               return r;
-                             })
+      .def_property(
+          "value",
+          [](const Vector3 &_this) {
+            py::array_t<Value> r(3);
+            r.mutable_at(0) = value(value(_this).x());
+            r.mutable_at(1) = value(value(_this).y());
+            r.mutable_at(2) = value(value(_this).z());
+            return r;
+          },
+          [](Vector3 &_this, const py::array_t<Value> &array) {
+            TRACTOR_ASSERT(array.ndim() == 1);
+            TRACTOR_ASSERT(array.size() == 3);
+            value(value(_this).x()) = array.at(0);
+            value(value(_this).y()) = array.at(1);
+            value(value(_this).z()) = array.at(2);
+          })
       .def(py::self + py::self)
       .def(py::self - py::self)
       .def(py::self * Scalar())

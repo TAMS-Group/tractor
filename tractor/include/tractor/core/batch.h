@@ -18,11 +18,11 @@ template <class T, size_t S> class ALIGNBATCH(T, S) BatchStorage {
 public:
   T _data[S];
   inline void _check() const {
-    for (size_t i = 0; i < S; i++) {
-      if (!std::isfinite(_data[i])) {
-        throw std::runtime_error("not finite");
-      }
-    }
+    // for (size_t i = 0; i < S; i++) {
+    //   if (!std::isfinite(_data[i])) {
+    //     throw std::runtime_error("not finite");
+    //   }
+    // }
   }
 };
 
@@ -264,6 +264,18 @@ TRACTOR_FAST inline void batch_sum(const Batch<T, S> &dx, T &da) {
     rs += dx[i];
   }
   da = rs;
+}
+
+// -----------------------------------------------------------------------------
+
+template <class T> TRACTOR_FAST inline T batch_sum(const T &v) { return v; }
+template <class T, size_t S>
+TRACTOR_FAST inline T batch_sum(const Batch<T, S> &dx) {
+  T rs = T(0);
+  for (size_t i = 0; i < S; i++) {
+    rs += dx[i];
+  }
+  return rs;
 }
 
 // -----------------------------------------------------------------------------

@@ -52,6 +52,15 @@ public:
     return 0;                                                                  \
   }();
 
+// #define TRACTOR_PYTHON_TYPED_SCALAR(name)                                      \
+//   static int _tractor_python_typed = []() {                                    \
+//     PythonRegistry::instance()->add([](py::module m) {                         \
+//       name<float>(m, m.attr("types_float").cast<py::module>());                \
+//       name<double>(m, m.attr("types_double").cast<py::module>());              \
+//     });                                                                        \
+//     return 0;                                                                  \
+//   }();
+
 #define TRACTOR_PYTHON_TYPED(name)                                             \
   static int _tractor_python_typed = []() {                                    \
     PythonRegistry::instance()->add([](py::module m) {                         \
@@ -72,6 +81,11 @@ public:
     return 0;                                                                  \
   }();
 
+// name<GeometryFast<Var<Batch<float, 4>>>>(                                \
+//     m, m.attr("types_float_twist_4").cast<py::module>());                \
+// name<GeometryFast<Var<Batch<double, 4>>>>(                               \
+//     m, m.attr("types_double_twist_4").cast<py::module>());               \
+
 #define TRACTOR_PYTHON_GEOMETRY(name)                                          \
   static int _tractor_python_geometry = []() {                                 \
     PythonRegistry::instance()->add([](py::module m) {                         \
@@ -90,8 +104,6 @@ public:
 template <class Type>
 static auto pythonizeTypeBase(py::module &main_module, py::module &type_module,
                               const char *name) {
-  // main_module.def("goal", [](const std::shared_ptr<Type> &var) { goal(*var);
-  // });
   main_module.def("goal", [](const Type &var) { goal(var); });
   return ptr_class<Type>(type_module, name)
       .def(py::init<>())
@@ -112,16 +124,6 @@ template <class Type> struct TypePythonizer {
     return pythonizeTypeBase<Type>(main_module, type_module, name);
   }
 };
-
-// template <class Type> struct TypePythonizer<Var<Type>> {
-//   static auto pythonize(py::module &main_module, py::module &type_module,
-//                         const char *name) {
-//     return pythonizeTypeBase<Var<Type>>(main_module, type_module, name)
-//         .def_property(
-//             "value", [](const Var<Type> &v) { return (Type)v.value(); },
-//             [](Var<Type> &v, const Type &p) { v.value() = p; });
-//   }
-// };
 
 template <class Type>
 static auto pythonizeType(py::module &main_module, py::module &type_module,
