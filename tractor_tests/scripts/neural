@@ -31,7 +31,7 @@ def update():
     yy.value = np.sin(xx.value*frequency) + numpy.random.normal(size=xx.value.shape) * noise
 update()
 
-tr.profiler.start(1)
+tr.profiler.start(5)
 
 input = tt.InputLayer()
 output = input

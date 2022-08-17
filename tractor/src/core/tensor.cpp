@@ -14,6 +14,8 @@
 
 namespace tractor {
 
+static constexpr size_t g_tensor_alignment = 32;
+
 size_t TensorShape::hash() const noexcept {
   size_t hash = 0;
   boost::hash_combine(hash, _data.size());
@@ -34,9 +36,12 @@ const std::string makeTensorName(const TypeInfo &element,
 
 TypeInfo makeTensorType(const TypeInfo &element_type,
                         const TensorShape &shape) {
-  return TypeInfo::make(makeTensorName(element_type, shape),
-                        element_type.size() * shape.elementCount(),
-                        element_type.alignment());
+  return TypeInfo::make(
+      makeTensorName(element_type, shape),
+      element_type.size() * shape.elementCount(),
+      std::max(size_t(1), (element_type.alignment() + g_tensor_alignment - 1) /
+                              g_tensor_alignment) *
+          g_tensor_alignment);
 }
 
 const Operator *createTensorOpVariant(const Operator *element_op,
