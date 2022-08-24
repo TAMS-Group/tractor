@@ -17,13 +17,13 @@ static void pythonizeROSTyped(py::module main_module, py::module type_module) {
   main_module.def("interact",
                   [](const std::string &frame, const std::string &name,
                      Var<Vector3<Scalar>> &point, double size) {
-                    interact(frame, name, point, Scalar(size));
+                    return interact(frame, name, point, Scalar(size));
                   });
 
   main_module.def("interact",
                   [](const std::string &frame, const std::string &name,
                      Var<Pose<Scalar>> &pose, double size) {
-                    interact(frame, name, pose, Scalar(size));
+                    return interact(frame, name, pose, Scalar(size));
                   });
 }
 
@@ -31,9 +31,29 @@ TRACTOR_PYTHON_TYPED(pythonizeROSTyped);
 
 static void pythonizeROS(py::module m) {
 
-  m.def("visualize_points", &visualizePoints);
+  m.def("visualize_points",
+        py::overload_cast<const std::string &, double, const Eigen::Vector4d &,
+                          const std::vector<Eigen::Vector3d> &>(
+            &visualizePoints));
 
-  m.def("visualize_lines", &visualizeLines);
+  m.def("visualize_points",
+        py::overload_cast<const std::string &, double,
+                          const std::vector<Eigen::Vector4d> &,
+                          const std::vector<Eigen::Vector3d> &>(
+            &visualizePoints));
+
+  m.def(
+      "visualize_lines",
+      py::overload_cast<const std::string &, double, const Eigen::Vector4d &,
+                        const std::vector<Eigen::Vector3d> &>(&visualizeLines));
+
+  m.def(
+      "visualize_lines",
+      py::overload_cast<const std::string &, double,
+                        const std::vector<Eigen::Vector4d> &,
+                        const std::vector<Eigen::Vector3d> &>(&visualizeLines));
+
+  m.def("clear_visualization", &clearVisualization);
 
   m.def("init_ros", [](const std::string &name) {
     TRACTOR_DEBUG("init_ros " << name);
@@ -49,6 +69,7 @@ static void pythonizeROS(py::module m) {
               ros::init_options::NoSigintHandler | ros::init_options::NoRosout);
     static ros::NodeHandle node_handle("~");
     static ros::AsyncSpinner spinner(4);
+    clearVisualization();
   });
 
   m.def("publish", [](const std::string &topic, const py::object &message) {

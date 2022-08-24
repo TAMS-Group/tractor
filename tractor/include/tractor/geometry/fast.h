@@ -177,6 +177,8 @@ template <class Base> struct GeometryImpl : Base {
     return translationPose(ret_translation) * orientationPose(ret_orientation);
   }
 
+  static Vector3 residual(const Orientation &a) { return quat_residual(a); }
+
   static Vector3 residual(const Orientation &a, const Orientation &b) {
     return quat_residual(inverse(a) * b);
   }

@@ -401,46 +401,676 @@ TRACTOR_D(forward, quat_inverse, (const Vector3<T> &a, Vector3<T> &x),
 TRACTOR_D(reverse, quat_inverse, (Vector3<T> & a, const Vector3<T> &x),
           { a = -x; })
 
+// -------------------------------------------------------------------------
+
 TRACTOR_OP(quat_unpack, (const Quaternion<T> &q, T &x, T &y, T &z, T &w),
            { quat_unpack(q, x, y, z, w); })
+TRACTOR_D(prepare, quat_unpack,
+          (const Quaternion<T> &a, const T &x, const T &y, const T &z,
+           const T &w, Quaternion<T> &va),
+          { va = a; })
+TRACTOR_D(forward, quat_unpack,
+          (const Quaternion<T> &va, const Vector3<T> &da, T &dx, T &dy, T &dz,
+           T &dw),
+          {
+            // Quaternion<T> qda(da.x() * T(0.5), da.y() * T(0.5), da.z() *
+            // T(0.5),
+            //                   T(1.0));
+            // auto r = qda * va;
+            // dx = r.x() - va.x();
+            // dy = r.y() - va.y();
+            // dz = r.z() - va.z();
+            // dw = r.w() - va.w();
+
+            T va_x = va.x();
+            T va_y = va.y();
+            T va_z = va.z();
+            T va_w = va.w();
+
+            T qda_x = da.x() * T(0.5);
+            T qda_y = da.y() * T(0.5);
+            T qda_z = da.z() * T(0.5);
+            // T qda_w = T(1.0);
+
+            // T r_x = (qda_w * va_x + qda_x * va_w) + (qda_y * va_z - qda_z *
+            // va_y); T r_y = (qda_w * va_y - qda_x * va_z) + (qda_y * va_w +
+            // qda_z * va_x); T r_z = (qda_w * va_z + qda_x * va_y) - (qda_y *
+            // va_x - qda_z * va_w); T r_w = (qda_w * va_w - qda_x * va_x) -
+            // (qda_y * va_y + qda_z * va_z);
+
+            // T r_x = qda_w * va_x + qda_x * va_w + qda_y * va_z - qda_z *
+            // va_y; T r_y = qda_w * va_y - qda_x * va_z + qda_y * va_w + qda_z
+            // * va_x; T r_z = qda_w * va_z + qda_x * va_y - qda_y * va_x +
+            // qda_z * va_w; T r_w = qda_w * va_w - qda_x * va_x - qda_y * va_y
+            // - qda_z * va_z;
+            //
+            // dx = r_x - va.x();
+            // dy = r_y - va.y();
+            // dz = r_z - va.z();
+            // dw = r_w - va.w();
+
+            dx = +qda_x * va_w + qda_y * va_z - qda_z * va_y;
+            dy = -qda_x * va_z + qda_y * va_w + qda_z * va_x;
+            dz = +qda_x * va_y - qda_y * va_x + qda_z * va_w;
+            dw = -qda_x * va_x - qda_y * va_y - qda_z * va_z;
+
+            // dxyzw = qda * va - va
+          })
+TRACTOR_D(reverse, quat_unpack,
+          (const Quaternion<T> &va, Vector3<T> &da, const T &dx, const T &dy,
+           const T &dz, const T &dw),
+          {
+            // Quaternion<T> qda = va * Quaternion<T>(dx, dy, dz, dw).inverse();
+
+            T va_x = va.x();
+            T va_y = va.y();
+            T va_z = va.z();
+            T va_w = va.w();
+
+            T qda_x = +dx * va_w - dy * va_z + dz * va_y - dw * va_x;
+            T qda_y = +dx * va_z + dy * va_w - dz * va_x - dw * va_y;
+            T qda_z = -dx * va_y + dy * va_x + dz * va_w - dw * va_z;
+
+            da.x() = qda_x * T(0.5);
+            da.y() = qda_y * T(0.5);
+            da.z() = qda_z * T(0.5);
+
+            // Quaternion<T> r;
+            // r.x() = dx + va.x();
+            // r.y() = dy + va.y();
+            // r.z() = dz + va.z();
+            // r.w() = dw + va.w();
+            //
+            // Quaternion<T> qda = va.inverse() * r;
+            //
+            // da.x() = qda.x() * T(0.5);
+            // da.y() = qda.y() * T(0.5);
+            // da.z() = qda.z() * T(0.5);
+
+            // Quaternion<T> r;
+            // r.x() = dx - va.x();
+            // r.y() = dy - va.y();
+            // r.z() = dz - va.z();
+            // r.w() = dw - va.w();
+            //
+            // Quaternion<T> qda = r * va;
+            //
+            // da.x() = qda.x() * T(0.5);
+            // da.y() = qda.y() * T(0.5);
+            // da.z() = qda.z() * T(0.5);
+
+            // Quaternion<T> r;
+            // r.x() = dx + va.x();
+            // r.y() = dy + va.y();
+            // r.z() = dz + va.z();
+            // r.w() = dw + va.w();
+            //
+            // // r = qda * va;
+            // // qda^-1 * r = va
+            // // qda^-1 = va * r^-1
+            // // qda = (va * r^-1)^-1
+            // // qda = r * va^-1
+            //
+            // // Quaternion<T> qda = va.inverse() * r;
+            // // Quaternion<T> qda = r * va.inverse();
+            // Quaternion<T> qda = r;
+            //
+            // da.x() = qda.x() * T(2);
+            // da.y() = qda.y() * T(2);
+            // da.z() = qda.z() * T(2);
+          })
+
+// -------------------------------------------------------------------------
 
 TRACTOR_OP(quat_pack,
-           (const T &x, const T &y, const T &z, const T &w, Quaternion<T> &vec),
-           { quat_pack(x, y, z, w, vec); })
+           (const T &a, const T &b, const T &c, const T &d, Quaternion<T> &x),
+           { quat_pack(a, b, c, d, x); })
+TRACTOR_D(prepare, quat_pack,
+          (const T &a, const T &b, const T &c, const T &d,
+           const Quaternion<T> &x, Quaternion<T> &v),
+          { v = x; })
+TRACTOR_D(forward, quat_pack,
+          (const Quaternion<T> &v, const T &da, const T &db, const T &dc,
+           const T &dd, Vector3<T> &dx),
+          {
+            // Quaternion<T> r =
+            //     v.inverse() *
+            //     Quaternion<T>(v.x() + da, v.y() + db, v.z() + dc, v.w() +
+            //     dd);
+
+            // Quaternion<T> r =
+            //     Quaternion<T>(v.x() + da, v.y() + db, v.z() + dc, v.w() + dd)
+            //     * v.inverse();
+            // dx.x() = r.x() * T(2);
+            // dx.y() = r.y() * T(2);
+            // dx.z() = r.z() * T(2);
+
+            // auto vv = v * v.inverse();
+            // auto dv = Quaternion<T>(da, db, dc, dd) * v.inverse();
+            //
+            // Quaternion<T> r;
+            // r.x() = vv.x() + dv.x();
+            // r.y() = vv.y() + dv.y();
+            // r.z() = vv.z() + dv.z();
+            // r.w() = vv.w() + dv.w();
+            //
+            // dx.x() = r.x() * T(2);
+            // dx.y() = r.y() * T(2);
+            // dx.z() = r.z() * T(2);
+
+            // T v_x = v.x();
+            // T v_y = v.y();
+            // T v_z = v.z();
+            // T v_w = v.w();
+
+            // T p_x = v_x + da;
+            // T p_y = v_y + db;
+            // T p_z = v_z + dc;
+            // T p_w = v_w + dd;
+            //
+            // T q_x = -v_x;
+            // T q_y = -v_y;
+            // T q_z = -v_z;
+            // T q_w = v_w;
+            //
+            // T r_x = p_w * q_x + p_x * q_w + p_y * q_z - p_z * q_y;
+            // T r_y = p_w * q_y - p_x * q_z + p_y * q_w + p_z * q_x;
+            // T r_z = p_w * q_z + p_x * q_y - p_y * q_x + p_z * q_w;
+            // T r_w = p_w * q_w - p_x * q_x - p_y * q_y - p_z * q_z;
+            //
+            // dx.x() = r_x * T(2);
+            // dx.y() = r_y * T(2);
+            // dx.z() = r_z * T(2);
+
+            // clang-format off
+
+            // // ---
+            //
+            // T r_x = (v_w + dd) * -v_x + (v_x + da) * v_w + (v_y + db) * -v_z - (v_z + dc) * -v_y;
+            // T r_y = (v_w + dd) * -v_y - (v_x + da) * -v_z + (v_y + db) * v_w + (v_z + dc) * -v_x;
+            // T r_z = (v_w + dd) * -v_z + (v_x + da) * -v_y - (v_y + db) * -v_x + (v_z + dc) * v_w;
+            // T r_w = (v_w + dd) * v_w - (v_x + da) * -v_x - (v_y + db) * -v_y - (v_z + dc) * -v_z;
+
+            // ---
+
+            // T r_x = (v_w * -v_x + dd * -v_x) + (v_x * v_w + da * v_w) + (v_y * -v_z + db * -v_z) - (v_z * -v_y + dc * -v_y);
+            // T r_y = (v_w * -v_y + dd * -v_y) - (v_x * -v_z + da * -v_z) + (v_y * v_w + db * v_w) + (v_z * -v_x + dc * -v_x);
+            // T r_z = (v_w * -v_z + dd * -v_z) + (v_x * -v_y + da * -v_y) - (v_y * -v_x + db * -v_x) + (v_z * v_w + dc * v_w);
+            // T r_w = (v_w * v_w + dd * v_w) - (v_x * -v_x + da * -v_x) - (v_y * -v_y + db * -v_y) - (v_z * -v_z + dc * -v_z);
+
+            // ---
+
+            // T r_x = v_w * -v_x + dd * -v_x + v_x * v_w + da * v_w + v_y * -v_z + db * -v_z - v_z * -v_y - dc * -v_y;
+            // T r_y = v_w * -v_y + dd * -v_y - v_x * -v_z - da * -v_z + v_y * v_w + db * v_w + v_z * -v_x + dc * -v_x;
+            // T r_z = v_w * -v_z + dd * -v_z + v_x * -v_y + da * -v_y - v_y * -v_x - db * -v_x + v_z * v_w + dc * v_w;
+            // T r_w = v_w * v_w + dd * v_w - v_x * -v_x - da * -v_x - v_y * -v_y - db * -v_y - v_z * -v_z - dc * -v_z;
+
+            // ---
+
+            // T r_x = v_w * -v_x + dd * -v_x + v_x * +v_w + da * +v_w + v_y * -v_z + db * -v_z - v_z * -v_y - dc * -v_y;
+            // T r_y = v_w * -v_y + dd * -v_y - v_x * -v_z - da * -v_z + v_y * +v_w + db * +v_w + v_z * -v_x + dc * -v_x;
+            // T r_z = v_w * -v_z + dd * -v_z + v_x * -v_y + da * -v_y - v_y * -v_x - db * -v_x + v_z * +v_w + dc * +v_w;
+            // T r_w = v_w * +v_w + dd * +v_w - v_x * -v_x - da * -v_x - v_y * -v_y - db * -v_y - v_z * -v_z - dc * -v_z;
+
+            // T r_x = + dd * -v_x  + da * +v_w + v_y * -v_z + db * -v_z - v_z * -v_y - dc * -v_y;
+            // T r_y = + dd * -v_y - v_x * -v_z - da * -v_z + db * +v_w + v_z * -v_x + dc * -v_x;
+            // T r_z = + dd * -v_z + v_x * -v_y + da * -v_y - v_y * -v_x - db * -v_x + dc * +v_w;
+            // T r_w = v_w * +v_w + dd * +v_w - v_x * -v_x - da * -v_x - v_y * -v_y - db * -v_y - v_z * -v_z - dc * -v_z;
+
+            // T r_x = +dd * -v_x + da * +v_w + db * -v_z - dc * -v_y;
+            // T r_y = +dd * -v_y - da * -v_z + db * +v_w + dc * -v_x;
+            // T r_z = +dd * -v_z + da * -v_y - db * -v_x + dc * +v_w;
+
+            // clang-format on
+
+            // T v_x = v.x();
+            // T v_y = v.y();
+            // T v_z = v.z();
+            // T v_w = v.w();
+            //
+            // T r_x = -dd * v_x + da * v_w - db * v_z + dc * v_y;
+            // T r_y = -dd * v_y + da * v_z + db * v_w - dc * v_x;
+            // T r_z = -dd * v_z - da * v_y + db * v_x + dc * v_w;
+            //
+            // dx.x() = r_x * T(2);
+            // dx.y() = r_y * T(2);
+            // dx.z() = r_z * T(2);
+
+            dx = quat_pack_forward(v, Quaternion<T>(da, db, dc, dd));
+          })
+TRACTOR_D(reverse, quat_pack,
+          (const Quaternion<T> &v, T &da, T &db, T &dc, T &dd,
+           const Vector3<T> &dx),
+          {
+            // T v_x = v.x();
+            // T v_y = v.y();
+            // T v_z = v.z();
+            // T v_w = v.w();
+            //
+            // T r_x = dx.x() * T(2);
+            // T r_y = dx.y() * T(2);
+            // T r_z = dx.z() * T(2);
+            //
+            // da = +r_x * v_w + r_y * v_z - r_z * v_y;
+            // db = -r_x * v_z + r_y * v_w + r_z * v_x;
+            // dc = +r_x * v_y - r_y * v_x + r_z * v_w;
+            // dd = -r_x * v_x - r_y * v_y - r_z * v_z;
+
+            Quaternion d = quat_pack_reverse(v, dx);
+            da = d.x();
+            db = d.y();
+            dc = d.z();
+            dd = d.w();
+          })
+
+// -------------------------------------------------------------------------
 
 // TRACTOR_OP(quat_residual, (const Quaternion<T> &a), { return a.vec() *
 // T(2);
 // })
+
+// TRACTOR_OP(quat_residual, (const Quaternion<T> &a),
+//            { return quat_residual(a); })
+// TRACTOR_D(prepare, quat_residual, (const Quaternion<T> &a, const Vector3<T>
+// &x),
+//           {})
+// TRACTOR_D(forward, quat_residual, (const Vector3<T> &a, Vector3<T> &x),
+//           { x = a; })
+// TRACTOR_D(reverse, quat_residual, (Vector3<T> & a, const Vector3<T> &x),
+//           { a = x; })
+
 TRACTOR_OP(quat_residual, (const Quaternion<T> &a),
            { return quat_residual(a); })
-TRACTOR_D(prepare, quat_residual, (const Quaternion<T> &a, const Vector3<T> &x),
-          {})
-TRACTOR_D(forward, quat_residual, (const Vector3<T> &a, Vector3<T> &x),
-          { x = a; })
-TRACTOR_D(reverse, quat_residual, (Vector3<T> & a, const Vector3<T> &x),
+TRACTOR_D(forward, quat_residual,
+          (const Quaternion<T> &va, const Vector3<T> &vx, const Vector3<T> &a,
+           Vector3<T> &x),
+          { x = va * a; })
+TRACTOR_D(reverse, quat_residual,
+          (const Quaternion<T> &va, const Vector3<T> &vx, Vector3<T> &a,
+           const Vector3<T> &x),
           { a = x; })
 
+template <class T> struct AngleAxisQuatLinerization {
+  Vector3<T> axis_normalized;
+  T sin_angle_by_axis_length;
+  T cos_angle_minus_one_by_axis_length;
+};
 TRACTOR_OP(angle_axis_quat, (const T &angle, const Vector3<T> &axis),
            { return angle_axis_quat(angle, axis); })
 TRACTOR_D(prepare, angle_axis_quat,
           (const T &angle, const Vector3<T> &axis, const Quaternion<T> &rot,
-           T &v_angle, Vector3<T> &v_axis),
+           // T &v_angle, Vector3<T> &v_axis
+           AngleAxisQuatLinerization<T> &v),
           {
-            v_angle = angle;
-            v_axis = axis;
+            // v_angle = angle;
+            // v_axis = axis;
+            v.axis_normalized = normalized(axis);
+            v.sin_angle_by_axis_length = T(sin(angle)) / norm(axis);
+            v.cos_angle_minus_one_by_axis_length =
+                (T(cos(angle)) - T(1)) / norm(axis);
           })
 TRACTOR_D(forward, angle_axis_quat,
-          (const T &v_angle, const Vector3<T> &v_axis, const T &d_angle,
-           const Vector3<T> &d_axis, Vector3<T> &d_rot),
-          { d_rot = v_axis * d_angle + d_axis * v_angle; })
+          (
+              // const T &v_angle, const Vector3<T> &v_axis,
+              const AngleAxisQuatLinerization<T> &v, //
+              const T &d_angle, const Vector3<T> &d_axis, Vector3<T> &d_rot),
+          {
+            Vector3<T> d_axis_p =
+                (d_axis - v.axis_normalized * dot(v.axis_normalized, d_axis));
+            d_rot = v.axis_normalized * d_angle             //
+                    + d_axis_p * v.sin_angle_by_axis_length //
+                    + cross(d_axis_p, v.axis_normalized) *
+                          v.cos_angle_minus_one_by_axis_length;
+
+            // T v_axis_f = T(1) / norm(v_axis);
+            // Vector3<T> v_axis_n = v_axis * v_axis_f;
+            // Vector3<T> d_axis_n =
+            //     (d_axis - v_axis_n * dot(v_axis_n, d_axis)) * v_axis_f;
+            //
+            // d_rot = v_axis_n * d_angle           //
+            //         + d_axis_n * T(sin(v_angle)) //
+            //         + cross(d_axis_n, v_axis_n) * (T(cos(v_angle)) - T(1));
+
+            // Vector3<T> v_axis_n = v_axis;
+            // Vector3<T> d_axis_n = d_axis - v_axis_n * dot(v_axis_n, d_axis);
+            //
+            // // clang-format off
+            // d_rot = v_axis * d_angle
+            //       + d_axis_n * T(sin(v_angle))
+            //       + cross(d_axis, v_axis) * (T(cos(v_angle)) - T(1));
+            // // clang-format on
+
+            // Vector3<T> v_axis_n = v_axis;
+            // Vector3<T> d_axis_n = d_axis - v_axis_n * dot(v_axis_n, d_axis);
+
+            // // clang-format off
+            // d_rot = v_axis_n * d_angle
+            //       + d_axis_n * T(sin(v_angle))
+            //       + cross(d_axis_n, v_axis_n) * (T(cos(v_angle)) - T(1));
+            // // clang-format on
+
+            // T v_s = sin(v_angle * T(0.5));
+            // T v_c = cos(v_angle * T(0.5));
+
+            // // clang-format off
+            // d_rot = v_axis * d_angle
+            //       + d_axis_n * v_c * v_s * T(2)
+            //       - cross(d_axis_n, v_axis_n) * v_s * v_s * T(2);
+            // // clang-format on
+
+            // Vector3<T> rv = d_axis_n * v_c - cross(d_axis_n, v_axis_n) * v_s;
+            // d_rot = v_axis * d_angle + rv * v_s * T(2);
+
+            // T vqx = v_axis_n.x() * v_s;
+            // T vqy = v_axis_n.y() * v_s;
+            // T vqz = v_axis_n.z() * v_s;
+            // T vqw = v_c;
+            //
+            // T dqx = d_axis_n.x();
+            // T dqy = d_axis_n.y();
+            // T dqz = d_axis_n.z();
+            //
+            // T r_x = +dqx * vqw - (dqy * vqz - dqz * vqy);
+            // T r_y = +dqy * vqw - (dqz * vqx - dqx * vqz);
+            // T r_z = +dqz * vqw - (dqx * vqy - dqy * vqx);
+            //
+            // d_rot = v_axis * d_angle + Vector3<T>(r_x, r_y, r_z) * v_s *
+            // T(2);
+
+            // Quaternion<T> v_quat;
+            // v_quat.x() = v_axis_n.x() * v_s;
+            // v_quat.y() = v_axis_n.y() * v_s;
+            // v_quat.z() = v_axis_n.z() * v_s;
+            // v_quat.w() = v_c;
+            //
+            // Quaternion<T> d_quat;
+            // d_quat.x() = d_axis_n.x();
+            // d_quat.y() = d_axis_n.y();
+            // d_quat.z() = d_axis_n.z();
+            // d_quat.w() = T(0);
+            //
+            // d_rot = v_axis * d_angle + quat_pack_forward(v_quat, d_quat) *
+            // v_s;
+
+            /*
+            // clang-format off
+
+            T vs = sin(v_angle * T(0.5));
+            T vc = cos(v_angle * T(0.5));
+
+            T ds = d_angle * +vc * T(0.5);
+            T dc = d_angle * -vs * T(0.5);
+
+            T r_x =
+                    -v_axis_n.x() * dc * vs
+                    +v_axis_n.x() * ds * vc
+                    -v_axis_n.z() * v_axis_n.y() * ds * vs
+                    +v_axis_n.y() * v_axis_n.z() * ds * vs
+
+                    +d_axis_n.x() * vs * vc
+                    -d_axis_n.y() * v_axis_n.z() * vs * vs
+                    +d_axis_n.z() * v_axis_n.y() * vs * vs
+                    ;
+
+            T r_y =
+                    -v_axis_n.y() * dc * vs
+                    +v_axis_n.y() * ds * vc
+                    +v_axis_n.x() * ds * v_axis_n.z() * vs
+                    -v_axis_n.z() * ds * v_axis_n.x() * vs
+
+                    +d_axis_n.y() * vs * vc
+                    +d_axis_n.x() * vs * v_axis_n.z() * vs
+                    -d_axis_n.z() * vs * v_axis_n.x() * vs
+                    ;
+
+            T r_z =
+                    -v_axis_n.z() * dc * vs
+                    +v_axis_n.z() * ds * vc
+                    -v_axis_n.x() * ds * v_axis_n.y() * vs
+                    +v_axis_n.y() * ds * v_axis_n.x() * vs
+
+                    +d_axis_n.z() * vs * vc
+                    -d_axis_n.x() * vs * v_axis_n.y() * vs
+                    +d_axis_n.y() * vs * v_axis_n.x() * vs
+                    ;
+
+            d_rot.x() = r_x * T(2);
+            d_rot.y() = r_y * T(2);
+            d_rot.z() = r_z * T(2);
+
+            // clang-format on
+            */
+
+            /*
+            // clang-format off
+
+            T vs = sin(v_angle * T(0.5));
+            T vc = cos(v_angle * T(0.5));
+
+            T ds = d_angle * +vc * T(0.5);
+            T dc = d_angle * -vs * T(0.5);
+
+            T r_x =
+                    -v_axis_n.x() * dc * vs
+                    +v_axis_n.x() * ds * vc
+                    +d_axis_n.x() * vs * vc
+
+                    -v_axis_n.y() * ds * v_axis_n.z() * vs
+                    -d_axis_n.y() * vs * v_axis_n.z() * vs
+                    +v_axis_n.z() * ds * v_axis_n.y() * vs
+                    +d_axis_n.z() * vs * v_axis_n.y() * vs
+                    ;
+
+            T r_y =
+                    -v_axis_n.y() * dc * vs
+                    +v_axis_n.y() * ds * vc
+                    +d_axis_n.y() * vs * vc
+
+                    +v_axis_n.x() * ds * v_axis_n.z() * vs
+                    +d_axis_n.x() * vs * v_axis_n.z() * vs
+                    -v_axis_n.z() * ds * v_axis_n.x() * vs
+                    -d_axis_n.z() * vs * v_axis_n.x() * vs
+                    ;
+
+            T r_z =
+                    -v_axis_n.z() * dc * vs
+                    +v_axis_n.z() * ds * vc
+                    +d_axis_n.z() * vs * vc
+
+                    -v_axis_n.x() * ds * v_axis_n.y() * vs
+                    -d_axis_n.x() * vs * v_axis_n.y() * vs
+                    +v_axis_n.y() * ds * v_axis_n.x() * vs
+                    +d_axis_n.y() * vs * v_axis_n.x() * vs
+                    ;
+
+            d_rot.x() = r_x * T(2);
+            d_rot.y() = r_y * T(2);
+            d_rot.z() = r_z * T(2);
+
+            // clang-format on
+            */
+
+            /*
+            Vector3<T> v_axis_n = normalized(v_axis);
+            Vector3<T> d_axis_n = d_axis - v_axis_n * dot(v_axis_n, d_axis);
+
+            T vs = sin(v_angle * T(0.5));
+            T vc = cos(v_angle * T(0.5));
+
+            T ds = d_angle * +vc * T(0.5);
+            T dc = d_angle * -vs * T(0.5);
+
+            T r_x = -dc * v_axis_n.x() * vs + v_axis_n.x() * ds * vc +
+                    d_axis_n.x() * vs * vc -
+                    v_axis_n.y() * ds * v_axis_n.z() * vs -
+                    d_axis_n.y() * vs * v_axis_n.z() * vs +
+                    v_axis_n.z() * ds * v_axis_n.y() * vs +
+                    d_axis_n.z() * vs * v_axis_n.y() * vs;
+
+            T r_y = -dc * v_axis_n.y() * vs +
+                    v_axis_n.x() * ds * v_axis_n.z() * vs +
+                    d_axis_n.x() * vs * v_axis_n.z() * vs +
+                    v_axis_n.y() * ds * vc + d_axis_n.y() * vs * vc -
+                    v_axis_n.z() * ds * v_axis_n.x() * vs -
+                    d_axis_n.z() * vs * v_axis_n.x() * vs;
+
+            T r_z = -dc * v_axis_n.z() * vs -
+                    v_axis_n.x() * ds * v_axis_n.y() * vs -
+                    d_axis_n.x() * vs * v_axis_n.y() * vs +
+                    v_axis_n.y() * ds * v_axis_n.x() * vs +
+                    d_axis_n.y() * vs * v_axis_n.x() * vs +
+                    v_axis_n.z() * ds * vc + d_axis_n.z() * vs * vc;
+
+            d_rot.x() = r_x * T(2);
+            d_rot.y() = r_y * T(2);
+            d_rot.z() = r_z * T(2);
+            */
+
+            /*
+            Vector3<T> v_axis_n = normalized(v_axis);
+            Vector3<T> d_axis_n = d_axis - v_axis_n * dot(v_axis_n, d_axis);
+
+            T vs = sin(v_angle * T(0.5));
+            T vc = cos(v_angle * T(0.5));
+
+            T ds = d_angle * +vc * T(0.5);
+            T dc = d_angle * -vs * T(0.5);
+
+            T qvx = v_axis_n.x() * vs;
+            T qvy = v_axis_n.y() * vs;
+            T qvz = v_axis_n.z() * vs;
+            T qvw = vc;
+
+            T qdx = v_axis_n.x() * ds + d_axis_n.x() * vs;
+            T qdy = v_axis_n.y() * ds + d_axis_n.y() * vs;
+            T qdz = v_axis_n.z() * ds + d_axis_n.z() * vs;
+            T qdw = dc;
+
+            T r_x =
+                -dc * (v_axis_n.x() * vs) +
+                (v_axis_n.x() * ds + d_axis_n.x() * vs) * vc -
+                (v_axis_n.y() * ds + d_axis_n.y() * vs) * (v_axis_n.z() * vs) +
+                (v_axis_n.z() * ds + d_axis_n.z() * vs) * (v_axis_n.y() * vs);
+
+            T r_y =
+                -dc * (v_axis_n.y() * vs) +
+                (v_axis_n.x() * ds + d_axis_n.x() * vs) * (v_axis_n.z() * vs) +
+                (v_axis_n.y() * ds + d_axis_n.y() * vs) * qvw -
+                (v_axis_n.z() * ds + d_axis_n.z() * vs) * (v_axis_n.x() * vs);
+
+            T r_z =
+                -dc * (v_axis_n.z() * vs) -
+                (v_axis_n.x() * ds + d_axis_n.x() * vs) * (v_axis_n.y() * vs) +
+                (v_axis_n.y() * ds + d_axis_n.y() * vs) * (v_axis_n.x() * vs) +
+                (v_axis_n.z() * ds + d_axis_n.z() * vs) * vc;
+
+            d_rot.x() = r_x * T(2);
+            d_rot.y() = r_y * T(2);
+            d_rot.z() = r_z * T(2);
+            */
+
+            /*
+            Vector3<T> v_axis_n = normalized(v_axis);
+            Vector3<T> d_axis_n = d_axis - v_axis_n * dot(v_axis_n, d_axis);
+
+            T vs = sin(v_angle * T(0.5));
+            T vc = cos(v_angle * T(0.5));
+
+            T ds = d_angle * +vc * T(0.5);
+            T dc = d_angle * -vs * T(0.5);
+
+            T qvx = v_axis_n.x() * vs;
+            T qvy = v_axis_n.y() * vs;
+            T qvz = v_axis_n.z() * vs;
+            T qvw = vc;
+
+            T qdx = v_axis_n.x() * ds + d_axis_n.x() * vs;
+            T qdy = v_axis_n.y() * ds + d_axis_n.y() * vs;
+            T qdz = v_axis_n.z() * ds + d_axis_n.z() * vs;
+            T qdw = dc;
+
+            T r_x = -qdw * qvx + qdx * qvw - qdy * qvz + qdz * qvy;
+            T r_y = -qdw * qvy + qdx * qvz + qdy * qvw - qdz * qvx;
+            T r_z = -qdw * qvz - qdx * qvy + qdy * qvx + qdz * qvw;
+
+            d_rot.x() = r_x * T(2);
+            d_rot.y() = r_y * T(2);
+            d_rot.z() = r_z * T(2);
+            */
+
+            /*
+            Vector3<T> v_axis_n = normalized(v_axis);
+            Vector3<T> d_axis_n = d_axis - v_axis_n * dot(v_axis_n, d_axis);
+
+            T v_s = sin(v_angle * T(0.5));
+            T v_c = cos(v_angle * T(0.5));
+
+            T d_s = d_angle * +v_c * T(0.5);
+            T d_c = d_angle * -v_s * T(0.5);
+
+            Quaternion<T> v_quat;
+            v_quat.x() = v_axis_n.x() * v_s;
+            v_quat.y() = v_axis_n.y() * v_s;
+            v_quat.z() = v_axis_n.z() * v_s;
+            v_quat.w() = v_c;
+
+            Quaternion<T> d_quat;
+            d_quat.x() = v_axis_n.x() * d_s + d_axis_n.x() * v_s;
+            d_quat.y() = v_axis_n.y() * d_s + d_axis_n.y() * v_s;
+            d_quat.z() = v_axis_n.z() * d_s + d_axis_n.z() * v_s;
+            d_quat.w() = d_c;
+
+            d_rot = quat_pack_forward(v_quat, d_quat);
+            */
+
+            /*
+            // d_rot = v_axis * d_angle + d_axis * v_angle;
+
+            // d_rot = v_axis * d_angle +
+            //         (d_axis - v_axis * dot(d_axis, v_axis)) * v_angle;
+
+            // d_rot = v_axis * d_angle +
+            //         angle_axis_quat(v_angle, v_axis).inverse() *
+            //             (d_axis - v_axis * dot(d_axis, v_axis)) * v_angle;
+
+            d_rot = v_axis * d_angle;
+            T s = sin(v_angle * T(0.5)) * T(2.0);
+
+            // T c = cos(v_angle * T(0.5));
+            //  quat.x() = axis_n.x() * s;
+            //  quat.y() = axis_n.y() * s;
+            //  quat.z() = axis_n.z() * s;
+
+            // d_rot += angle_axis_quat(v_angle, v_axis).inverse() * d_axis * s;
+            // d_rot += d_axis * s;
+            d_rot += (d_axis - v_axis * dot(d_axis, v_axis)) * s;
+            */
+          })
 TRACTOR_D(reverse, angle_axis_quat,
-          (const T &v_angle, const Vector3<T> &v_axis, T &d_angle,
-           Vector3<T> &d_axis, const Vector3<T> &d_rot),
+          (
+              // const T &v_angle, const Vector3<T> &v_axis,
+              const AngleAxisQuatLinerization<T> &v, //
+              T &d_angle, Vector3<T> &d_axis, const Vector3<T> &d_rot),
           {
             // d_angle = d_rot.x() * v_axis.x() + d_rot.y() * v_axis.y() +
             //          d_rot.z() * v_axis.z();
-            d_angle = dot(d_rot, v_axis);
-            d_axis = d_rot * v_angle;
+
+            // d_angle = dot(d_rot, v_axis);
+            // d_axis = d_rot * v_angle;
+
+            Vector3<T> d_rot_p =
+                (d_rot - v.axis_normalized * dot(v.axis_normalized, d_rot));
+
+            d_angle = dot(v.axis_normalized, d_rot);
+
+            d_axis = d_rot_p * v.sin_angle_by_axis_length +
+                     cross(v.axis_normalized, d_rot_p) *
+                         v.cos_angle_minus_one_by_axis_length;
+
+            // d_rot = v.axis_normalized * d_angle             //
+            //         + d_axis_p * v.sin_angle_by_axis_length //
+            //         + cross(d_axis_p, v.axis_normalized) *
+            //               v.cos_angle_minus_one_by_axis_length;
           })
 
 TRACTOR_GRADIENT_TYPE_TEMPLATE(Pose<T>, Twist<T>);
@@ -972,9 +1602,36 @@ TRACTOR_D_T(reverse, pose_twist, add,
 
 template <class T>
 Quaternion<T> operator+(const Quaternion<T> &a, const Vector3<T> &b) {
-  return normalized(normalized(Quaternion<T>(b.x() * T(0.5), b.y() * T(0.5),
-                                             b.z() * T(0.5), T(1.0))) *
-                    a);
+
+  // return normalized(normalized(Quaternion<T>(b.x() * T(0.5), b.y() * T(0.5),
+  //                                            b.z() * T(0.5), T(1.0))) *
+  //                   a);
+  // return normalized(angle_axis_quat(norm(b), normalized(b)) * a);
+
+  // Quaternion<T> qb = normalized(
+  //     Quaternion<T>(b.x() * T(0.5), b.y() * T(0.5), b.z() * T(0.5), T(1)));
+  // return normalized(qb * a);
+
+  Quaternion<T> qb =
+      Quaternion<T>(b.x() * T(0.5), b.y() * T(0.5), b.z() * T(0.5), T(1));
+  return qb * a;
+
+  // Quaternion<T> b_quat(a * b.x() * T(0.5), //
+  //                      a * b.y() * T(0.5), //
+  //                      a * b.z() * T(0.5), //
+  //                      T(1));
+
+  // T norm = b.x() * b.x() + b.y() * b.y() + b.z() * b.z();
+  // T angle = norm;
+  // Vector3<T> axis = v / norm;
+  // Quaternion<T> quat;
+  // T s = sin(angle * T(0.5));
+  // T c = cos(angle * T(0.5));
+  // quat.x() = axis.x() * s;
+  // quat.y() = axis.y() * s;
+  // quat.z() = axis.z() * s;
+  // quat.w() = c;
+  // return quat;
 }
 template <class T>
 Quaternion<T> &operator+=(Quaternion<T> &a, const Vector3<T> &b) {
@@ -983,18 +1640,66 @@ Quaternion<T> &operator+=(Quaternion<T> &a, const Vector3<T> &b) {
 }
 TRACTOR_OP_T(quat_vec3, add, (const Quaternion<T> &a, const Vector3<T> &b),
              { return a + b; })
-TRACTOR_D_T(prepare, quat_vec3, add,
-            (const Quaternion<T> &a, const Vector3<T> &b,
-             const Quaternion<T> &x),
-            {})
+// TRACTOR_D_T(prepare, quat_vec3, add,
+//             (const Quaternion<T> &a, const Vector3<T> &b,
+//              const Quaternion<T> &x),
+//             {})
 TRACTOR_D_T(forward, quat_vec3, add,
-            (const Vector3<T> &a, const Vector3<T> &b, Vector3<T> &x),
-            { x = a + b; })
-TRACTOR_D_T(reverse, quat_vec3, add,
-            (Vector3<T> & a, Vector3<T> &b, const Vector3<T> &x), {
-              a = x;
-              b = x;
+            (const Quaternion<T> &va, const Vector3<T> &vb,
+             const Quaternion<T> &vx, const Vector3<T> &da,
+             const Vector3<T> &db, Vector3<T> &dx),
+            { // x = a + b;
+              // Quaternion<T> qvb = normalized(Quaternion<T>(
+              //     vb.x() * T(0.5), vb.y() * T(0.5), vb.z() * T(0.5), T(1)));
+              //
+              // // dx = qvb * da + db * va;
+              //
+              // // dx = qvb * da + va.inverse() * db;
+              // // dx = qvb * da + db;
+              //
+              // dx = qvb * da + db * va;
+
+              static auto q = [](const Vector3<T> &v) {
+                return Quaternion<T>(v.x() * T(0.5), v.y() * T(0.5),
+                                     v.z() * T(0.5), T(1.0));
+              };
+
+              Quaternion<T> qdx = q(vb + db) * q(da) * va * vx.inverse();
+
+              dx.x() = qdx.x() * T(2.0);
+              dx.y() = qdx.y() * T(2.0);
+              dx.z() = qdx.z() * T(2.0);
             })
+TRACTOR_D_T(reverse, quat_vec3, add,
+            (const Quaternion<T> &va, const Vector3<T> &vb,
+             const Quaternion<T> &vx, Vector3<T> &da, Vector3<T> &db,
+             const Vector3<T> &dx),
+            {
+              da.setZero();
+              db.setZero();
+            })
+
+// TRACTOR_OP(vec_to_quat, (const Vector3<T> &a), {
+//   T angle = norm(a);
+//   Vector3<T> axis = normalized(v);
+//   Quaternion<T> quat;
+//   T s = sin(angle * T(0.5));
+//   T c = cos(angle * T(0.5));
+//   quat.x() = axis.x() * s;
+//   quat.y() = axis.y() * s;
+//   quat.z() = axis.z() * s;
+//   quat.w() = c;
+//   return quat;
+// })
+// TRACTOR_D(prepare, vec_to_quat, (const Vector3<T> &a, const Quaternion<T>
+// &x),
+//           {})
+// TRACTOR_D(forward, vec_to_quat, (const Vector3<T> &a, Vector3<T> &x),
+//           { x = a + b; })
+// TRACTOR_D(reverse, vec_to_quat, (Vector3<T> & a, const Vector3<T> &x), {
+//   a = x;
+//   b = x;
+// })
 
 template <class T> T gate(const T &a, const T &b) { return a; }
 TRACTOR_OP(gate, (const T &a, const T &b), { return a; })
@@ -1163,8 +1868,23 @@ template <class T> inline auto norm(const Var<Vector3<T>> &v) {
   return Var<T>(sqrt(dot(v, v)));
 }
 
-template <class T> inline auto normalized(const Var<Vector3<T>> &v) {
-  return v * (Var<T>(T(1)) / norm(v));
-}
+// template <class T> inline auto normalized(const Var<Vector3<T>> &v) {
+//   return v * (Var<T>(T(1)) / norm(v));
+// }
+
+TRACTOR_OP(normalized, (const Vector3<T> &a), { return a * (T(1) / norm(a)); })
+TRACTOR_D(prepare, normalized,
+          (const Vector3<T> &a, const Vector3<T> &x, Vector3<T> &va, T &vf), {
+            va = a;
+            vf = T(1) / norm(a);
+          })
+TRACTOR_D(forward, normalized,
+          (const Vector3<T> &va, const T &vf, const Vector3<T> &da,
+           Vector3<T> &dx),
+          { dx = (da - va * (dot(da, va) * vf * vf)) * vf; })
+TRACTOR_D(reverse, normalized,
+          (const Vector3<T> &va, const T &vf, Vector3<T> &da,
+           const Vector3<T> &dx),
+          { da = (dx - va * (dot(dx, va) * vf * vf)) * vf; })
 
 } // namespace tractor

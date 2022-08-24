@@ -19,6 +19,12 @@ static void pythonizeRobot(py::module main_module, py::module type_module) {
     visualize(topic, joint_state);
   });
 
+  main_module.def("visualize",
+                  [](const std::string &topic,
+                     const std::vector<JointState<Geometry>> &trajectory) {
+                    visualize(topic, trajectory);
+                  });
+
   static Factory::Key<std::string>::Value<moveit::core::RobotModelConstPtr>
       robot_model_factory([](const std::string &robot_description) {
         TRACTOR_DEBUG("loading robot model " << robot_description);

@@ -177,30 +177,103 @@ void quat_pack(const T &x, const T &y, const T &z, const T &w,
   vec = Quaternion<T>(x, y, z, w);
 }
 
-template <class T> Vector3<T> quat_residual(const Quaternion<T> &a) {
-  return a.vec() * T(a.w() < 0 ? -2 : 2);
+template <class T> Vector3<T> quat_residual(const Quaternion<T> &q) {
+  T f = T(1) / sqrt(T(1) - q.w() * q.w());
+  T x = q.x() * f;
+  T y = q.y() * f;
+  T z = q.z() * f;
+  T angle = T(2) * acos(q.w());
+  return Vector3<T>(x * angle, y * angle, z * angle);
 }
 
-template <class T, size_t S>
-Vector3<Batch<T, S>> quat_residual(const Quaternion<Batch<T, S>> &a) {
-  Batch<T, S> f;
-  for (size_t i = 0; i < S; i++) {
-    f[i] = T(a.w()[i] < 0 ? -2 : 2);
-  }
-  return a.vec() * f;
-}
+// template <class T> Vector3<T> quat_residual(const Quaternion<T> &a) {
+//   return a.vec() * T(a.w() < 0 ? -2 : 2);
+// }
+//
+// template <class T, size_t S>
+// Vector3<Batch<T, S>> quat_residual(const Quaternion<Batch<T, S>> &a) {
+//   Batch<T, S> f;
+//   for (size_t i = 0; i < S; i++) {
+//     f[i] = T(a.w()[i] < 0 ? -2 : 2);
+//   }
+//   return a.vec() * f;
+// }
 
 template <class T>
 Quaternion<T> angle_axis_quat(const T &angle, const Vector3<T> &axis) {
+  Vector3<T> axis_n = normalized(axis);
   Quaternion<T> quat;
   T s = sin(angle * T(0.5));
   T c = cos(angle * T(0.5));
-  quat.x() = axis.x() * s;
-  quat.y() = axis.y() * s;
-  quat.z() = axis.z() * s;
+  quat.x() = axis_n.x() * s;
+  quat.y() = axis_n.y() * s;
+  quat.z() = axis_n.z() * s;
   quat.w() = c;
+  // return normalized(quat);
   return quat;
 }
+
+template <class T>
+inline Vector3<T> quat_pack_forward(const Quaternion<T> &v,
+                                    const Quaternion<T> &d) {
+
+  // see quat pack op in geometry/ops.h
+
+  T v_x = v.x();
+  T v_y = v.y();
+  T v_z = v.z();
+  T v_w = v.w();
+
+  T da = d.x();
+  T db = d.y();
+  T dc = d.z();
+  T dd = d.w();
+
+  T r_x = -dd * v_x + da * v_w - db * v_z + dc * v_y;
+  T r_y = -dd * v_y + da * v_z + db * v_w - dc * v_x;
+  T r_z = -dd * v_z - da * v_y + db * v_x + dc * v_w;
+
+  Vector3<T> dx;
+  dx.x() = r_x * T(2);
+  dx.y() = r_y * T(2);
+  dx.z() = r_z * T(2);
+  return dx;
+}
+
+template <class T>
+inline Quaternion<T> quat_pack_reverse(const Quaternion<T> &v,
+                                       const Vector3<T> &dx) {
+
+  // see quat pack op in geometry/ops.h
+
+  T v_x = v.x();
+  T v_y = v.y();
+  T v_z = v.z();
+  T v_w = v.w();
+
+  T r_x = dx.x() * T(2);
+  T r_y = dx.y() * T(2);
+  T r_z = dx.z() * T(2);
+
+  T da = +r_x * v_w + r_y * v_z - r_z * v_y;
+  T db = -r_x * v_z + r_y * v_w + r_z * v_x;
+  T dc = +r_x * v_y - r_y * v_x + r_z * v_w;
+  T dd = -r_x * v_x - r_y * v_y - r_z * v_z;
+
+  return Quaternion<T>(da, db, dc, dd);
+}
+
+// template <class T>
+// Quaternion<T> angle_axis_quat(const T &angle, const Vector3<T> &axis) {
+//   Quaternion<T> quat;
+//   T s = sin(angle * T(0.5));
+//   T c = cos(angle * T(0.5));
+//   quat.x() = axis.x() * s;
+//   quat.y() = axis.y() * s;
+//   quat.z() = axis.z() * s;
+//   quat.w() = c;
+//   return quat;
+// }
 
 typedef Quaternion<double> Quatd;
 typedef Quaternion<float> Quatf;

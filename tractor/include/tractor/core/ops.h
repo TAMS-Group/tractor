@@ -8,6 +8,8 @@
 
 namespace tractor {
 
+using std::acos;
+using std::asin;
 using std::cos;
 using std::exp;
 using std::log;
@@ -108,6 +110,18 @@ TRACTOR_OP(cos, (const T &a), { return T(cos(a)); })
 TRACTOR_D(prepare, cos, (const T &a, const T &x, T &p), { p = -sin(a); })
 TRACTOR_D(forward, cos, (const T &p, const T &da, T &dx), { dx = da * p; })
 TRACTOR_D(reverse, cos, (const T &p, T &da, const T &dx), { da = dx * p; })
+
+TRACTOR_OP(asin, (const T &a), { return T(asin(a)); })
+TRACTOR_D(prepare, asin, (const T &a, const T &x, T &p),
+          { p = T(1) / sqrt(T(1) - a * a); })
+TRACTOR_D(forward, asin, (const T &p, const T &da, T &dx), { dx = da * p; })
+TRACTOR_D(reverse, asin, (const T &p, T &da, const T &dx), { da = dx * p; })
+
+TRACTOR_OP(acos, (const T &a), { return T(acos(a)); })
+TRACTOR_D(prepare, acos, (const T &a, const T &x, T &p),
+          { p = T(-1) / sqrt(T(1) - a * a); })
+TRACTOR_D(forward, acos, (const T &p, const T &da, T &dx), { dx = da * p; })
+TRACTOR_D(reverse, acos, (const T &p, T &da, const T &dx), { da = dx * p; })
 
 TRACTOR_OP(sincos, (const T &a, T &s, T &c), {
   s = sin(a);

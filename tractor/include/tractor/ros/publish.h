@@ -16,7 +16,7 @@ void publish(const std::string &topic, const Message &message) {
 
   static Factory::Key<std::string>::Value<ros::Publisher> factory(
       [&](const std::string &topic) {
-        return node_handle.advertise<Message>(topic, 10);
+        return node_handle.advertise<Message>(topic, 100);
       });
 
   factory.get(topic).publish(message);

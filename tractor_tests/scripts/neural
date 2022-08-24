@@ -10,15 +10,15 @@ import numpy.random
 
 #tr.logger.verbosity = 2
 
-count = 128
+count = 512
 noise = 0.2
 stdev = 0.2
 activation = "tanh"
-units = 64
+units = 256
 weight_regularization = 0.1
 activity_regularization = 0.01
 bias_regularization = 0.1
-layers = 8
+layers = 3
 use_bias = True
 
 xx = tt.Tensor()
@@ -81,7 +81,7 @@ def test():
     plt.clf()
     plt.scatter(xx.value, yy.value, marker=".")
     xx.value = np.linspace(-5, +5, count).reshape([count,1])
-    plt.plot(xx.value, network.predict(xx).value)
+    plt.plot(xx.value, network.predict(xx).value, c="r")
     plt.xlim([-5,5])
     plt.ylim([-1.5,1.5])
     key = plt.waitforbuttonpress(timeout=0.001)
@@ -97,7 +97,7 @@ def test():
 
 solver = tt.LeastSquaresSolver(tr.DefaultEngine())
 solver.regularization = 1
-solver.max_linear_iterations = 10
+solver.max_linear_iterations = 5
 solver.step_scaling = 1
 
 solver.compile(prog)

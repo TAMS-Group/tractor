@@ -138,20 +138,27 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
             value(value(_this).w()) = array.at(3);
           })
       .def(py::self * py::self)
-      .def(py::self * Vector3());
+      .def(py::self * Vector3())
+      .def(py::self + Vector3());
   mod_main.def("inverse",
                py::overload_cast<const Orientation &>(&Geometry::inverse));
   // mod_main.def("pack",
   //              py::overload_cast<const Scalar &, const Scalar &, const Scalar
   //              &,
   //                                const Scalar &>(&Geometry::pack));
-  // mod_main.def("residual",
-  //                 py::overload_cast<const Orientation &,
-  //                                   const Orientation &>(
-  //                     &Geometry::residual));
+  mod_main.def("residual",
+               py::overload_cast<const Orientation &, const Orientation &>(
+                   &Geometry::residual));
+  mod_main.def("residual",
+               py::overload_cast<const Orientation &>(&Geometry::residual));
   // mod_main.def("angle_axis_orientation",
   //              py::overload_cast<const Scalar &, const Vector3 &>(
   //                  &Geometry::angleAxisOrientation));
+  mod_main.def("unpack", [](const Orientation &q) {
+    std::array<Scalar, 4> ret;
+    Geometry::unpack(q, ret[0], ret[1], ret[2], ret[3]);
+    return ret;
+  });
 
   // -------------------------------------------------------------
   // Matrix3
