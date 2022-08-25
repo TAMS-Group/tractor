@@ -46,7 +46,7 @@ class Tests:
         w = tg.Vector3()
         t.variable(w)
 
-        t.goal((pose + twist) * w)
+        t.goal(t.inverse(pose + twist + twist) * w)
 
     # def quat_residual_2(self, tg):
     #     angle_1 = tt.Scalar()
@@ -383,7 +383,7 @@ class Tests:
     #     b = tt.Scalar()
     #     t.variable(a)
     #     t.variable(b)
-    #     x = t.ops.add_random_normal(a, b)
+    #     x = t.add_random_normal(a, b)
     #     t.goal(x)
 
 engine = tractor.DefaultEngine()
@@ -449,15 +449,16 @@ class GradientTester:
 
     def check_output(self, a, b):
         assert(len(a) == len(b))
-        all_ok = True
+        ret = [ ]
         for imode in range(len(a)):
             #print np.sqrt(np.mean(np.square(a[imode] - b[imode])))
             ok = np.allclose(a[imode], b[imode])
             #if imode == 0: ok = False
             #print (self.modes[imode].rjust(8)+":"+("\033[92m"+"OK   "+"\033[0m" if ok else "\033[1m"+"\033[91m"+"ERROR"+"\033[0m")),
-            print (self.modes[imode]+":"+("\033[1m"+"\033[92m"+"OK"+"\033[0m" if ok else "\033[1m"+"\033[91m"+"ERROR"+"\033[0m").ljust(20,".")),
-            all_ok = all_ok and ok
-        return all_ok
+            #print (self.modes[imode]+":"+("\033[1m"+"\033[92m"+"OK"+"\033[0m" if ok else "\033[1m"+"\033[91m"+"ERROR"+"\033[0m").ljust(20,".")),
+            #all_ok = all_ok and ok
+            ret.append(ok)
+        return np.array(ret, dtype=bool)
 
     def check_outputs(self, outputs):
         all_ok = True
@@ -467,21 +468,40 @@ class GradientTester:
 
     def test(self, function):
         print (function.__name__+"").ljust(25, "."),
+
         variants = [Variant(function, m) for m in self.modules]
-        compute_input = variants[0].make_compute_input()
-        forward_input = variants[0].make_forward_input()
-        reverse_input = variants[0].make_reverse_input()
-        outputs = [v.run(compute_input, forward_input, reverse_input) for v in variants]
-        all_ok = self.check_outputs(outputs)
+        all_ok = np.full(len(self.modes), True, dtype=bool)
+
+        for i in range(100):
+
+            compute_input = variants[0].make_compute_input()
+            forward_input = variants[0].make_forward_input()
+            reverse_input = variants[0].make_reverse_input()
+
+            outputs = [v.run(compute_input, forward_input, reverse_input) for v in variants]
+            ok = self.check_outputs(outputs)
+
+            if not ok.all():
+                for imode in range(3):
+                    print " ", self.modes[imode], function.__name__
+                    for o in outputs:
+                        print "".join(["%.3f".rjust(7) % v for v in o[imode]])
+                    print ""
+
+            all_ok = (all_ok & ok)
+
+        for imode in range(len(self.modes)):
+            ok = all_ok[imode]
+            print (self.modes[imode]+":"+("\033[1m"+"\033[92m"+"OK"+"\033[0m" if ok else "\033[1m"+"\033[91m"+"ERROR"+"\033[0m").ljust(20,".")),
         print ""
 
-        if not all_ok:
-            print ""
-            for imode in range(3):
-                print " ", self.modes[imode]
-                for o in outputs:
-                    print "".join(["%.3f".rjust(7) % v for v in o[imode]])
-                print ""
+        # if not all_ok:
+        #     print ""
+        #     for imode in range(3):
+        #         print " ", self.modes[imode]
+        #         for o in outputs:
+        #             print "".join(["%.3f".rjust(7) % v for v in o[imode]])
+        #         print ""
 
 modules = [
     tractor.types_double_twist,
