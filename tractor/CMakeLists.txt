@@ -14,7 +14,7 @@ set(OPT_FLAGS -O0)
 
 # ------------------------------------------------------------------
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ASAN_FLAGS} -g -Wno-register -std=c++17 ${OPT_FLAGS} -mavx -U__AVX__ -fopenmp")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ASAN_FLAGS} -ffast-math -g -Wno-register -std=c++17 ${OPT_FLAGS} -mavx -U__AVX__ -fopenmp")
 
 find_package(Bullet REQUIRED)
 

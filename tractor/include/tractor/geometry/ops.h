@@ -530,11 +530,14 @@ TRACTOR_OP(quat_pack,
            { quat_pack(a, b, c, d, x); })
 TRACTOR_D(prepare, quat_pack,
           (const T &a, const T &b, const T &c, const T &d,
-           const Quaternion<T> &x, Quaternion<T> &v),
-          { v = x; })
+           const Quaternion<T> &x, Quaternion<T> &v_quat, T &v_norm_inv),
+          {
+            v_quat = Quaternion<T>(a, b, c, d);
+            v_norm_inv = T(1) / norm(v_quat);
+          })
 TRACTOR_D(forward, quat_pack,
-          (const Quaternion<T> &v, const T &da, const T &db, const T &dc,
-           const T &dd, Vector3<T> &dx),
+          (const Quaternion<T> &v_quat, const T &v_norm_inv, const T &da,
+           const T &db, const T &dc, const T &dd, Vector3<T> &dx),
           {
             // Quaternion<T> r =
             //     v.inverse() *
@@ -639,11 +642,12 @@ TRACTOR_D(forward, quat_pack,
             // dx.y() = r_y * T(2);
             // dx.z() = r_z * T(2);
 
-            dx = quat_pack_forward(v, Quaternion<T>(da, db, dc, dd));
+            dx = quat_pack_forward(v_quat, v_norm_inv,
+                                   Quaternion<T>(da, db, dc, dd));
           })
 TRACTOR_D(reverse, quat_pack,
-          (const Quaternion<T> &v, T &da, T &db, T &dc, T &dd,
-           const Vector3<T> &dx),
+          (const Quaternion<T> &v_quat, const T &v_norm_inv, T &da, T &db,
+           T &dc, T &dd, const Vector3<T> &dx),
           {
             // T v_x = v.x();
             // T v_y = v.y();
@@ -659,7 +663,7 @@ TRACTOR_D(reverse, quat_pack,
             // dc = +r_x * v_y - r_y * v_x + r_z * v_w;
             // dd = -r_x * v_x - r_y * v_y - r_z * v_z;
 
-            Quaternion d = quat_pack_reverse(v, dx);
+            Quaternion d = quat_pack_reverse(v_quat, v_norm_inv, dx);
             da = d.x();
             db = d.y();
             dc = d.z();
@@ -685,13 +689,85 @@ TRACTOR_D(reverse, quat_pack,
 TRACTOR_OP(quat_residual, (const Quaternion<T> &a),
            { return quat_residual(a); })
 TRACTOR_D(forward, quat_residual,
-          (const Quaternion<T> &va, const Vector3<T> &vx, const Vector3<T> &a,
-           Vector3<T> &x),
-          { x = va * a; })
+          (const Quaternion<T> &va, const Vector3<T> &vx, const Vector3<T> &da,
+           Vector3<T> &dx),
+          {
+            // T d_va_w_r = T(1) - va.w() * va.w();
+            // T d_va_w =
+            //     T(2) * va.w() * acos(va.w()) / (d_va_w_r * sqrt(d_va_w_r)) -
+            //     T(2) / (T(1) - va.w() * va.w());
+            //
+            // T vec_f = T(2) * acos(quat.w()) / sqrt(T(1) - quat.w() *
+            // quat.w());
+            //
+            // T vec_x = quat.x() * vec_f;
+            // T vec_y = quat.y() * vec_f;
+            // T vec_z = quat.z() * vec_f;
+            //
+            // return Vector3<T>(vec_x, vec_y, vec_z);
+
+            // x = va * a;
+
+            // auto vqa = va;
+
+            T vec_f = T(2) * acos(va.w()) / sqrt(T(1) - va.w() * va.w());
+
+            T d_va_w_r = T(1) - va.w() * va.w();
+            auto d_vec_f =
+                T(2) * va.w() * acos(va.w()) / (d_va_w_r * sqrt(d_va_w_r)) -
+                T(2) / (T(1) - va.w() * va.w());
+
+            //
+
+            Quaternion<T> dqda = Quaternion<T>(da.x() * T(0.5), da.y() * T(0.5),
+                                               da.z() * T(0.5), T(0));
+
+            auto dqa = dqda * va;
+
+            T d_vec_f_w = d_vec_f * dqa.w();
+
+            T d_vec_x = dqa.x() * vec_f + va.x() * d_vec_f_w;
+            T d_vec_y = dqa.y() * vec_f + va.y() * d_vec_f_w;
+            T d_vec_z = dqa.z() * vec_f + va.z() * d_vec_f_w;
+
+            dx = Vector3<T>(d_vec_x, d_vec_y, d_vec_z);
+          })
 TRACTOR_D(reverse, quat_residual,
-          (const Quaternion<T> &va, const Vector3<T> &vx, Vector3<T> &a,
-           const Vector3<T> &x),
-          { a = x; })
+          (const Quaternion<T> &va, const Vector3<T> &vx, Vector3<T> &da,
+           const Vector3<T> &dx),
+          {
+            // da = dx;
+
+            T vec_f = T(2) * acos(va.w()) / sqrt(T(1) - va.w() * va.w());
+
+            T d_va_w_r = T(1) - va.w() * va.w();
+            auto d_vec_f =
+                T(2) * va.w() * acos(va.w()) / (d_va_w_r * sqrt(d_va_w_r)) -
+                T(2) / (T(1) - va.w() * va.w());
+
+            //
+
+            T d_vec_x = dx.x();
+            T d_vec_y = dx.y();
+            T d_vec_z = dx.z();
+
+            T d_vec_f_w =
+                va.x() * d_vec_x + va.y() * d_vec_y + va.z() * d_vec_z;
+
+            Quaternion<T> dqa;
+            dqa.x() = d_vec_x * vec_f;
+            dqa.y() = d_vec_y * vec_f;
+            dqa.z() = d_vec_z * vec_f;
+            dqa.w() = d_vec_f_w * d_vec_f;
+
+            Quaternion<T> dqda = dqa * va.inverse();
+
+            da.x() = dqda.x() * T(0.5);
+            da.y() = dqda.y() * T(0.5);
+            da.z() = dqda.z() * T(0.5);
+          })
+
+// -------------------------------------------------------------------------
 
 template <class T> struct AngleAxisQuatLinerization {
   Vector3<T> axis_normalized;
@@ -1685,7 +1761,7 @@ TRACTOR_D_T(forward, pose_twist, add,
             (const AddPoseTwistLinearization<T> &v, const Twist<T> &da,
              const Twist<T> &db, Twist<T> &dx),
             {
-              Vector3 dqb = quat_pack_forward(v.bqn,
+              Vector3 dqb = quat_pack_forward(v.bqn, T(1),
                                               Quaternion<T>(                  //
                                                   db.rotation().x() * v.bqfh, //
                                                   db.rotation().y() * v.bqfh, //
@@ -1741,7 +1817,7 @@ TRACTOR_D_T(reverse, pose_twist, add,
 
               rot += cross(v.bqn * v.at, dx.translation());
 
-              Quaternion<T> qdb = quat_pack_reverse(v.bqn, rot * v.bqfh);
+              Quaternion<T> qdb = quat_pack_reverse(v.bqn, T(1), rot * v.bqfh);
 
               db.rotation().x() = qdb.x();
               db.rotation().y() = qdb.y();
@@ -1851,7 +1927,7 @@ TRACTOR_D_T(forward, quat_vec3, add,
                 const QuatVec3AddLinearization<T> &v, const Vector3<T> &da,
                 const Vector3<T> &db, Vector3<T> &dx),
             {
-              Vector3 dqb = quat_pack_forward(v.bqn,
+              Vector3 dqb = quat_pack_forward(v.bqn, T(1),
                                               Quaternion<T>(       //
                                                   db.x() * v.bqfh, //
                                                   db.y() * v.bqfh, //
@@ -1932,7 +2008,7 @@ TRACTOR_D_T(reverse, quat_vec3, add,
               // db.setZero();
 
               da = v.bqn.inverse() * dx;
-              Quaternion<T> qdb = quat_pack_reverse(v.bqn, dx * v.bqfh);
+              Quaternion<T> qdb = quat_pack_reverse(v.bqn, T(1), dx * v.bqfh);
               db.x() = qdb.x();
               db.y() = qdb.y();
               db.z() = qdb.z();

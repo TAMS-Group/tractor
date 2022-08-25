@@ -171,19 +171,39 @@ void quat_unpack(const Quaternion<T> &q, T &x, T &y, T &z, T &w) {
   w = q.w();
 }
 
+// template <class T>
+// void quat_pack(const T &x, const T &y, const T &z, const T &w,
+//                Quaternion<T> &vec) {
+//   vec = Quaternion<T>(x, y, z, w);
+// }
+
 template <class T>
 void quat_pack(const T &x, const T &y, const T &z, const T &w,
                Quaternion<T> &vec) {
-  vec = Quaternion<T>(x, y, z, w);
+  T f = T(1) / sqrt(x * x + y * y + z * z + w * w);
+  vec = Quaternion<T>(x * f, y * f, z * f, w * f);
 }
 
-template <class T> Vector3<T> quat_residual(const Quaternion<T> &q) {
-  T f = T(1) / sqrt(T(1) - q.w() * q.w());
-  T x = q.x() * f;
-  T y = q.y() * f;
-  T z = q.z() * f;
-  T angle = T(2) * acos(q.w());
-  return Vector3<T>(x * angle, y * angle, z * angle);
+template <class T> Vector3<T> quat_residual(const Quaternion<T> &quat) {
+
+  // Quaternion<T> quat_n = normalized(quat);
+  //
+  // T axis_temp = T(1) / sqrt(T(1) - quat_n.w() * quat_n.w());
+  // T axis_x = quat_n.x() * axis_temp;
+  // T axis_y = quat_n.y() * axis_temp;
+  // T axis_z = quat_n.z() * axis_temp;
+  //
+  // T angle = T(2) * acos(quat_n.w());
+  //
+  // return Vector3<T>(axis_x * angle, axis_y * angle, axis_z * angle);
+
+  T vec_f = T(2) * acos(quat.w()) / sqrt(T(1) - quat.w() * quat.w());
+
+  T vec_x = quat.x() * vec_f;
+  T vec_y = quat.y() * vec_f;
+  T vec_z = quat.z() * vec_f;
+
+  return Vector3<T>(vec_x, vec_y, vec_z);
 }
 
 // template <class T> Vector3<T> quat_residual(const Quaternion<T> &a) {
@@ -212,6 +232,8 @@ Quaternion<T> angle_axis_quat(const T &angle, const Vector3<T> &axis) {
   // return normalized(quat);
   return quat;
 }
+
+/*
 
 template <class T>
 inline Vector3<T> quat_pack_forward(const Quaternion<T> &v,
@@ -254,6 +276,92 @@ inline Quaternion<T> quat_pack_reverse(const Quaternion<T> &v,
   T r_x = dx.x() * T(2);
   T r_y = dx.y() * T(2);
   T r_z = dx.z() * T(2);
+
+  T da = +r_x * v_w + r_y * v_z - r_z * v_y;
+  T db = -r_x * v_z + r_y * v_w + r_z * v_x;
+  T dc = +r_x * v_y - r_y * v_x + r_z * v_w;
+  T dd = -r_x * v_x - r_y * v_y - r_z * v_z;
+
+  return Quaternion<T>(da, db, dc, dd);
+}
+
+*/
+
+template <class T> T dot(const Quaternion<T> &a, const Quaternion<T> &b) {
+  return a.x() * b.x() + a.y() * b.y() + a.z() * b.z() + a.w() * b.w();
+}
+
+// template <class T> T norm(const Quaternion<T> &q) { return sqrt(dot(q, q)); }
+
+template <class T> Quaternion<T> operator*(const Quaternion<T> &q, const T &f) {
+  return Quaternion<T>(q.x() * f, q.y() * f, q.z() * f, q.w() * f);
+}
+
+template <class T> Quaternion<T> operator/(const Quaternion<T> &q, const T &f) {
+  return q * (T(1) / f);
+}
+
+template <class T>
+Quaternion<T> operator+(const Quaternion<T> &a, const Quaternion<T> &b) {
+  return Quaternion<T>(a.x() + b.x(), a.y() + b.y(), a.z() + b.z(),
+                       a.w() + b.w());
+}
+
+template <class T>
+Quaternion<T> operator-(const Quaternion<T> &a, const Quaternion<T> &b) {
+  return Quaternion<T>(a.x() - b.x(), a.y() - b.y(), a.z() - b.z(),
+                       a.w() - b.w());
+}
+
+template <class T>
+inline Vector3<T> quat_pack_forward(const Quaternion<T> &v, const T &v_norm_inv,
+                                    const Quaternion<T> &d) {
+
+  // see quat pack op in geometry/ops.h
+
+  // auto v_n = normalized(v);
+  auto v_n = v * v_norm_inv;
+
+  // auto d_n = d / norm(v);
+
+  auto d_p = (d - v_n * dot(v_n, d)) / norm(v);
+
+  T v_x = v_n.x();
+  T v_y = v_n.y();
+  T v_z = v_n.z();
+  T v_w = v_n.w();
+
+  T da = d_p.x();
+  T db = d_p.y();
+  T dc = d_p.z();
+  T dd = d_p.w();
+
+  T r_x = -dd * v_x + da * v_w - db * v_z + dc * v_y;
+  T r_y = -dd * v_y + da * v_z + db * v_w - dc * v_x;
+  T r_z = -dd * v_z - da * v_y + db * v_x + dc * v_w;
+
+  Vector3<T> dx;
+  dx.x() = r_x * T(2);
+  dx.y() = r_y * T(2);
+  dx.z() = r_z * T(2);
+  return dx;
+}
+
+template <class T>
+inline Quaternion<T> quat_pack_reverse(const Quaternion<T> &v,
+                                       const T &v_norm_inv,
+                                       const Vector3<T> &dx) {
+
+  // see quat pack op in geometry/ops.h
+
+  T v_x = v.x() * v_norm_inv;
+  T v_y = v.y() * v_norm_inv;
+  T v_z = v.z() * v_norm_inv;
+  T v_w = v.w() * v_norm_inv;
+
+  T r_x = dx.x() * T(2) * v_norm_inv;
+  T r_y = dx.y() * T(2) * v_norm_inv;
+  T r_z = dx.z() * T(2) * v_norm_inv;
 
   T da = +r_x * v_w + r_y * v_z - r_z * v_y;
   T db = -r_x * v_z + r_y * v_w + r_z * v_x;
