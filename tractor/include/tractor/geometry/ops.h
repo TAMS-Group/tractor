@@ -1642,6 +1642,7 @@ template <class T> Pose<T> operator+(const Pose<T> &a, const Twist<T> &b) {
   Pose<T> pb = Pose(b.translation(), qb);
   return pb * a;
 }
+
 TRACTOR_OP_T(pose_twist, add, (const Pose<T> &a, const Twist<T> &b), {
   Pose<T> ret = a + b;
   // TRACTOR_DEBUG("add pose twist " << ret);
@@ -1659,30 +1660,43 @@ TRACTOR_OP_T(pose_twist, add, (const Pose<T> &a, const Twist<T> &b), {
 //               b = x;
 //             })
 
-TRACTOR_D_T(forward, pose_twist, add,
-            (const Pose<T> &va, const Twist<T> &vb, const Pose<T> &vx,
-             const Twist<T> &da, const Twist<T> &db, Twist<T> &dx),
-            {
-              Quaternion<T> vbq = Quaternion<T>(vb.rotation().x() * T(0.5), //
-                                                vb.rotation().y() * T(0.5), //
-                                                vb.rotation().z() * T(0.5), //
-                                                T(1)                        //
-              );
-              T vbqf = T(1) / norm(vbq);
-              Quaternion<T> vbqn = normalized(vbq);
-              Vector3 dqb =
-                  quat_pack_forward(vbqn,
-                                    Quaternion<T>(                         //
-                                        db.rotation().x() * T(0.5) * vbqf, //
-                                        db.rotation().y() * T(0.5) * vbqf, //
-                                        db.rotation().z() * T(0.5) * vbqf, //
-                                        T(0)                               //
-                                        ));
-              dx.rotation() = dqb + vbqn * da.rotation();
+template <class T> struct AddPoseTwistLinearization {
+  Quaternion<T> bqn;
+  Vector3<T> at;
+  T bqfh;
+};
 
-              dx.translation() = db.translation() + vbqn * da.translation() +
-                                 // cross(dqb, vbq * va.translation())
-                                 cross(dqb, vbqn * va.translation());
+TRACTOR_D_T(prepare, pose_twist, add,
+            (const Pose<T> &a, const Twist<T> &b, const Pose<T> &x,
+             AddPoseTwistLinearization<T> &v),
+            {
+              Quaternion<T> bq = Quaternion<T>(b.rotation().x() * T(0.5), //
+                                               b.rotation().y() * T(0.5), //
+                                               b.rotation().z() * T(0.5), //
+                                               T(1)                       //
+              );
+              T bqf = T(1) / norm(bq);
+              v.bqn = normalized(bq);
+              v.bqfh = bqf * T(0.5);
+              v.at = a.translation();
+            })
+
+TRACTOR_D_T(forward, pose_twist, add,
+            (const AddPoseTwistLinearization<T> &v, const Twist<T> &da,
+             const Twist<T> &db, Twist<T> &dx),
+            {
+              Vector3 dqb = quat_pack_forward(v.bqn,
+                                              Quaternion<T>(                  //
+                                                  db.rotation().x() * v.bqfh, //
+                                                  db.rotation().y() * v.bqfh, //
+                                                  db.rotation().z() * v.bqfh, //
+                                                  T(0)                        //
+                                                  ));
+
+              dx.rotation() = dqb + v.bqn * da.rotation();
+
+              dx.translation() = db.translation() + v.bqn * da.translation() +
+                                 cross(dqb, v.bqn * v.at);
 
               // dx = va * db + cross(da, va * vb);
 
@@ -1714,11 +1728,28 @@ TRACTOR_D_T(forward, pose_twist, add,
               // dx.rotation() = v_ar * db_r + da.rotation();
             })
 TRACTOR_D_T(reverse, pose_twist, add,
-            (const Pose<T> &va, const Twist<T> &vb, const Pose<T> &vx,
+            (const AddPoseTwistLinearization<T> &v,
+             // const Pose<T> &va, const Twist<T> &vb, const Pose<T> &vx,
              Twist<T> &da, Twist<T> &db, const Twist<T> &dx),
             {
-                // a = x;
-                // b = x;
+              // a = x;
+              // b = x;
+
+              da.rotation() = v.bqn.inverse() * dx.rotation();
+
+              Vector3<T> rot = dx.rotation();
+
+              rot += cross(v.bqn * v.at, dx.translation());
+
+              Quaternion<T> qdb = quat_pack_reverse(v.bqn, rot * v.bqfh);
+
+              db.rotation().x() = qdb.x();
+              db.rotation().y() = qdb.y();
+              db.rotation().z() = qdb.z();
+
+              db.translation() = dx.translation();
+
+              da.translation() = v.bqn.inverse() * dx.translation();
             })
 
 // -------------------------------------------------------------------------
