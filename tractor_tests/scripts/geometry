@@ -11,6 +11,23 @@ import tractor.types_double as tt
 
 class Tests:
 
+    def pose_translation(self, tg):
+
+        pass
+
+    def pose_orientation(self, tg):
+
+        pass
+
+    def pose_residual(self, tg):
+        pos = tg.Vector3()
+        t.variable(pos)
+        xyzw = [tt.Scalar(1) for i in range(4)]
+        for v in xyzw: t.variable(v)
+        q = tg.Orientation(xyzw)
+        pose = tg.Pose(pos, q)
+        t.goal(t.residual(pose))
+
     def quat_residual(self, tg):
 
         angle = tt.Scalar()
@@ -45,6 +62,22 @@ class Tests:
         t.variable(axis)
 
         t.goal(t.residual(tg.Orientation.angle_axis(angle, axis)))
+
+    def quat_pack_residual(self, tg):
+        xyzw = [tt.Scalar() for i in range(4)]
+        for v in xyzw: t.variable(v)
+        t.goal(t.residual(tg.Orientation(xyzw)))
+
+    def make_pose(self, tg):
+        pos = tg.Vector3()
+        t.variable(pos)
+        xyzw = [tt.Scalar(1) for i in range(4)]
+        for v in xyzw: t.variable(v)
+        q = tg.Orientation(xyzw)
+        pose = tg.Pose(pos, q)
+        w = tg.Vector3()
+        t.variable(w)
+        t.goal(pose * w)
 
     def pose_twist_add(self, tg):
 
@@ -490,7 +523,7 @@ class GradientTester:
         variants = [Variant(function, m) for m in self.modules]
         all_ok = np.full(len(self.modes), True, dtype=bool)
 
-        for i in range(10):
+        for i in range(100):
 
             compute_input = variants[0].make_compute_input()
             forward_input = variants[0].make_forward_input()
@@ -501,12 +534,16 @@ class GradientTester:
 
             if not ok.all():
                 for imode in range(3):
+                    print ""
                     print " ", self.modes[imode], function.__name__
                     for o in outputs:
                         print "".join(["%.3f".rjust(7) % v for v in o[imode]])
                     print ""
 
             all_ok = (all_ok & ok)
+
+            if not ok.all():
+                break
 
         for imode in range(len(self.modes)):
             ok = all_ok[imode]

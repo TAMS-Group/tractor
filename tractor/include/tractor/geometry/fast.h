@@ -111,6 +111,10 @@ template <class Base> struct GeometryImpl : Base {
     return make_twist(translation, rotation);
   }
 
+  static Twist pack(const Vector3 &translation, const Vector3 &rotation) {
+    return make_twist(translation, rotation);
+  }
+
   static Pose orientationPose(const Orientation &orientation) {
     return orientation_pose(orientation);
   }
@@ -152,14 +156,15 @@ template <class Base> struct GeometryImpl : Base {
     unpack(orientation(pose), qx, qy, qz, qw);
   }
 
-  static Pose pose(const Scalar &px, const Scalar &py, const Scalar &pz,
+  static Pose pack(const Scalar &px, const Scalar &py, const Scalar &pz,
                    const Scalar &qx, const Scalar &qy, const Scalar &qz,
                    const Scalar &qw) {
     Vector3 p;
     vec3_pack(px, py, pz, p);
     Orientation q;
     quat_pack(qx, qy, qz, qw, q);
-    return translationPose(p) * orientationPose(q);
+    // return translationPose(p) * orientationPose(q);
+    return make_pose(p, q);
   }
 
   static Orientation pack(const Scalar &qx, const Scalar &qy, const Scalar &qz,
@@ -167,6 +172,10 @@ template <class Base> struct GeometryImpl : Base {
     Orientation q;
     quat_pack(qx, qy, qz, qw, q);
     return q;
+  }
+
+  static Pose pack(const Vector3 &position, const Orientation &orientation) {
+    return make_pose(position, orientation);
   }
 
   static Orientation inverse(const Orientation &q) { return quat_inverse(q); }
@@ -180,11 +189,16 @@ template <class Base> struct GeometryImpl : Base {
   static Vector3 residual(const Orientation &a) { return quat_residual(a); }
 
   static Vector3 residual(const Orientation &a, const Orientation &b) {
-    return quat_residual(inverse(a) * b);
+    return residual(inverse(a) * b);
+  }
+
+  static Twist residual(const Pose &a) {
+    // return pose_residual(a);
+    return twist(position(a), residual(orientation(a)));
   }
 
   static Twist residual(const Pose &a, const Pose &b) {
-    return pose_residual(a, b);
+    return residual(inverse(a) * b);
   }
 
   static Scalar dot(const Vector3 &a, const Vector3 &b) {

@@ -672,6 +672,70 @@ TRACTOR_D(reverse, quat_pack,
 
 // -------------------------------------------------------------------------
 
+template <class T> T quat_residual_gradient(const T &x) {
+
+  typedef typename BatchScalar<T>::Type S;
+  T y;
+  makeBatchLoop([](const S &x, S &y) {
+    if (x >= S(1)) {
+      y = S(-2) / S(3);
+    } else {
+      S r = S(1) - x * x;
+      y = S(2) * x * acos(x) / (r * sqrt(r)) - S(2) / (S(1) - x * x);
+    }
+  }).run(x, y);
+  return y;
+
+  // T r = T(1) - x * x;
+  // T y = T(2) * x * acos(x) / (r * sqrt(r)) - T(2) / (T(1) - x * x);
+  // return y;
+}
+
+template <class T>
+auto quat_residual_factor(const T &x) ->
+    typename std::enable_if<!IsVar<T>::value, T>::type {
+
+  typedef typename BatchScalar<T>::Type S;
+  T y;
+  makeBatchLoop([](const S &x, S &y) {
+    if (x >= S(1)) {
+      y = S(2);
+    } else {
+      y = S(2) * acos(x) / sqrt(S(1) - x * x);
+    }
+  }).run(x, y);
+  return y;
+
+  // return x;
+
+  // return T(2) * acos(a) / sqrt(T(1) - a * a);
+}
+
+TRACTOR_OP(quat_residual_factor, (const T &x), {
+  return quat_residual_factor(x);
+
+  // typedef typename BatchScalar<T>::Type S;
+  // T y;
+  // makeBatchLoop([](const S &x, S &y) {
+  //   if (x >= S(1)) {
+  //     y = S(-2) / S(3);
+  //   } else {
+  //     y = S(2) * acos(x) / sqrt(S(1) - x * x);
+  //   }
+  // }).run(x, y);
+  // return y;
+
+  // return x;
+})
+TRACTOR_D(prepare, quat_residual_factor, (const T &a, const T &x, T &p),
+          { p = quat_residual_gradient(a); })
+TRACTOR_D(forward, quat_residual_factor, (const T &p, const T &da, T &dx),
+          { dx = da * p; })
+TRACTOR_D(reverse, quat_residual_factor, (const T &p, T &da, const T &dx),
+          { da = dx * p; })
+
+// -------------------------------------------------------------------------
+
 // TRACTOR_OP(quat_residual, (const Quaternion<T> &a), { return a.vec() *
 // T(2);
 // })
@@ -686,11 +750,63 @@ TRACTOR_D(reverse, quat_pack,
 // TRACTOR_D(reverse, quat_residual, (Vector3<T> & a, const Vector3<T> &x),
 //           { a = x; })
 
+template <class T> struct QuatResidualLinearization {
+  T vec_f;
+  T d_vec_f;
+  Quaternion<T> va;
+};
+
+template <class T> Vector3<T> quat_residual(const Quaternion<T> &quat) {
+
+  // Quaternion<T> quat_n = normalized(quat);
+  //
+  // T axis_temp = T(1) / sqrt(T(1) - quat_n.w() * quat_n.w());
+  // T axis_x = quat_n.x() * axis_temp;
+  // T axis_y = quat_n.y() * axis_temp;
+  // T axis_z = quat_n.z() * axis_temp;
+  //
+  // T angle = T(2) * acos(quat_n.w());
+  //
+  // return Vector3<T>(axis_x * angle, axis_y * angle, axis_z * angle);
+
+  // T vec_f = T(2) * acos(quat.w()) / sqrt(T(1) - quat.w() * quat.w());
+  T vec_f = quat_residual_factor(quat.w());
+
+  // Quaternion<T> quat_n = normalized(quat);
+  //
+  // T w = quat_n.w() * T(0.999999);
+  // T vec_f = T(2) * acos(w) / sqrt(T(1) - w * w);
+
+  T vec_x = quat.x() * vec_f;
+  T vec_y = quat.y() * vec_f;
+  T vec_z = quat.z() * vec_f;
+
+  return Vector3<T>(vec_x, vec_y, vec_z);
+}
+
 TRACTOR_OP(quat_residual, (const Quaternion<T> &a),
            { return quat_residual(a); })
+TRACTOR_D(prepare, quat_residual,
+          (const Quaternion<T> &va, const Vector3<T> &vx,
+           QuatResidualLinearization<T> &v),
+          {
+            // v.vec_f = T(2) * acos(va.w()) / sqrt(T(1) - va.w() * va.w());
+            //
+            // T d_va_w_r = T(1) - va.w() * va.w();
+            // v.d_vec_f =
+            //     T(2) * va.w() * acos(va.w()) / (d_va_w_r * sqrt(d_va_w_r)) -
+            //     T(2) / (T(1) - va.w() * va.w());
+
+            v.vec_f = quat_residual_factor(va.w());
+            v.d_vec_f = quat_residual_gradient(va.w());
+
+            v.va = va;
+          })
 TRACTOR_D(forward, quat_residual,
-          (const Quaternion<T> &va, const Vector3<T> &vx, const Vector3<T> &da,
-           Vector3<T> &dx),
+          (
+              // const Quaternion<T> &va, const Vector3<T> &vx,
+              const QuatResidualLinearization<T> &v, //
+              const Vector3<T> &da, Vector3<T> &dx),
           {
             // T d_va_w_r = T(1) - va.w() * va.w();
             // T d_va_w =
@@ -710,12 +826,17 @@ TRACTOR_D(forward, quat_residual,
 
             // auto vqa = va;
 
-            T vec_f = T(2) * acos(va.w()) / sqrt(T(1) - va.w() * va.w());
+            // T vec_f = T(2) * acos(va.w()) / sqrt(T(1) - va.w() * va.w());
+            // T d_va_w_r = T(1) - va.w() * va.w();
+            // auto d_vec_f =
+            //     T(2) * va.w() * acos(va.w()) / (d_va_w_r * sqrt(d_va_w_r)) -
+            //     T(2) / (T(1) - va.w() * va.w());
 
-            T d_va_w_r = T(1) - va.w() * va.w();
-            auto d_vec_f =
-                T(2) * va.w() * acos(va.w()) / (d_va_w_r * sqrt(d_va_w_r)) -
-                T(2) / (T(1) - va.w() * va.w());
+            //
+
+            auto &vec_f = v.vec_f;
+            auto &d_vec_f = v.d_vec_f;
+            auto &va = v.va;
 
             //
 
@@ -733,17 +854,24 @@ TRACTOR_D(forward, quat_residual,
             dx = Vector3<T>(d_vec_x, d_vec_y, d_vec_z);
           })
 TRACTOR_D(reverse, quat_residual,
-          (const Quaternion<T> &va, const Vector3<T> &vx, Vector3<T> &da,
-           const Vector3<T> &dx),
+          (
+              // const Quaternion<T> &va, const Vector3<T> &vx,
+              const QuatResidualLinearization<T> &v, //
+              Vector3<T> &da, const Vector3<T> &dx),
           {
             // da = dx;
 
-            T vec_f = T(2) * acos(va.w()) / sqrt(T(1) - va.w() * va.w());
+            // T vec_f = T(2) * acos(va.w()) / sqrt(T(1) - va.w() * va.w());
+            // T d_va_w_r = T(1) - va.w() * va.w();
+            // auto d_vec_f =
+            //     T(2) * va.w() * acos(va.w()) / (d_va_w_r * sqrt(d_va_w_r)) -
+            //     T(2) / (T(1) - va.w() * va.w());
 
-            T d_va_w_r = T(1) - va.w() * va.w();
-            auto d_vec_f =
-                T(2) * va.w() * acos(va.w()) / (d_va_w_r * sqrt(d_va_w_r)) -
-                T(2) / (T(1) - va.w() * va.w());
+            //
+
+            auto &vec_f = v.vec_f;
+            auto &d_vec_f = v.d_vec_f;
+            auto &va = v.va;
 
             //
 
@@ -1510,6 +1638,25 @@ TRACTOR_D(reverse, translation_pose,
           (Vector3<T> & translation, const Twist<T> &twist),
           { translation = twist.translation(); })
 
+template <class T>
+inline Pose<T> make_pose(const Vector3<T> &a, const Quaternion<T> &b) {
+  return Pose<T>(a, b);
+}
+TRACTOR_OP(make_pose, (const Vector3<T> &a, const Quaternion<T> &b),
+           { return Pose<T>(a, b); })
+TRACTOR_D(prepare, make_pose,
+          (const Vector3<T> &a, const Quaternion<T> &b, const Pose<T> &x), {})
+TRACTOR_D(forward, make_pose,
+          (const Vector3<T> &da, const Vector3<T> &db, Twist<T> &dx), {
+            dx.translation() = da;
+            dx.rotation() = db;
+          })
+TRACTOR_D(reverse, make_pose,
+          (Vector3<T> & da, Vector3<T> &db, const Twist<T> &dx), {
+            da = dx.translation();
+            db = dx.rotation();
+          })
+
 TRACTOR_OP(translation_twist, (const Vector3<T> &translation),
            { return translation_twist(translation); })
 TRACTOR_D(prepare, translation_twist,
@@ -1581,39 +1728,125 @@ TRACTOR_D(reverse, pose_translate,
             translation = parent_orientation.inverse() * twist.translation();
           })
 
-template <class T> struct PoseResidualState {
-  Pose<T> a;
-  Pose<T> b;
+// -------------------------------------------------------------------------
+
+// template <class Pose>
+// auto pose_residual(const Pose &a)
+//     -> decltype(make_twist(a.position(), a.position())) {
+//   return make_twist(a.position(), quat_residual(a.orientation()));
+// }
+
+template <class T> Twist<T> pose_residual(const Pose<T> &a) {
+  Twist<T> x;
+  x.translation() = a.translation();
+  x.rotation() = quat_residual(a.orientation());
+  return x;
+}
+
+// template <class T> Twist<T> pose_residual(const Pose<T> &a, const Pose<T> &b)
+// {
+//   Twist<T> x;
+//
+//   // x.translation() = a.translation() - b.translation();
+//   // x.rotation() = quat_residual(a.orientation().inverse() *
+//   // b.orientation());
+//
+//   // residual * a = b
+//   // (residual * a)^-1 = b^-1
+//   // a^-1 * residual^-1 = b^-1
+//   // residual  = a * b^-1
+//   x.translation() = b.translation() - a.translation();
+//   x.rotation() = -quat_residual(a.orientation() * b.orientation().inverse());
+//
+//   return x;
+// }
+
+template <class T> struct PoseResidualLinearization {
+  T vec_f;
+  T d_vec_f;
+  Quaternion<T> va;
+  Vector3<T> pa;
 };
-TRACTOR_OP(pose_residual, (const Pose<T> &a, const Pose<T> &b),
-           { return pose_residual(a, b); })
+
+TRACTOR_OP(pose_residual, (const Pose<T> &a), { return pose_residual(a); })
 TRACTOR_D(prepare, pose_residual,
-          (const Pose<T> &a, const Pose<T> &b, const Twist<T> &x,
-           PoseResidualState<T> &v),
+          (const Pose<T> &pose, const Twist<T> &vx,
+           PoseResidualLinearization<T> &v),
           {
-            v.a = a;
-            v.b = b;
+            auto &va = pose.orientation();
+
+            // v.vec_f = T(2) * acos(va.w()) / sqrt(T(1) - va.w() * va.w());
+            //
+            // T d_va_w_r = T(1) - va.w() * va.w();
+            // v.d_vec_f =
+            //     T(2) * va.w() * acos(va.w()) / (d_va_w_r * sqrt(d_va_w_r)) -
+            //     T(2) / (T(1) - va.w() * va.w());
+
+            v.vec_f = quat_residual_factor(va.w());
+            v.d_vec_f = quat_residual_gradient(va.w());
+
+            v.va = va;
+
+            v.pa = pose.position();
           })
 TRACTOR_D(forward, pose_residual,
-          (const PoseResidualState<T> &v, const Twist<T> &da,
-           const Twist<T> &db, Twist<T> &dx),
+          (const PoseResidualLinearization<T> &v, //
+           const Twist<T> &twist_a, Twist<T> &twist_x),
           {
-            // dx.translation() = da.translation() - db.translation();
-            // dx.rotation() =
-            //    v.a.orientation().inverse() * db.rotation() - da.rotation();
-            dx = db - da;
+            auto &vec_f = v.vec_f;
+            auto &d_vec_f = v.d_vec_f;
+            auto &va = v.va;
+
+            auto &da = twist_a.rotation();
+
+            Quaternion<T> dqda = Quaternion<T>(da.x() * T(0.5), da.y() * T(0.5),
+                                               da.z() * T(0.5), T(0));
+
+            auto dqa = dqda * va;
+
+            T d_vec_f_w = d_vec_f * dqa.w();
+
+            T d_vec_x = dqa.x() * vec_f + va.x() * d_vec_f_w;
+            T d_vec_y = dqa.y() * vec_f + va.y() * d_vec_f_w;
+            T d_vec_z = dqa.z() * vec_f + va.z() * d_vec_f_w;
+
+            twist_x.rotation() = Vector3<T>(d_vec_x, d_vec_y, d_vec_z);
+
+            twist_x.translation() = twist_a.translation();
           })
 TRACTOR_D(reverse, pose_residual,
-          (const PoseResidualState<T> &v, Twist<T> &da, Twist<T> &db,
-           const Twist<T> &dx),
+          (const PoseResidualLinearization<T> &v, //
+           Twist<T> &twist_a, const Twist<T> &twist_x),
           {
-            // da.translation() = dx.translation();
-            // db.translation() = -dx.translation();
-            // da.rotation() = -dx.rotation();
-            // db.rotation() = v.a.orientation() * dx.rotation();
-            da = -dx;
-            db = dx;
+            auto &vec_f = v.vec_f;
+            auto &d_vec_f = v.d_vec_f;
+            auto &va = v.va;
+
+            auto &dx = twist_x.rotation();
+
+            T d_vec_x = dx.x();
+            T d_vec_y = dx.y();
+            T d_vec_z = dx.z();
+
+            T d_vec_f_w =
+                va.x() * d_vec_x + va.y() * d_vec_y + va.z() * d_vec_z;
+
+            Quaternion<T> dqa;
+            dqa.x() = d_vec_x * vec_f;
+            dqa.y() = d_vec_y * vec_f;
+            dqa.z() = d_vec_z * vec_f;
+            dqa.w() = d_vec_f_w * d_vec_f;
+
+            Quaternion<T> dqda = dqa * va.inverse();
+
+            twist_a.rotation().x() = dqda.x() * T(0.5);
+            twist_a.rotation().y() = dqda.y() * T(0.5);
+            twist_a.rotation().z() = dqda.z() * T(0.5);
+
+            twist_a.translation() = twist_x.translation();
           })
+
+// -------------------------------------------------------------------------
 
 TRACTOR_OP(twist_unpack,
            (const Twist<T> &v, T &tx, T &ty, T &tz, T &rx, T &ry, T &rz), {

@@ -283,7 +283,7 @@ public:
   virtual void
   deserializePositions(const typename Geometry::Scalar *positions) override {
     _pose =
-        Geometry::pose(positions[0], positions[1], positions[2], positions[3],
+        Geometry::pack(positions[0], positions[1], positions[2], positions[3],
                        positions[4], positions[5], positions[6]);
   }
 };
@@ -307,22 +307,26 @@ public:
     return parent * Geometry::translationPose(_position) *
            Geometry::orientationPose(_orientation);
   }
-  void pose(const typename Geometry::Pose &pose) {
-    _position = Geometry::translation(pose);
-    _orientation = Geometry::orientation(pose);
+  // void pose(const typename Geometry::Pose &pose) {
+  //   _position = Geometry::translation(pose);
+  //   _orientation = Geometry::orientation(pose);
+  // }
+  typename Geometry::Pose pose() const {
+    return Geometry::translationPose(_position) *
+           Geometry::orientationPose(_orientation);
   }
   virtual void
   makeVariables(const JointModelBase<Geometry> &model,
                 const JointVariableOptions<Geometry> &options) override {
     variable(_position);
     variable(_orientation);
-    bool has_trust_region = (options.trust_region > 0);
-    if (has_trust_region) {
-      goal(tractor::vector3_trust_region_constraint(
-          _position, typename Geometry::Value(options.trust_region)));
-      goal(tractor::quaternion_trust_region_constraint(
-          _orientation, typename Geometry::Value(options.trust_region)));
-    }
+    // bool has_trust_region = (options.trust_region > 0);
+    // if (has_trust_region) {
+    //   goal(tractor::vector3_trust_region_constraint(
+    //       _position, typename Geometry::Value(options.trust_region)));
+    //   goal(tractor::quaternion_trust_region_constraint(
+    //       _orientation, typename Geometry::Value(options.trust_region)));
+    // }
   }
   virtual void makeParameters(const JointModelBase<Geometry> &model) override {
     parameter(_position);

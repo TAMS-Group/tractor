@@ -184,28 +184,6 @@ void quat_pack(const T &x, const T &y, const T &z, const T &w,
   vec = Quaternion<T>(x * f, y * f, z * f, w * f);
 }
 
-template <class T> Vector3<T> quat_residual(const Quaternion<T> &quat) {
-
-  // Quaternion<T> quat_n = normalized(quat);
-  //
-  // T axis_temp = T(1) / sqrt(T(1) - quat_n.w() * quat_n.w());
-  // T axis_x = quat_n.x() * axis_temp;
-  // T axis_y = quat_n.y() * axis_temp;
-  // T axis_z = quat_n.z() * axis_temp;
-  //
-  // T angle = T(2) * acos(quat_n.w());
-  //
-  // return Vector3<T>(axis_x * angle, axis_y * angle, axis_z * angle);
-
-  T vec_f = T(2) * acos(quat.w()) / sqrt(T(1) - quat.w() * quat.w());
-
-  T vec_x = quat.x() * vec_f;
-  T vec_y = quat.y() * vec_f;
-  T vec_z = quat.z() * vec_f;
-
-  return Vector3<T>(vec_x, vec_y, vec_z);
-}
-
 // template <class T> Vector3<T> quat_residual(const Quaternion<T> &a) {
 //   return a.vec() * T(a.w() < 0 ? -2 : 2);
 // }

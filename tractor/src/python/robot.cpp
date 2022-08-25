@@ -70,12 +70,17 @@ static void pythonizeRobot(py::module main_module, py::module type_module) {
       type_module, "FloatingJointModel");
   ptr_class<FloatingJointState<Geometry>, JointStateBase<Geometry>>(
       type_module, "FloatingJointState")
+      // .def_property_readonly(
+      //     "pose",
+      //     [](FloatingJointState<Geometry> &_this) { return _this.pose(); })
       .def_property(
           "pose",
           [](FloatingJointState<Geometry> &_this) { return &_this.pose(); },
           [](FloatingJointState<Geometry> &_this,
              const typename Geometry::Pose &pose) { _this.pose() = pose; },
-          py::return_value_policy::reference_internal);
+          py::return_value_policy::reference_internal)
+      //
+      ;
 
   ptr_class<ScalarJointModelBase<Geometry>, JointModelBase<Geometry>>(
       type_module, "ScalarJointModelBase")

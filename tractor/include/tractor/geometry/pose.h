@@ -27,6 +27,8 @@ public:
   }
   inline auto &translation() const { return _translation; }
   inline auto &translation() { return _translation; }
+  inline auto &position() const { return _translation; }
+  inline auto &position() { return _translation; }
   inline auto &orientation() const { return _orientation; }
   inline auto &orientation() { return _orientation; }
   inline static auto Identity() {
@@ -167,23 +169,6 @@ Pose<T> pose_translate(const Pose<T> &parent, const Vector3<T> &translation) {
   pose.translation() =
       parent.translation() + parent.orientation() * translation;
   return pose;
-}
-
-template <class T> Twist<T> pose_residual(const Pose<T> &a, const Pose<T> &b) {
-  Twist<T> x;
-
-  // x.translation() = a.translation() - b.translation();
-  // x.rotation() = quat_residual(a.orientation().inverse() *
-  // b.orientation());
-
-  // residual * a = b
-  // (residual * a)^-1 = b^-1
-  // a^-1 * residual^-1 = b^-1
-  // residual  = a * b^-1
-  x.translation() = b.translation() - a.translation();
-  x.rotation() = -quat_residual(a.orientation() * b.orientation().inverse());
-
-  return x;
 }
 
 typedef Pose<double> Pose3d;

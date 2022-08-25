@@ -73,8 +73,7 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
       .def(py::init([]() { return Geometry::PoseIdentity(); }))
       .def(py::init(
           [](const Vector3 &translation, const Orientation &orientation) {
-            return Geometry::translationPose(translation) *
-                   Geometry::orientationPose(orientation);
+            return Geometry::pack(translation, orientation);
           }))
       .def(py::self * py::self)
       .def(py::self * Vector3())
@@ -85,6 +84,10 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
   mod_main.def("position",
                py::overload_cast<const Pose &>(&Geometry::position));
   mod_main.def("orientation", &Geometry::orientation);
+  mod_main.def("residual", py::overload_cast<const Pose &, const Pose &>(
+                               &Geometry::residual));
+  mod_main.def("residual",
+               py::overload_cast<const Pose &>(&Geometry::residual));
   // mod_main.def(
   //     "residual",
   //     py::overload_cast<const Pose &,

@@ -154,7 +154,7 @@ Display:
           X: 0,000000
           Y: 0,000000
           Z: 0,000000
-      Visible: true
+      Visible: false
       id: 70775
       type: RobotStateDisplay
     - DescriptionColor:
@@ -169,7 +169,7 @@ Display:
       Name: InteractiveMarkerDisplay1
       ShowDescriptions: true
       TopicNamespace: /interactive_markers
-      Visible: false
+      Visible: true
       id: 75321
       type: InteractiveMarkerDisplay
     - Description: /dexopt_robot_description
@@ -197,7 +197,7 @@ Display:
         Texture: false
         id: 77613
       Name: DisplayRobotStateDisplay1
-      Topic: /dexopt/display_robot_state
+      Topic: /display_robot_state
       Transform:
         Orientation:
           Pitch: 0,000000
@@ -207,7 +207,7 @@ Display:
           X: 0,000000
           Y: 0,000000
           Z: 0,000000
-      Visible: false
+      Visible: true
       id: 77612
       type: DisplayRobotStateDisplay
     - Frame: ""
@@ -322,7 +322,7 @@ Display:
         Texture: false
         id: 79300
       Name: RobotModelDisplay4
-      Visible: true
+      Visible: false
       id: 79299
       type: RobotModelDisplay
   Environment:
@@ -339,7 +339,7 @@ Display:
       G: 0,000000
       R: 0,000000
     HemisphericLighting: 1,000000
-    UseEnvironmentMap: false
+    UseEnvironmentMap: true
     id: 30
     type: EnvironmentComponent
   FixedFrame: base_frame
@@ -362,16 +362,16 @@ Timeline:
     []
   id: 7
 Window:
-  FieldOfView: 10,000000
+  FieldOfView: 30,000000
   Name: Window
   ViewPosition:
-    X: -0,140726
-    Y: 0,145659
-    Z: 3,986826
+    X: 0,576449
+    Y: 1,068435
+    Z: 0,634314
   ViewTarget:
-    X: -0,137748
-    Y: -0,081901
-    Z: 0,189820
+    X: -0,052694
+    Y: 0,000372
+    Z: 0,112729
   id: 77426
   type: SceneWindow
 id: 6

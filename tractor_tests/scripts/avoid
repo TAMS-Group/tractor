@@ -28,10 +28,20 @@ def f():
         if isinstance(joint_model, tg.FloatingJointModel):
             tr.variable(joint_state.pose)
     link_states = robot_model.forward_kinematics(joint_states)
-    tr.goal(tr.pose_translation(link_states.link_pose("object")) - tr.pose_translation(object_goal_pose))
-    tr.goal(tr.quat_residual(tr.quat_inverse(tr.pose_orientation(link_states.link_pose("object"))) * tr.pose_orientation(object_goal_pose)) * tt.Scalar(0.05))
+    #tr.goal(tr.residual(link_states.link_pose("object"), object_goal_pose))
+    #tr.goal(tr.pose_translation(link_states.link_pose("object")) - tr.pose_translation(object_goal_pose))
+    #tr.goal(tr.quat_residual(tr.quat_inverse(tr.pose_orientation(link_states.link_pose("object"))) * tr.pose_orientation(object_goal_pose)) * tt.Scalar(0.05))
+    for v in [
+        tg.Vector3(+1,0,0),
+        tg.Vector3(0,+1,0),
+        tg.Vector3(0,0,+1),
+        tg.Vector3(-1,0,0),
+        tg.Vector3(0,-1,0),
+        tg.Vector3(0,0,-1),
+    ]:
+        tr.goal((tr.inverse(link_states.link_pose("object")) * object_goal_pose) * v - v)
     collision = tr.collide(
-        link_states.link_pose("object"), 
+        link_states.link_pose("object"),
         collision_robot.link("object"),
         link_states.link_pose("world"),
         collision_robot.link("world")
@@ -49,9 +59,10 @@ solver = tt.LeastSquaresSolver(tr.DefaultEngine())
 solver.compile(prog)
 solver.tolerance = 1e-12
 solver.adaptive_regularization = False
-solver.timeout = 0.05
+#solver.timeout = 0.05
+solver.timeout = 0.000000001
 solver.max_linear_iterations = 20
-solver.regularization = 0.01
+solver.regularization = 1
 solver.line_search = False
 solver.step_scaling = 1
 
