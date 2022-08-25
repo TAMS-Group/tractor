@@ -63,6 +63,10 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
       .def_static("angle_axis",
                   py::overload_cast<const Scalar &, const Vector3 &>(
                       &Geometry::angleAxisPose))
+      .def_static(
+          "angle_axis",
+          py::overload_cast<const Pose &, const Scalar &, const Vector3 &>(
+              &Geometry::angleAxisPose))
       .def_property_readonly_static(
           "identity",
           [](const py::object &) { return Geometry::PoseIdentity(); })
@@ -73,7 +77,8 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
                    Geometry::orientationPose(orientation);
           }))
       .def(py::self * py::self)
-      .def(py::self * Vector3());
+      .def(py::self * Vector3())
+      .def(py::self + Twist());
   mod_main.def("inverse", py::overload_cast<const Pose &>(&Geometry::inverse));
   mod_main.def("translation",
                py::overload_cast<const Pose &>(&Geometry::translation));

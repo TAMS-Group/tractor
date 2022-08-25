@@ -21,6 +21,33 @@ class Tests:
 
         t.goal(t.residual(tg.Orientation.angle_axis(angle, axis)))
 
+    def pose_twist_add(self, tg):
+
+        angle = tt.Scalar()
+        t.variable(angle)
+
+        axis = tg.Vector3()
+        t.variable(axis)
+
+        quat = tg.Orientation.angle_axis(angle, axis)
+
+        pos = tg.Vector3()
+        t.variable(pos)
+
+        pose = tg.Pose(pos, quat)
+
+        twist_t = tg.Vector3([1,2,3])
+        twist_r = tg.Vector3([2,3,4])
+        t.variable(twist_t)
+        t.variable(twist_r)
+
+        twist = tg.Twist(twist_t, twist_r)
+
+        w = tg.Vector3()
+        t.variable(w)
+
+        t.goal((pose + twist) * w)
+
     # def quat_residual_2(self, tg):
     #     angle_1 = tt.Scalar()
     #     t.variable(angle_1)
@@ -63,48 +90,77 @@ class Tests:
         t.goal((t.inverse(tg.Orientation.angle_axis(angle_1, axis_1)) * t.inverse(tg.Orientation.angle_axis(angle_2, axis_2))) * vec)
         t.goal((tg.Orientation.angle_axis(angle_1, axis_1) * t.inverse(tg.Orientation.angle_axis(angle_2, axis_2))) * vec)
 
-    # def vec_to_quat(self, tg):
-    #
-    #     v = tg.Vector3()
-    #     t.variable(v)
-    #
-    #     q = tg.Orientation().identity + v
-    #
-    #     t.goal(q * tg.Vector3(1,2,3))
-    #
-    # def vec_to_quat_2(self, tg):
-    #
-    #     angle = tt.Scalar()
-    #     t.variable(angle)
-    #     axis = t.normalized(tg.Vector3(1,2,3))
-    #
-    #     v = tg.Vector3()
-    #     t.variable(v)
-    #     q = tg.Orientation.angle_axis(angle, axis) + v
-    #
-    #     t.goal(q * tg.Vector3(1,2,3))
-    #
-    # def vec_to_quat_0(self, tg):
-    #
-    #     angle = tt.Scalar()
-    #     t.variable(angle)
-    #     axis = t.normalized(tg.Vector3(1,2,3))
-    #
-    #     q = tg.Orientation.angle_axis(angle, axis) + tg.Vector3(-1,3,2)
-    #     t.goal(q * tg.Vector3(5,1,3))
-    #
-    # def vec_to_quat_3(self, tg):
-    #
-    #     angle_1 = tt.Scalar()
-    #     t.variable(angle_1)
-    #     axis_1 = t.normalized(tg.Vector3(1,2,3))
-    #
-    #     angle_2 = tt.Scalar()
-    #     t.variable(angle_2)
-    #     axis_2 = t.normalized(tg.Vector3(-4,5,6))
-    #
-    #     q = tg.Orientation.angle_axis(angle_1, axis_1) * tg.Orientation.angle_axis(angle_2, axis_2) + tg.Vector3(-1,3,2)
-    #     t.goal(q * tg.Vector3(1,2,3))
+    def vec_to_quat(self, tg):
+
+        v = tg.Vector3()
+        t.variable(v)
+
+        q = tg.Orientation().identity + v
+
+        w = tg.Vector3()
+        t.variable(w)
+
+        t.goal(q * w)
+
+    def vec_to_quat_1(self, tg):
+
+        angle = tt.Scalar()
+        t.variable(angle)
+
+        axis = tg.Vector3()
+        t.variable(axis)
+
+        q = tg.Orientation.angle_axis(angle, axis) + tg.Vector3(-1,3,2)
+        t.goal(q * tg.Vector3(5,1,3))
+
+    def vec_to_quat_2(self, tg):
+
+        angle = tt.Scalar()
+        t.variable(angle)
+
+        axis = tg.Vector3()
+        t.variable(axis)
+
+        w = tg.Vector3()
+        t.variable(w)
+
+        q = tg.Orientation.angle_axis(angle, axis) + w
+
+        t.goal(q * tg.Vector3(1,2,3))
+
+    def vec_to_quat_3(self, tg):
+
+        angle_1 = tt.Scalar()
+        t.variable(angle_1)
+        axis_1 = tg.Vector3()
+        t.variable(axis_1)
+
+        angle_2 = tt.Scalar()
+        t.variable(angle_2)
+        axis_2 = tg.Vector3()
+        t.variable(axis_2)
+
+        q = tg.Orientation.angle_axis(angle_1, axis_1) * tg.Orientation.angle_axis(angle_2, axis_2) + tg.Vector3(-1,3,2)
+
+        w = tg.Vector3()
+        t.variable(w)
+
+        t.goal(q * w)
+
+    def vec_to_quat_inv(self, tg):
+
+        angle = tt.Scalar()
+        t.variable(angle)
+
+        axis = tg.Vector3()
+        t.variable(axis)
+
+        w = tg.Vector3()
+        t.variable(w)
+
+        q = t.inverse(tg.Orientation.angle_axis(angle, axis)) + w
+
+        t.goal(t.inverse(q) * tg.Vector3(1,2,3))
 
     def twist_translation(self, tg):
         v = tg.Vector3()
@@ -136,30 +192,20 @@ class Tests:
         t.variable(w)
         t.goal(tg.Orientation.angle_axis(a, v) * w)
 
-    # def angle_axis_pose_va(self, tg):
-    #     a = tt.Scalar()
-    #     v = tg.Vector3()
-    #     w = tg.Vector3()
-    #     t.variable(a)
-    #     t.variable(v)
-    #     t.variable(w)
-    #     t.goal(tg.Pose.angle_axis(a, t.normalized(v)) * w)
+    def angle_axis_va_inv(self, tg):
+        a = tt.Scalar(1)
+        v = tg.Vector3([1,2,3])
+        w = tg.Vector3([2,3,4])
+        t.variable(a)
+        t.variable(v)
+        t.variable(w)
+        t.goal(t.inverse(tg.Orientation.angle_axis(a, v)) * w)
 
     def angle_axis_v(self, tg):
-
         axis = tg.Vector3()
         t.variable(axis)
-
-        axis += tg.Vector3(5,0,0)
-
         angle = tt.Scalar(1)
-        #t.variable(angle)
-
-        #testvector = tg.Vector3()
-        #t.variable(testvector)
-
         testvector = tg.Vector3(0,1,0)
-
         t.goal(tg.Orientation.angle_axis(angle, t.normalized(axis)) * testvector - testvector)
 
     def quat_unpack(self, tg):
@@ -208,6 +254,59 @@ class Tests:
         t.variable(w)
         v = t.normalized(tg.Vector3(1,2,3))
         t.goal(tg.Pose.angle_axis(a, v) * w)
+
+    def angle_axis_pose_va(self, tg):
+        a = tt.Scalar()
+        v = tg.Vector3()
+        w = tg.Vector3()
+        t.variable(a)
+        t.variable(v)
+        t.variable(w)
+        t.goal(tg.Pose.angle_axis(a, v) * w)
+
+    def angle_axis_pose_p(self, tg):
+
+        a = tt.Scalar()
+        v = tg.Vector3()
+        t.variable(a)
+        t.variable(v)
+        pa = tg.Pose.angle_axis(a, v)
+
+        a = tt.Scalar()
+        v = tg.Vector3()
+        t.variable(a)
+        t.variable(v)
+        pb = tg.Pose.angle_axis(pa, a, v)
+
+        a = tt.Scalar()
+        v = tg.Vector3()
+        t.variable(a)
+        t.variable(v)
+        pc = tg.Pose.angle_axis(pb, a, v)
+
+        a = tt.Scalar()
+        v = tg.Vector3()
+        t.variable(a)
+        t.variable(v)
+        pd = t.inverse(tg.Pose.angle_axis(a, v)) * pa
+
+        w = tg.Vector3()
+        t.variable(w)
+
+        t.goal(pd * w)
+
+    def angle_axis_pose_inverse(self, tg):
+
+        a = tt.Scalar()
+        v = tg.Vector3()
+        t.variable(a)
+        t.variable(v)
+        p = t.inverse(tg.Pose.angle_axis(a * tt.Scalar(10), v))
+
+        w = tg.Vector3()
+        t.variable(w)
+
+        t.goal(p * w)
 
     def vec3_unpack(self, tg):
         a = tg.Vector3()
@@ -300,7 +399,8 @@ class Variant:
         self.x_forward = engine.compile(self.derivatives.forward)
         self.x_reverse = engine.compile(self.derivatives.reverse)
         self.scalar_size = 8
-        self.memory = engine.createMemory()
+        self.memory_forward = engine.createMemory()
+        self.memory_reverse = engine.createMemory()
 
     def make_compute_input(self):
         return np.random.normal(size=self.x_compute.input_buffer_size/self.scalar_size) * 1
@@ -311,21 +411,25 @@ class Variant:
     def make_reverse_input(self):
         return np.random.normal(size=self.x_reverse.input_buffer_size/self.scalar_size) * 1
 
+    def run_compute_m(self, input, memory):
+        self.x_compute.input(input, memory)
+        self.x_compute.execute(memory)
+        self.x_prepare.execute(memory)
+        return np.frombuffer(self.x_compute.output(memory), dtype=np.double)
+
     def run_compute(self, input):
-        self.x_compute.input(input, self.memory)
-        self.x_compute.execute(self.memory)
-        self.x_prepare.execute(self.memory)
-        return np.frombuffer(self.x_compute.output(self.memory), dtype=np.double)
+        self.run_compute_m(input, self.memory_forward)
+        return self.run_compute_m(input, self.memory_reverse)
 
     def run_forward(self, input):
-        self.x_forward.input(input, self.memory)
-        self.x_forward.execute(self.memory)
-        return np.frombuffer(self.x_forward.output(self.memory), dtype=np.double)
+        self.x_forward.input(input, self.memory_forward)
+        self.x_forward.execute(self.memory_forward)
+        return np.frombuffer(self.x_forward.output(self.memory_forward), dtype=np.double)
 
     def run_reverse(self, input):
-        self.x_reverse.input(input, self.memory)
-        self.x_reverse.execute(self.memory)
-        return np.frombuffer(self.x_reverse.output(self.memory), dtype=np.double)
+        self.x_reverse.input(input, self.memory_reverse)
+        self.x_reverse.execute(self.memory_reverse)
+        return np.frombuffer(self.x_reverse.output(self.memory_reverse), dtype=np.double)
 
     def run(self, compute_input, forward_input, reverse_input):
         ret_compute = self.run_compute(compute_input)
@@ -362,7 +466,7 @@ class GradientTester:
         return all_ok
 
     def test(self, function):
-        print (function.__name__+"").ljust(20, "."),
+        print (function.__name__+"").ljust(25, "."),
         variants = [Variant(function, m) for m in self.modules]
         compute_input = variants[0].make_compute_input()
         forward_input = variants[0].make_forward_input()

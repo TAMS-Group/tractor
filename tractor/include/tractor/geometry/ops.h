@@ -395,11 +395,14 @@ template <class T> auto quat_inverse(const Quaternion<T> &a) {
 }
 TRACTOR_OP(quat_inverse, (const Quaternion<T> &a), { return quat_inverse(a); })
 TRACTOR_D(prepare, quat_inverse,
-          (const Quaternion<T> &a, const Quaternion<T> &x), {})
-TRACTOR_D(forward, quat_inverse, (const Vector3<T> &a, Vector3<T> &x),
-          { x = -a; })
-TRACTOR_D(reverse, quat_inverse, (Vector3<T> & a, const Vector3<T> &x),
-          { a = -x; })
+          (const Quaternion<T> &a, const Quaternion<T> &x, Quaternion<T> &va),
+          { va = a; })
+TRACTOR_D(forward, quat_inverse,
+          (const Quaternion<T> &va, const Vector3<T> &a, Vector3<T> &x),
+          { x = va.inverse() * -a; })
+TRACTOR_D(reverse, quat_inverse,
+          (const Quaternion<T> &va, Vector3<T> &a, const Vector3<T> &x),
+          { a = va * -x; })
 
 // -------------------------------------------------------------------------
 
@@ -1257,98 +1260,140 @@ TRACTOR_D_T(reverse, pose_vec3, mul,
               db = v.arinv * dx;
             })
 
-template <class T> struct FGAngleAxisPoseState {
-  T angle;
-  Vector3<T> axis;
-};
+// template <class T> struct FGAngleAxisPoseState {
+//   T angle;
+//   Vector3<T> axis;
+// };
+// TRACTOR_OP(angle_axis_pose, (const T &angle, const Vector3<T> &axis),
+//            { return angle_axis_pose(angle, axis); })
+// TRACTOR_D(prepare, angle_axis_pose,
+//           (const T &angle, const Vector3<T> &axis, const Pose<T> &pose,
+//            FGAngleAxisPoseState<T> &v),
+//           {
+//             v.angle = angle;
+//             v.axis = axis;
+//           })
+// TRACTOR_D(forward, angle_axis_pose,
+//           (const FGAngleAxisPoseState<T> &v, const T &d_angle,
+//            const Vector3<T> &d_axis, Twist<T> &d_pose),
+//           {
+//             d_pose.translation().setZero();
+//             d_pose.rotation() = v.axis * d_angle + d_axis * v.angle;
+//           })
+// TRACTOR_D(reverse, angle_axis_pose,
+//           (const FGAngleAxisPoseState<T> &v, T &d_angle, Vector3<T> &d_axis,
+//            const Twist<T> &d_pose),
+//           {
+//             d_angle = dot(d_pose.rotation(), v.axis);
+//             d_axis = d_pose.rotation() * v.angle;
+//           })
+
 TRACTOR_OP(angle_axis_pose, (const T &angle, const Vector3<T> &axis),
            { return angle_axis_pose(angle, axis); })
 TRACTOR_D(prepare, angle_axis_pose,
           (const T &angle, const Vector3<T> &axis, const Pose<T> &pose,
-           FGAngleAxisPoseState<T> &v),
+           AngleAxisQuatLinerization<T> &v),
           {
-            v.angle = angle;
-            v.axis = axis;
+            v.axis_normalized = normalized(axis);
+            v.sin_angle_by_axis_length = T(sin(angle)) / norm(axis);
+            v.cos_angle_minus_one_by_axis_length =
+                (T(cos(angle)) - T(1)) / norm(axis);
           })
 TRACTOR_D(forward, angle_axis_pose,
-          (const FGAngleAxisPoseState<T> &v, const T &d_angle,
+          (const AngleAxisQuatLinerization<T> &v, const T &d_angle,
            const Vector3<T> &d_axis, Twist<T> &d_pose),
           {
+            Vector3<T> d_axis_p =
+                (d_axis - v.axis_normalized * dot(v.axis_normalized, d_axis));
+            d_pose.rotation() = v.axis_normalized * d_angle             //
+                                + d_axis_p * v.sin_angle_by_axis_length //
+                                + cross(d_axis_p, v.axis_normalized) *
+                                      v.cos_angle_minus_one_by_axis_length;
             d_pose.translation().setZero();
-            d_pose.rotation() = v.axis * d_angle + d_axis * v.angle;
           })
 TRACTOR_D(reverse, angle_axis_pose,
-          (const FGAngleAxisPoseState<T> &v, T &d_angle, Vector3<T> &d_axis,
-           const Twist<T> &d_pose),
-          {
-            d_angle = dot(d_pose.rotation(), v.axis);
-            d_axis = d_pose.rotation() * v.angle;
-          })
-
-template <class T> struct PoseAngleAxisPoseState {
-  // Pose<T> parent;
-  Quaternion<T> parent_orientation;
-  Quaternion<T> parent_orientation_inverse;
-  Vector3<T> parent_orientation_axis;
-  T angle;
-  Vector3<T> axis;
-};
-TRACTOR_OP(pose_angle_axis_pose,
-           (const Pose<T> &parent, const T &angle, const Vector3<T> &axis),
-           { return pose_angle_axis_pose(parent, angle, axis); })
-TRACTOR_D(prepare, pose_angle_axis_pose,
-          (const Pose<T> &parent, const T &angle, const Vector3<T> &axis,
-           const Pose<T> &pose, PoseAngleAxisPoseState<T> &v),
-          {
-            // v.parent = parent;
-            v.parent_orientation = parent.orientation();
-            v.parent_orientation_inverse = parent.orientation().inverse();
-            v.parent_orientation_axis = parent.orientation() * axis;
-            v.angle = angle;
-            v.axis = axis;
-          })
-TRACTOR_D(forward, pose_angle_axis_pose,
-          (const PoseAngleAxisPoseState<T> &v, const Twist<T> &d_parent,
-           const T &d_angle, const Vector3<T> &d_axis, Twist<T> &d_pose),
-          {
-            // d_pose.translation() = d_parent.translation();
-            // d_pose.rotation() = d_parent.rotation() +
-            //                    (v.parent.orientation() * v.axis) * d_angle +
-            //                    (v.parent.orientation() * d_axis) * v.angle;
-
-            // d_pose.translation() = d_parent.translation();
-            // d_pose.rotation() = d_parent.rotation() +
-            //                    (v.parent_orientation_axis) * d_angle +
-            //                    (v.parent_orientation * d_axis) * v.angle;
-
-            // dx.translation() = da.translation() + v.ar * db.translation() +
-            //                   cross(da.rotation(), v.arbt);
-            // dx.rotation() = v.ar * db.rotation() + da.rotation();
-
-            d_pose.translation() = d_parent.translation();
-            d_pose.rotation() = d_parent.rotation() +
-                                (v.parent_orientation_axis) * d_angle +
-                                (v.parent_orientation * d_axis) * v.angle;
-          })
-TRACTOR_D(reverse, pose_angle_axis_pose,
-          (const PoseAngleAxisPoseState<T> &v, Twist<T> &d_parent, T &d_angle,
+          (const AngleAxisQuatLinerization<T> &v, T &d_angle,
            Vector3<T> &d_axis, const Twist<T> &d_pose),
           {
-            // d_parent.translation() = d_pose.translation();
-            // d_parent.rotation() = d_pose.rotation();
-            // d_angle = dot(v.parent.orientation().inverse() *
-            // d_pose.rotation(),
-            //              v.axis);
-            // d_axis = (v.parent.orientation().inverse() * d_pose.rotation()) *
-            //         v.angle;
-
-            d_parent.translation() = d_pose.translation();
-            d_parent.rotation() = d_pose.rotation();
-            d_angle =
-                dot(v.parent_orientation_inverse * d_pose.rotation(), v.axis);
-            d_axis =
-                (v.parent_orientation_inverse * d_pose.rotation()) * v.angle;
+            Vector3<T> d_rot = d_pose.rotation();
+            Vector3<T> d_rot_p =
+                (d_rot - v.axis_normalized * dot(v.axis_normalized, d_rot));
+            d_angle = dot(v.axis_normalized, d_rot);
+            d_axis = d_rot_p * v.sin_angle_by_axis_length +
+                     cross(v.axis_normalized, d_rot_p) *
+                         v.cos_angle_minus_one_by_axis_length;
           })
+
+// template <class T> struct PoseAngleAxisPoseState {
+//   // Pose<T> parent;
+//   Quaternion<T> parent_orientation;
+//   Quaternion<T> parent_orientation_inverse;
+//   Vector3<T> parent_orientation_axis;
+//   T angle;
+//   Vector3<T> axis;
+// };
+// TRACTOR_OP(pose_angle_axis_pose,
+//            (const Pose<T> &parent, const T &angle, const Vector3<T> &axis),
+//            { return pose_angle_axis_pose(parent, angle, axis); })
+// TRACTOR_D(prepare, pose_angle_axis_pose,
+//           (const Pose<T> &parent, const T &angle, const Vector3<T> &axis,
+//            const Pose<T> &pose, PoseAngleAxisPoseState<T> &v),
+//           {
+//             // v.parent = parent;
+//             v.parent_orientation = parent.orientation();
+//             v.parent_orientation_inverse = parent.orientation().inverse();
+//             v.parent_orientation_axis = parent.orientation() * axis;
+//             v.angle = angle;
+//             v.axis = axis;
+//           })
+// TRACTOR_D(forward, pose_angle_axis_pose,
+//           (const PoseAngleAxisPoseState<T> &v, const Twist<T> &d_parent,
+//            const T &d_angle, const Vector3<T> &d_axis, Twist<T> &d_pose),
+//           {
+//             // d_pose.translation() = d_parent.translation();
+//             // d_pose.rotation() = d_parent.rotation() +
+//             //                    (v.parent.orientation() * v.axis) * d_angle
+//             +
+//             //                    (v.parent.orientation() * d_axis) *
+//             v.angle;
+//
+//             // d_pose.translation() = d_parent.translation();
+//             // d_pose.rotation() = d_parent.rotation() +
+//             //                    (v.parent_orientation_axis) * d_angle +
+//             //                    (v.parent_orientation * d_axis) * v.angle;
+//
+//             // dx.translation() = da.translation() + v.ar * db.translation()
+//             +
+//             //                   cross(da.rotation(), v.arbt);
+//             // dx.rotation() = v.ar * db.rotation() + da.rotation();
+//
+//             d_pose.translation() = d_parent.translation();
+//             d_pose.rotation() = d_parent.rotation() +
+//                                 (v.parent_orientation_axis) * d_angle +
+//                                 (v.parent_orientation * d_axis) * v.angle;
+//           })
+// TRACTOR_D(reverse, pose_angle_axis_pose,
+//           (const PoseAngleAxisPoseState<T> &v, Twist<T> &d_parent, T
+//           &d_angle,
+//            Vector3<T> &d_axis, const Twist<T> &d_pose),
+//           {
+//             // d_parent.translation() = d_pose.translation();
+//             // d_parent.rotation() = d_pose.rotation();
+//             // d_angle = dot(v.parent.orientation().inverse() *
+//             // d_pose.rotation(),
+//             //              v.axis);
+//             // d_axis = (v.parent.orientation().inverse() *
+//             d_pose.rotation()) *
+//             //         v.angle;
+//
+//             d_parent.translation() = d_pose.translation();
+//             d_parent.rotation() = d_pose.rotation();
+//             d_angle =
+//                 dot(v.parent_orientation_inverse * d_pose.rotation(),
+//                 v.axis);
+//             d_axis =
+//                 (v.parent_orientation_inverse * d_pose.rotation()) * v.angle;
+//           })
 
 TRACTOR_OP(pose_translation, (const Pose<T> &pose),
            { return pose_translation(pose); })
@@ -1574,31 +1619,109 @@ template <class T> void parameter(Pose<T> &pose) {
 }
 */
 
+// -------------------------------------------------------------------------
+
 template <class T> Pose<T> operator+(const Pose<T> &a, const Twist<T> &b) {
-  Pose<T> ret;
-  ret.translation() =
-      a.translation() + b.translation() + cross(b.rotation(), a.translation());
-  ret.orientation() =
-      normalized(normalized(Quaternion<T>(b.rotation().x() * T(0.5),
-                                          b.rotation().y() * T(0.5),
-                                          b.rotation().z() * T(0.5), T(1.0))) *
-                 a.orientation());
-  return ret;
+  // Pose<T> ret;
+  // ret.translation() =
+  //     a.translation() + b.translation() + cross(b.rotation(),
+  //     a.translation());
+  // ret.orientation() =
+  //     normalized(normalized(Quaternion<T>(b.rotation().x() * T(0.5),
+  //                                         b.rotation().y() * T(0.5),
+  //                                         b.rotation().z() * T(0.5), T(1.0)))
+  //                                         *
+  //                a.orientation());
+  // return ret;
+  Quaternion<T> qb =
+      normalized(normalized(Quaternion<T>(b.rotation().x() * T(0.5), //
+                                          b.rotation().y() * T(0.5), //
+                                          b.rotation().z() * T(0.5), //
+                                          T(1.0)                     //
+                                          )));
+  Pose<T> pb = Pose(b.translation(), qb);
+  return pb * a;
 }
 TRACTOR_OP_T(pose_twist, add, (const Pose<T> &a, const Twist<T> &b), {
   Pose<T> ret = a + b;
   // TRACTOR_DEBUG("add pose twist " << ret);
   return ret;
 })
-TRACTOR_D_T(prepare, pose_twist, add,
-            (const Pose<T> &a, const Twist<T> &b, const Pose<T> &x), {})
+
+// TRACTOR_D_T(prepare, pose_twist, add,
+//             (const Pose<T> &a, const Twist<T> &b, const Pose<T> &x), {})
+// TRACTOR_D_T(forward, pose_twist, add,
+//             (const Twist<T> &a, const Twist<T> &b, Twist<T> &x), { x = a + b;
+//             })
+// TRACTOR_D_T(reverse, pose_twist, add,
+//             (Twist<T> & a, Twist<T> &b, const Twist<T> &x), {
+//               a = x;
+//               b = x;
+//             })
+
 TRACTOR_D_T(forward, pose_twist, add,
-            (const Twist<T> &a, const Twist<T> &b, Twist<T> &x), { x = a + b; })
-TRACTOR_D_T(reverse, pose_twist, add,
-            (Twist<T> & a, Twist<T> &b, const Twist<T> &x), {
-              a = x;
-              b = x;
+            (const Pose<T> &va, const Twist<T> &vb, const Pose<T> &vx,
+             const Twist<T> &da, const Twist<T> &db, Twist<T> &dx),
+            {
+              Quaternion<T> vbq = Quaternion<T>(vb.rotation().x() * T(0.5), //
+                                                vb.rotation().y() * T(0.5), //
+                                                vb.rotation().z() * T(0.5), //
+                                                T(1)                        //
+              );
+              T vbqf = T(1) / norm(vbq);
+              Quaternion<T> vbqn = normalized(vbq);
+              Vector3 dqb =
+                  quat_pack_forward(vbqn,
+                                    Quaternion<T>(                         //
+                                        db.rotation().x() * T(0.5) * vbqf, //
+                                        db.rotation().y() * T(0.5) * vbqf, //
+                                        db.rotation().z() * T(0.5) * vbqf, //
+                                        T(0)                               //
+                                        ));
+              dx.rotation() = dqb + vbqn * da.rotation();
+
+              dx.translation() = db.translation() + vbqn * da.translation() +
+                                 // cross(dqb, vbq * va.translation())
+                                 cross(dqb, vbqn * va.translation());
+
+              // dx = va * db + cross(da, va * vb);
+
+              // auto qvb = Quaternion<T>(vb.rotation().x() * T(0.5), //
+              //                          vb.rotation().y() * T(0.5), //
+              //                          vb.rotation().z() * T(0.5), //
+              //                          T(1)                        //
+              // );
+              //
+              // Quaternion<T> qvbn = normalized(qvb);
+              // T qvbf = T(1) / norm(qvb);
+              //
+              // Quaternion<T> qdbn =
+              //     Quaternion<T>(db.rotation().x() * qvbf * T(0.5), //
+              //                   db.rotation().y() * qvbf * T(0.5), //
+              //                   db.rotation().z() * qvbf * T(0.5), //
+              //                   T(0)                               //
+              //     );
+              //
+              // auto db_r = quat_pack_forward(qvbn, qdbn);
+              //
+              // auto v_ar = va.orientation();
+              // auto v_arbt = va.orientation() * vb.translation();
+              // auto v_arinv = va.orientation().inverse();
+              //
+              // dx.translation() = da.translation() + v_ar * db.translation() +
+              //                    cross(da.rotation(), v_arbt);
+              //
+              // dx.rotation() = v_ar * db_r + da.rotation();
             })
+TRACTOR_D_T(reverse, pose_twist, add,
+            (const Pose<T> &va, const Twist<T> &vb, const Pose<T> &vx,
+             Twist<T> &da, Twist<T> &db, const Twist<T> &dx),
+            {
+                // a = x;
+                // b = x;
+            })
+
+// -------------------------------------------------------------------------
 
 template <class T>
 Quaternion<T> operator+(const Quaternion<T> &a, const Vector3<T> &b) {
@@ -1606,15 +1729,35 @@ Quaternion<T> operator+(const Quaternion<T> &a, const Vector3<T> &b) {
   // return normalized(normalized(Quaternion<T>(b.x() * T(0.5), b.y() * T(0.5),
   //                                            b.z() * T(0.5), T(1.0))) *
   //                   a);
+
   // return normalized(angle_axis_quat(norm(b), normalized(b)) * a);
+
+  return normalized(normalized(Quaternion<T>(b.x() * T(0.5), b.y() * T(0.5),
+                                             b.z() * T(0.5), T(1))) *
+                    a);
 
   // Quaternion<T> qb = normalized(
   //     Quaternion<T>(b.x() * T(0.5), b.y() * T(0.5), b.z() * T(0.5), T(1)));
   // return normalized(qb * a);
 
-  Quaternion<T> qb =
-      Quaternion<T>(b.x() * T(0.5), b.y() * T(0.5), b.z() * T(0.5), T(1));
-  return qb * a;
+  // Quaternion<T> qb =
+  //     Quaternion<T>(b.x() * T(0.5), b.y() * T(0.5), b.z() * T(0.5), T(1));
+  // return qb * a;
+
+  // T angle = norm(b);
+  // Vector3<T> axis_n = b / angle;
+  //
+  // T s = sin(angle * T(0.5));
+  // T c = cos(angle * T(0.5));
+  //
+  // Quaternion<T> quat;
+  //
+  // quat.x() = axis_n.x() * s;
+  // quat.y() = axis_n.y() * s;
+  // quat.z() = axis_n.z() * s;
+  // quat.w() = c;
+  //
+  // return quat * a;
 
   // Quaternion<T> b_quat(a * b.x() * T(0.5), //
   //                      a * b.y() * T(0.5), //
@@ -1642,13 +1785,93 @@ TRACTOR_OP_T(quat_vec3, add, (const Quaternion<T> &a, const Vector3<T> &b),
              { return a + b; })
 // TRACTOR_D_T(prepare, quat_vec3, add,
 //             (const Quaternion<T> &a, const Vector3<T> &b,
-//              const Quaternion<T> &x),
-//             {})
+//              const Quaternion<T> &x, Quaternion<T> &va, Vector3<T> &vb),
+//             {
+//               va = a;
+//               vb = b;
+//               // T angle = norm(b);
+//               // Vector3<T> axis = normalized(b);
+//               // vb.axis_normalized = normalized(axis);
+//               // vb.sin_angle_by_axis_length = T(sin(angle)) / norm(axis);
+//               // vb.cos_angle_minus_one_by_axis_length =
+//               //     (T(cos(angle)) - T(1)) / norm(axis);
+//             })
+template <class T> struct QuatVec3AddLinearization {
+  Quaternion<T> bqn;
+  T bqfh;
+};
+TRACTOR_D_T(prepare, quat_vec3, add,
+            (const Quaternion<T> &a, const Vector3<T> &b,
+             const Quaternion<T> &x, QuatVec3AddLinearization<T> &v),
+            {
+              Quaternion<T> bq = Quaternion<T>(b.x() * T(0.5), //
+                                               b.y() * T(0.5), //
+                                               b.z() * T(0.5), //
+                                               T(1)            //
+              );
+              T bqf = T(1) / norm(bq);
+              v.bqn = normalized(bq);
+              v.bqfh = bqf * T(0.5);
+            })
 TRACTOR_D_T(forward, quat_vec3, add,
-            (const Quaternion<T> &va, const Vector3<T> &vb,
-             const Quaternion<T> &vx, const Vector3<T> &da,
-             const Vector3<T> &db, Vector3<T> &dx),
-            { // x = a + b;
+            (
+                // const Quaternion<T> &va, const Vector3<T> &vb,
+                // const Quaternion<T> &vx,
+                const QuatVec3AddLinearization<T> &v, const Vector3<T> &da,
+                const Vector3<T> &db, Vector3<T> &dx),
+            {
+              Vector3 dqb = quat_pack_forward(v.bqn,
+                                              Quaternion<T>(       //
+                                                  db.x() * v.bqfh, //
+                                                  db.y() * v.bqfh, //
+                                                  db.z() * v.bqfh, //
+                                                  T(0)             //
+                                                  ));
+              dx = dqb + v.bqn * da;
+
+              // Quaternion<T> vbq = Quaternion<T>(vb.x() * T(0.5), //
+              //                                   vb.y() * T(0.5), //
+              //                                   vb.z() * T(0.5), //
+              //                                   T(1)             //
+              // );
+              // T vbqf = T(1) / norm(vbq);
+              // Quaternion<T> vbqn = normalized(vbq);
+              // Vector3 dqb = quat_pack_forward(vbqn,
+              //                                 Quaternion<T>(              //
+              //                                     db.x() * T(0.5) * vbqf, //
+              //                                     db.y() * T(0.5) * vbqf, //
+              //                                     db.z() * T(0.5) * vbqf, //
+              //                                     T(0)                    //
+              //                                     ));
+              // dx = dqb + vbqn * da;
+
+              // T f = T(1) / norm(Quaternion<T>(vb.x() * T(0.5), //
+              //                                 vb.y() * T(0.5), //
+              //                                 vb.z() * T(0.5), //
+              //                                 T(1)             //
+              //                                 ));
+              // Quaternion<T> vbq = normalized(Quaternion<T>(vb.x() * T(0.5),
+              // //
+              //                                              vb.y() * T(0.5),
+              //                                              // vb.z() *
+              //                                              T(0.5), // T(1) //
+              //                                              ));
+              // Vector3 dqb = quat_pack_forward(
+              //     vbq, Quaternion<T>(db.x() * T(0.5) * f, db.y() * T(0.5) *
+              //     f,
+              //                        db.z() * T(0.5) * f, T(0)));
+              // dx = dqb + vbq * da;
+
+              // Vector3<T> d_axis_p =
+              //     (d_axis - v.axis_normalized * dot(v.axis_normalized,
+              //     d_axis));
+              //
+              // d_rot = v.axis_normalized * d_angle             //
+              //         + d_axis_p * v.sin_angle_by_axis_length //
+              //         + cross(d_axis_p, v.axis_normalized) *
+              //               v.cos_angle_minus_one_by_axis_length;
+
+              // x = a + b;
               // Quaternion<T> qvb = normalized(Quaternion<T>(
               //     vb.x() * T(0.5), vb.y() * T(0.5), vb.z() * T(0.5), T(1)));
               //
@@ -1659,24 +1882,45 @@ TRACTOR_D_T(forward, quat_vec3, add,
               //
               // dx = qvb * da + db * va;
 
-              static auto q = [](const Vector3<T> &v) {
-                return Quaternion<T>(v.x() * T(0.5), v.y() * T(0.5),
-                                     v.z() * T(0.5), T(1.0));
-              };
-
-              Quaternion<T> qdx = q(vb + db) * q(da) * va * vx.inverse();
-
-              dx.x() = qdx.x() * T(2.0);
-              dx.y() = qdx.y() * T(2.0);
-              dx.z() = qdx.z() * T(2.0);
+              // static auto q = [](const Vector3<T> &v) {
+              //   return Quaternion<T>(v.x() * T(0.5), v.y() * T(0.5),
+              //                        v.z() * T(0.5), T(1.0));
+              // };
+              //
+              // Quaternion<T> qdx = q(vb + db) * q(da) * va * vx.inverse();
+              //
+              // dx.x() = qdx.x() * T(2.0);
+              // dx.y() = qdx.y() * T(2.0);
+              // dx.z() = qdx.z() * T(2.0);
             })
 TRACTOR_D_T(reverse, quat_vec3, add,
-            (const Quaternion<T> &va, const Vector3<T> &vb,
-             const Quaternion<T> &vx, Vector3<T> &da, Vector3<T> &db,
-             const Vector3<T> &dx),
+            (const QuatVec3AddLinearization<T> &v, Vector3<T> &da,
+             Vector3<T> &db, const Vector3<T> &dx),
             {
-              da.setZero();
-              db.setZero();
+              // da.setZero();
+              // db.setZero();
+
+              da = v.bqn.inverse() * dx;
+              Quaternion<T> qdb = quat_pack_reverse(v.bqn, dx * v.bqfh);
+              db.x() = qdb.x();
+              db.y() = qdb.y();
+              db.z() = qdb.z();
+
+              // Vector3<T> xdb = dx;
+              // Vector3<T> xda = v.bqn.inverse() * dx;
+              //
+              // Quaternion<T> qdb = quat_pack_reverse(v.bqn,
+              //                                       Vector3<T>(           //
+              //                                           xdb.x() * v.bqfh, //
+              //                                           xdb.y() * v.bqfh, //
+              //                                           xdb.z() * v.bqfh  //
+              //                                           ));
+              //
+              // db.x() = qdb.x();
+              // db.y() = qdb.y();
+              // db.z() = qdb.z();
+              //
+              // da = xda;
             })
 
 // TRACTOR_OP(vec_to_quat, (const Vector3<T> &a), {

@@ -94,35 +94,42 @@ template <class T> Vector3<T> operator*(const Pose<T> &a, const Vector3<T> &b) {
 
 template <class T>
 Pose<T> angle_axis_pose(const T &angle, const Vector3<T> &axis) {
-  Pose<T> ret;
-  ret.translation().setZero();
-  auto &quat = ret.orientation();
-  T s = sin(angle * T(0.5));
-  T c = cos(angle * T(0.5));
-  quat.x() = axis.x() * s;
-  quat.y() = axis.y() * s;
-  quat.z() = axis.z() * s;
-  quat.w() = c;
-  return ret;
+  // Pose<T> ret;
+  // ret.translation().setZero();
+  // auto &quat = ret.orientation();
+  // T s = sin(angle * T(0.5));
+  // T c = cos(angle * T(0.5));
+  // quat.x() = axis.x() * s;
+  // quat.y() = axis.y() * s;
+  // quat.z() = axis.z() * s;
+  // quat.w() = c;
+  // return ret;
+  return Pose<T>(Vector3<T>::Zero(), angle_axis_quat(angle, axis));
 }
 
-template <class T>
-Pose<T> pose_angle_axis_pose(const Pose<T> &parent, const T &angle,
-                             const Vector3<T> &axis) {
-
-  Quaternion<T> quat;
-  T s = sin(angle * T(0.5));
-  T c = cos(angle * T(0.5));
-  quat.x() = axis.x() * s;
-  quat.y() = axis.y() * s;
-  quat.z() = axis.z() * s;
-  quat.w() = c;
-
-  Pose<T> ret;
-  ret.translation() = parent.translation();
-  ret.orientation() = parent.orientation() * quat;
-  return ret;
+template <class Pose, class Angle, class Vec3>
+Pose pose_angle_axis_pose(const Pose &parent, const Angle &angle,
+                          const Vec3 &axis) {
+  return parent * angle_axis_pose(angle, axis);
 }
+
+// template <class T>
+// Pose<T> pose_angle_axis_pose(const Pose<T> &parent, const T &angle,
+//                              const Vector3<T> &axis) {
+//
+//   Quaternion<T> quat;
+//   T s = sin(angle * T(0.5));
+//   T c = cos(angle * T(0.5));
+//   quat.x() = axis.x() * s;
+//   quat.y() = axis.y() * s;
+//   quat.z() = axis.z() * s;
+//   quat.w() = c;
+//
+//   Pose<T> ret;
+//   ret.translation() = parent.translation();
+//   ret.orientation() = parent.orientation() * quat;
+//   return ret;
+// }
 
 template <class T> Vector3<T> pose_translation(const Pose<T> &pose) {
   return pose.translation();
