@@ -28,18 +28,23 @@ def f():
         if isinstance(joint_model, tg.FloatingJointModel):
             tr.variable(joint_state.pose)
     link_states = robot_model.forward_kinematics(joint_states)
-    #tr.goal(tr.residual(link_states.link_pose("object"), object_goal_pose))
-    #tr.goal(tr.pose_translation(link_states.link_pose("object")) - tr.pose_translation(object_goal_pose))
+    tr.goal(tr.residual(link_states.link_pose("object"), object_goal_pose))
+    #tr.goal(tr.residual(object_goal_pose, link_states.link_pose("object")))
+    # ro = tr.unpack(tr.pose_orientation(link_states.link_pose("object")))
+    # rg = tr.unpack(tr.pose_orientation(object_goal_pose))
+    # for i in range(4):
+    #     tr.goal(ro[i] - rg[i])
+    # tr.goal(tr.pose_translation(link_states.link_pose("object")) - tr.pose_translation(object_goal_pose))
     #tr.goal(tr.quat_residual(tr.quat_inverse(tr.pose_orientation(link_states.link_pose("object"))) * tr.pose_orientation(object_goal_pose)) * tt.Scalar(0.05))
-    for v in [
-        tg.Vector3(+1,0,0),
-        tg.Vector3(0,+1,0),
-        tg.Vector3(0,0,+1),
-        tg.Vector3(-1,0,0),
-        tg.Vector3(0,-1,0),
-        tg.Vector3(0,0,-1),
-    ]:
-        tr.goal((tr.inverse(link_states.link_pose("object")) * object_goal_pose) * v - v)
+    # for v in [
+    #     tg.Vector3(+1,0,0),
+    #     tg.Vector3(0,+1,0),
+    #     tg.Vector3(0,0,+1),
+    #     tg.Vector3(-1,0,0),
+    #     tg.Vector3(0,-1,0),
+    #     tg.Vector3(0,0,-1),
+    # ]:
+    #     tr.goal((tr.inverse(link_states.link_pose("object")) * object_goal_pose) * v - v)
     collision = tr.collide(
         link_states.link_pose("object"),
         collision_robot.link("object"),

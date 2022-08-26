@@ -9,22 +9,38 @@ import tractor
 import inspect
 import tractor.types_double as tt
 
+#t.logger.verbosity = 1000
+t.debug()
+
 class Tests:
 
     def pose_translation(self, tg):
-
-        pass
+        pos = tg.Vector3()
+        t.variable(pos)
+        xyzw = [tt.Scalar(1) for i in range(4)]
+        for v in xyzw: t.variable(v)
+        #q = tg.Orientation(xyzw)
+        q = tg.Orientation([v * tt.Scalar(10) for v in xyzw])
+        pose = tg.Pose(pos, q)
+        t.goal(t.translation(pose))
 
     def pose_orientation(self, tg):
-
-        pass
+        pos = tg.Vector3()
+        t.variable(pos)
+        xyzw = [tt.Scalar(1) for i in range(4)]
+        for v in xyzw: t.variable(v)
+        #q = tg.Orientation(xyzw)
+        q = tg.Orientation([v * tt.Scalar(10) for v in xyzw])
+        pose = tg.Pose(pos, q)
+        t.goal(t.residual(t.orientation(pose)))
 
     def pose_residual(self, tg):
         pos = tg.Vector3()
         t.variable(pos)
         xyzw = [tt.Scalar(1) for i in range(4)]
         for v in xyzw: t.variable(v)
-        q = tg.Orientation(xyzw)
+        #q = tg.Orientation(xyzw)
+        q = tg.Orientation([v * tt.Scalar(10) for v in xyzw])
         pose = tg.Pose(pos, q)
         t.goal(t.residual(pose))
 
@@ -66,7 +82,7 @@ class Tests:
     def quat_pack_residual(self, tg):
         xyzw = [tt.Scalar() for i in range(4)]
         for v in xyzw: t.variable(v)
-        t.goal(t.residual(tg.Orientation(xyzw)))
+        t.goal(t.residual(tg.Orientation([v * tt.Scalar(10) for v in xyzw])))
 
     def make_pose(self, tg):
         pos = tg.Vector3()
@@ -99,7 +115,7 @@ class Tests:
         t.variable(twist_t)
         t.variable(twist_r)
 
-        twist = tg.Twist(twist_t, twist_r)
+        twist = tg.Twist(twist_t, twist_r) * tt.Scalar(10)
 
         w = tg.Vector3()
         t.variable(w)
@@ -142,7 +158,7 @@ class Tests:
         v = tg.Vector3()
         t.variable(v)
 
-        q = tg.Orientation().identity + v
+        q = tg.Orientation().identity + v * tt.Scalar(10)
 
         w = tg.Vector3()
         t.variable(w)
@@ -429,38 +445,38 @@ class Tests:
             vec = orientation * vec + vec
         t.goal(vec)
 
-    # def fail(self, tg):
+    def test_sin(self, tg):
+        a = tt.Scalar()
+        t.variable(a)
+        t.goal(t.sin(a))
+
+    # def test_fail(self, tg):
     #     a = tt.Scalar()
     #     b = tt.Scalar()
     #     t.variable(a)
     #     t.variable(b)
-    #     x = t.add_random_normal(a, b)
-    #     t.goal(x)
+    #     t.goal(t.add_random_normal(a, b))
 
 engine = tractor.DefaultEngine()
 
-class Variant:
+class Tester:
 
-    def __init__(self, function, module):
-        self.program = tractor.record(lambda: function(module))
-        # print self.program
+    def __init__(self, function):
+        self.function = function
+        self.program = tractor.record(lambda: function(tractor.types_double_twist))
         self.derivatives = tractor.derive(self.program)
         self.x_compute = engine.compile(self.program)
         self.x_prepare = engine.compile(self.derivatives.prepare)
         self.x_forward = engine.compile(self.derivatives.forward)
         self.x_reverse = engine.compile(self.derivatives.reverse)
         self.scalar_size = 8
-        self.memory_forward = engine.createMemory()
-        self.memory_reverse = engine.createMemory()
+        self.memory = engine.createMemory()
 
     def make_compute_input(self):
         return np.random.normal(size=self.x_compute.input_buffer_size/self.scalar_size) * 1
 
     def make_forward_input(self):
         return np.random.normal(size=self.x_forward.input_buffer_size/self.scalar_size) * 1
-
-    def make_reverse_input(self):
-        return np.random.normal(size=self.x_reverse.input_buffer_size/self.scalar_size) * 1
 
     def run_compute_m(self, input, memory):
         self.x_compute.input(input, memory)
@@ -469,100 +485,59 @@ class Variant:
         return np.frombuffer(self.x_compute.output(memory), dtype=np.double)
 
     def run_compute(self, input):
-        self.run_compute_m(input, self.memory_forward)
-        return self.run_compute_m(input, self.memory_reverse)
+        self.run_compute_m(input, self.memory)
+        return self.run_compute_m(input, self.memory)
 
     def run_forward(self, input):
-        self.x_forward.input(input, self.memory_forward)
-        self.x_forward.execute(self.memory_forward)
-        return np.frombuffer(self.x_forward.output(self.memory_forward), dtype=np.double)
+        self.x_forward.input(input, self.memory)
+        self.x_forward.execute(self.memory)
+        return np.frombuffer(self.x_forward.output(self.memory), dtype=np.double)
 
-    def run_reverse(self, input):
-        self.x_reverse.input(input, self.memory_reverse)
-        self.x_reverse.execute(self.memory_reverse)
-        return np.frombuffer(self.x_reverse.output(self.memory_reverse), dtype=np.double)
+    def run(self):
 
-    def run(self, compute_input, forward_input, reverse_input):
-        ret_compute = self.run_compute(compute_input)
-        ret_forward = self.run_forward(forward_input)
-        ret_reverse = self.run_reverse(reverse_input)
-        return [
-            ret_compute,
-            ret_forward,
-            ret_reverse,
-            ]
+        for rep in range(100):
 
-class GradientTester:
+            delta = 1e-5
 
-    def __init__(self, modules):
-        self.modules = modules
-        self.modes = ["compute", "forward", "reverse"]
+            value = self.make_compute_input()
+            #self.run_compute(value)
 
-    def check_output(self, a, b):
-        assert(len(a) == len(b))
-        ret = [ ]
-        for imode in range(len(a)):
-            #print np.sqrt(np.mean(np.square(a[imode] - b[imode])))
-            ok = np.allclose(a[imode], b[imode])
-            #if imode == 0: ok = False
-            #print (self.modes[imode].rjust(8)+":"+("\033[92m"+"OK   "+"\033[0m" if ok else "\033[1m"+"\033[91m"+"ERROR"+"\033[0m")),
-            #print (self.modes[imode]+":"+("\033[1m"+"\033[92m"+"OK"+"\033[0m" if ok else "\033[1m"+"\033[91m"+"ERROR"+"\033[0m").ljust(20,".")),
-            #all_ok = all_ok and ok
-            ret.append(ok)
-        return np.array(ret, dtype=bool)
+            input_gradient = self.make_forward_input()
 
-    def check_outputs(self, outputs):
-        all_ok = True
-        for ivar in range(1, len(outputs)):
-            all_ok = all_ok and self.check_output(outputs[0], outputs[ivar])
-        return all_ok
+            #output_gradient = self.run_forward(input_gradient)
 
-    def test(self, function):
-        print (function.__name__+"").ljust(25, "."),
+            #numeric_gradient = (self.run_compute(value + input_gradient * (delta * 0.5)) - self.run_compute(value - input_gradient * (delta * 0.5))) * (1 / delta)
 
-        variants = [Variant(function, m) for m in self.modules]
-        all_ok = np.full(len(self.modes), True, dtype=bool)
+            input_value_a = value + input_gradient * (delta * 0.5)
+            output_value_a = self.run_compute(input_value_a)
+            output_gradient_a = self.run_forward(input_gradient)
 
-        for i in range(100):
+            input_value_b = value - input_gradient * (delta * 0.5)
+            output_value_b = self.run_compute(input_value_b)
+            output_gradient_b = self.run_forward(input_gradient)
 
-            compute_input = variants[0].make_compute_input()
-            forward_input = variants[0].make_forward_input()
-            reverse_input = variants[0].make_reverse_input()
+            numeric_gradient = (output_value_a - output_value_b) * (1.0 / delta)
 
-            outputs = [v.run(compute_input, forward_input, reverse_input) for v in variants]
-            ok = self.check_outputs(outputs)
+            output_gradient = (output_gradient_a + output_gradient_b) * 0.5
 
-            if not ok.all():
-                for imode in range(3):
-                    print ""
-                    print " ", self.modes[imode], function.__name__
-                    for o in outputs:
-                        print "".join(["%.3f".rjust(7) % v for v in o[imode]])
-                    print ""
+            ok = np.allclose(output_gradient, numeric_gradient)
 
-            all_ok = (all_ok & ok)
+            if not ok:
+                print ""
+                print (self.function.__name__+"").ljust(25, ".") + " " + "\033[1m"+"\033[91m"+"ERROR"+"\033[0m"
+                print "iteration        ", rep
+                print "current value    ", value
+                print "output value a   ", output_value_a
+                print "output value b   ", output_value_b
+                print "input gradient   ", input_gradient
+                print "output gradient a", output_gradient_a
+                print "output gradient b", output_gradient_b
+                print "numeric gradient ", numeric_gradient
+                print ""
+                return
 
-            if not ok.all():
-                break
+        print (self.function.__name__+"").ljust(25, ".") + " " + "\033[1m"+"\033[92m"+"OK"+"\033[0m"
 
-        for imode in range(len(self.modes)):
-            ok = all_ok[imode]
-            print (self.modes[imode]+":"+("\033[1m"+"\033[92m"+"OK"+"\033[0m" if ok else "\033[1m"+"\033[91m"+"ERROR"+"\033[0m").ljust(20,".")),
-        print ""
-
-        # if not all_ok:
-        #     print ""
-        #     for imode in range(3):
-        #         print " ", self.modes[imode]
-        #         for o in outputs:
-        #             print "".join(["%.3f".rjust(7) % v for v in o[imode]])
-        #         print ""
-
-modules = [
-    tractor.types_double_twist,
-    tractor.types_double_scalar,
-]
-
-tester = GradientTester(modules)
 for m in inspect.getmembers(Tests(), predicate=inspect.ismethod):
-    tester.test(m[1])
+    #print m[1]
+    Tester(m[1]).run()

@@ -674,14 +674,30 @@ TRACTOR_D(reverse, quat_pack,
 
 template <class T> T quat_residual_gradient(const T &x) {
 
+  // typedef typename BatchScalar<T>::Type S;
+  // T y;
+  // makeBatchLoop([](const S &x, S &y) {
+  //   if (x >= S(1)) {
+  //     y = S(-2) / S(3);
+  //   } else {
+  //     S r = S(1) - x * x;
+  //     y = S(2) * x * acos(x) / (r * sqrt(r)) - S(2) / (S(1) - x * x);
+  //   }
+  // }).run(x, y);
+  // return y;
+
   typedef typename BatchScalar<T>::Type S;
   T y;
   makeBatchLoop([](const S &x, S &y) {
-    if (x >= S(1)) {
-      y = S(-2) / S(3);
+    if (x < S(0)) {
+      y = quat_residual_gradient(-x);
     } else {
-      S r = S(1) - x * x;
-      y = S(2) * x * acos(x) / (r * sqrt(r)) - S(2) / (S(1) - x * x);
+      if (x < S(1)) {
+        S r = S(1) - x * x;
+        y = S(2) * x * acos(x) / (r * sqrt(r)) - S(2) / (S(1) - x * x);
+      } else {
+        y = S(-2) / S(3);
+      }
     }
   }).run(x, y);
   return y;
@@ -695,13 +711,28 @@ template <class T>
 auto quat_residual_factor(const T &x) ->
     typename std::enable_if<!IsVar<T>::value, T>::type {
 
+  // typedef typename BatchScalar<T>::Type S;
+  // T y;
+  // makeBatchLoop([](const S &x, S &y) {
+  //   if (x >= S(1)) {
+  //     y = S(2);
+  //   } else {
+  //     y = S(2) * acos(x) / sqrt(S(1) - x * x);
+  //   }
+  // }).run(x, y);
+  // return y;
+
   typedef typename BatchScalar<T>::Type S;
   T y;
   makeBatchLoop([](const S &x, S &y) {
-    if (x >= S(1)) {
-      y = S(2);
+    if (x < S(0)) {
+      y = -quat_residual_factor(-x);
     } else {
-      y = S(2) * acos(x) / sqrt(S(1) - x * x);
+      if (x < S(1)) {
+        y = S(2) * acos(x) / sqrt(S(1) - x * x);
+      } else {
+        y = S(2);
+      }
     }
   }).run(x, y);
   return y;
@@ -736,14 +767,19 @@ TRACTOR_D(reverse, quat_residual_factor, (const T &p, T &da, const T &dx),
 
 // -------------------------------------------------------------------------
 
+// template <class T>
+// Quaternion<T>
+
+// -------------------------------------------------------------------------
+
 // TRACTOR_OP(quat_residual, (const Quaternion<T> &a), { return a.vec() *
 // T(2);
 // })
 
 // TRACTOR_OP(quat_residual, (const Quaternion<T> &a),
 //            { return quat_residual(a); })
-// TRACTOR_D(prepare, quat_residual, (const Quaternion<T> &a, const Vector3<T>
-// &x),
+// TRACTOR_D(prepare, quat_residual, (const Quaternion<T> &a, const
+// Vector3<T> &x),
 //           {})
 // TRACTOR_D(forward, quat_residual, (const Vector3<T> &a, Vector3<T> &x),
 //           { x = a; })
@@ -1942,14 +1978,18 @@ template <class T> Pose<T> operator+(const Pose<T> &a, const Twist<T> &b) {
   //                                         *
   //                a.orientation());
   // return ret;
-  Quaternion<T> qb =
-      normalized(normalized(Quaternion<T>(b.rotation().x() * T(0.5), //
-                                          b.rotation().y() * T(0.5), //
-                                          b.rotation().z() * T(0.5), //
-                                          T(1.0)                     //
-                                          )));
-  Pose<T> pb = Pose(b.translation(), qb);
-  return pb * a;
+
+  // Quaternion<T> qb =
+  //     normalized(normalized(Quaternion<T>(b.rotation().x() * T(0.5), //
+  //                                         b.rotation().y() * T(0.5), //
+  //                                         b.rotation().z() * T(0.5), //
+  //                                         T(1.0)                     //
+  //                                         )));
+  // Pose<T> pb = Pose(b.translation(), qb);
+  // return pb * a;
+
+  return Pose<T>(a.position() + b.translation(),
+                 a.orientation() + b.rotation());
 }
 
 TRACTOR_OP_T(pose_twist, add, (const Pose<T> &a, const Twist<T> &b), {
@@ -2004,8 +2044,11 @@ TRACTOR_D_T(forward, pose_twist, add,
 
               dx.rotation() = dqb + v.bqn * da.rotation();
 
-              dx.translation() = db.translation() + v.bqn * da.translation() +
-                                 cross(dqb, v.bqn * v.at);
+              // dx.translation() = db.translation() + v.bqn * da.translation()
+              // +
+              //                    cross(dqb, v.bqn * v.at);
+
+              dx.translation() = da.translation() + db.translation();
 
               // dx = va * db + cross(da, va * vb);
 
@@ -2048,7 +2091,7 @@ TRACTOR_D_T(reverse, pose_twist, add,
 
               Vector3<T> rot = dx.rotation();
 
-              rot += cross(v.bqn * v.at, dx.translation());
+              // rot += cross(v.bqn * v.at, dx.translation());
 
               Quaternion<T> qdb = quat_pack_reverse(v.bqn, T(1), rot * v.bqfh);
 
@@ -2058,7 +2101,8 @@ TRACTOR_D_T(reverse, pose_twist, add,
 
               db.translation() = dx.translation();
 
-              da.translation() = v.bqn.inverse() * dx.translation();
+              // da.translation() = v.bqn.inverse() * dx.translation();
+              da.translation() = dx.translation();
             })
 
 // -------------------------------------------------------------------------
