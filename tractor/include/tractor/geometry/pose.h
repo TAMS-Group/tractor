@@ -4,7 +4,6 @@
 
 #include <tractor/core/batch.h>
 #include <tractor/geometry/quaternion.h>
-#include <tractor/geometry/twist.h>
 #include <tractor/geometry/vector3.h>
 
 namespace tractor {
@@ -146,13 +145,6 @@ template <class T> Pose<T> translation_pose(const Vector3<T> &translation) {
   pose.translation() = translation;
   pose.orientation().setIdentity();
   return pose;
-}
-
-template <class T> Twist<T> translation_twist(const Vector3<T> &translation) {
-  Twist<T> twist;
-  twist.translation() = translation;
-  twist.rotation().setZero();
-  return twist;
 }
 
 template <class T> Pose<T> orientation_pose(const Quaternion<T> &orientation) {

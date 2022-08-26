@@ -138,6 +138,13 @@ template <class T> inline Vector3<T> twist_rotation(const Twist<T> &twist) {
   return twist.rotation();
 }
 
+template <class T> Twist<T> translation_twist(const Vector3<T> &translation) {
+  Twist<T> twist;
+  twist.translation() = translation;
+  twist.rotation().setZero();
+  return twist;
+}
+
 typedef Twist<double> Twist3d;
 typedef Twist<float> Twist3f;
 

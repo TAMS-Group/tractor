@@ -12,6 +12,16 @@ namespace tractor {
 
 template <class T> class Var;
 
+/*
+template <class Scalar> void goal(const Var<Vector3<Scalar>> &v) {
+  Var<Scalar> x, y, z;
+  vec3_unpack(v, x, y, z);
+  goal(x);
+  goal(y);
+  goal(z);
+}
+*/
+
 template <class Scalar> class Vector3 {
   Scalar _data[3];
 

@@ -4,7 +4,12 @@
 
 #include <tractor/core/eigen.h>
 #include <tractor/core/recorder.h>
+#include <tractor/geometry/matrix3_ops.h>
 #include <tractor/geometry/ops.h>
+#include <tractor/geometry/pose_ops.h>
+#include <tractor/geometry/quaternion_ops.h>
+#include <tractor/geometry/twist_ops.h>
+#include <tractor/geometry/vector3_ops.h>
 
 namespace tractor {
 

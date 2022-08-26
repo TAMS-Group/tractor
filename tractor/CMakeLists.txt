@@ -14,7 +14,7 @@ set(OPT_FLAGS -O0)
 
 # ------------------------------------------------------------------
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ASAN_FLAGS} -ffast-math -g -Wno-register -std=c++17 ${OPT_FLAGS} -mavx -U__AVX__ -fopenmp")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ASAN_FLAGS} -Wfatal-errors -ffast-math -g -Wno-register -std=c++17 ${OPT_FLAGS} -mavx -U__AVX__ -fopenmp")
 
 find_package(Bullet REQUIRED)
 
@@ -104,13 +104,19 @@ add_library(${LIBNAME}
     src/geometry/eigenmat.cpp
     src/geometry/eigenquat.cpp
     src/geometry/fast.cpp
+    src/geometry/matrix3.cpp
+    src/geometry/matrix3_ops.cpp
     src/geometry/ops.cpp
     src/geometry/plane.cpp
     src/geometry/pose.cpp
+    src/geometry/pose_ops.cpp
     src/geometry/quaternion.cpp
+    src/geometry/quaternion_ops.cpp
     src/geometry/twist.cpp
+    src/geometry/twist_ops.cpp
     src/geometry/types.cpp
     src/geometry/vector3.cpp
+    src/geometry/vector3_ops.cpp
     src/neural/layer.cpp
     src/neural/network.cpp
     src/neural/ops.cpp
