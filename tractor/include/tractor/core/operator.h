@@ -615,10 +615,10 @@ template <class T> struct OverloadSelector<Var<T>> {
 #define TRACTOR_OP_IMPL(mode, prefix, name, args, impl, postfix)               \
   TRACTOR_OP_TYPED(mode, prefix, name, args, impl, float, postfix##f)          \
   TRACTOR_OP_TYPED(mode, prefix, name, args, impl, double, postfix##d)         \
-  TRACTOR_OP_TYPED(mode, prefix, name, args, impl, uint64_t, postfix##i)       \
   TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch4f, postfix##4f)       \
   TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch4d, postfix##4d)
 
+// TRACTOR_OP_TYPED(mode, prefix, name, args, impl, uint64_t, postfix##i)       \
 // TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch8d, postfix##8d)
 // TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch16d, postfix##16d)
 

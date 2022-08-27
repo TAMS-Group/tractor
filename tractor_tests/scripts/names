@@ -2,11 +2,11 @@
 
 import tractor
 
-print dir(tractor)
+print "t", dir(tractor)
 print ""
-print dir(tractor.types_double)
+print "td", dir(tractor.types_double)
 print ""
-print dir(tractor.types_double_scalar)
+print "tds", dir(tractor.types_double_scalar)
 print ""
 
 print "intersection", set(dir(tractor.types_double)).intersection(set(dir(tractor.types_double_scalar)))
@@ -16,3 +16,5 @@ print "intersection", set(dir(tractor)).intersection(set(dir(tractor.types_doubl
 #print tractor.add.__doc__
 
 #print summary(tractor)
+
+#print tractor.cross(1, 2)

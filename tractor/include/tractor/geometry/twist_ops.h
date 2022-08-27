@@ -133,39 +133,39 @@ TRACTOR_D(reverse, make_twist,
 
 // -------------------------------------------------------------------------
 
-TRACTOR_OP(twist_unpack,
-           (const Twist<T> &v, T &tx, T &ty, T &tz, T &rx, T &ry, T &rz), {
-             tx = v.translation().x();
-             ty = v.translation().y();
-             tz = v.translation().z();
-             rx = v.rotation().x();
-             ry = v.rotation().y();
-             rz = v.rotation().z();
-           })
-TRACTOR_D(prepare, twist_unpack,
-          (const Twist<T> &v, const T &tx, const T &ty, const T &tz,
-           const T &rx, const T &ry, const T &rz),
-          {})
-TRACTOR_D(forward, twist_unpack,
-          (const Twist<T> &v, T &tx, T &ty, T &tz, T &rx, T &ry, T &rz), {
-            tx = v.translation().x();
-            ty = v.translation().y();
-            tz = v.translation().z();
-            rx = v.rotation().x();
-            ry = v.rotation().y();
-            rz = v.rotation().z();
-          })
-TRACTOR_D(reverse, twist_unpack,
-          (Twist<T> & v, const T &tx, const T &ty, const T &tz, const T &rx,
-           const T &ry, const T &rz),
-          {
-            v.translation().x() = tx;
-            v.translation().y() = ty;
-            v.translation().z() = tz;
-            v.rotation().x() = rx;
-            v.rotation().y() = ry;
-            v.rotation().z() = rz;
-          })
+// TRACTOR_OP(twist_unpack,
+//            (const Twist<T> &v, T &tx, T &ty, T &tz, T &rx, T &ry, T &rz), {
+//              tx = v.translation().x();
+//              ty = v.translation().y();
+//              tz = v.translation().z();
+//              rx = v.rotation().x();
+//              ry = v.rotation().y();
+//              rz = v.rotation().z();
+//            })
+// TRACTOR_D(prepare, twist_unpack,
+//           (const Twist<T> &v, const T &tx, const T &ty, const T &tz,
+//            const T &rx, const T &ry, const T &rz),
+//           {})
+// TRACTOR_D(forward, twist_unpack,
+//           (const Twist<T> &v, T &tx, T &ty, T &tz, T &rx, T &ry, T &rz), {
+//             tx = v.translation().x();
+//             ty = v.translation().y();
+//             tz = v.translation().z();
+//             rx = v.rotation().x();
+//             ry = v.rotation().y();
+//             rz = v.rotation().z();
+//           })
+// TRACTOR_D(reverse, twist_unpack,
+//           (Twist<T> & v, const T &tx, const T &ty, const T &tz, const T &rx,
+//            const T &ry, const T &rz),
+//           {
+//             v.translation().x() = tx;
+//             v.translation().y() = ty;
+//             v.translation().z() = tz;
+//             v.rotation().x() = rx;
+//             v.rotation().y() = ry;
+//             v.rotation().z() = rz;
+//           })
 
 TRACTOR_OP(twist_translation, (const Twist<T> &twist),
            { return twist_translation(twist); })

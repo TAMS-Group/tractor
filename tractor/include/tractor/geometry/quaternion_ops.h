@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <tractor/core/error.h>
 #include <tractor/core/operator.h>
 #include <tractor/geometry/quaternion.h>
 #include <tractor/geometry/vector3.h>
@@ -1034,59 +1035,279 @@ TRACTOR_D(reverse, angle_axis_quat,
           })
 
 // -------------------------------------------------------------------------
+//
+// template <class T>
+// Quaternion<T> operator+(const Quaternion<T> &a, const Vector3<T> &b) {
+//
+//   // return normalized(normalized(Quaternion<T>(b.x() * T(0.5), b.y() *
+//   T(0.5),
+//   //                                            b.z() * T(0.5), T(1.0))) *
+//   //                   a);
+//
+//   // return normalized(angle_axis_quat(norm(b), normalized(b)) * a);
+//
+//   return normalized(normalized(Quaternion<T>(b.x() * T(0.5), b.y() * T(0.5),
+//                                              b.z() * T(0.5), T(1))) *
+//                     a);
+//
+//   // Quaternion<T> qb = normalized(
+//   //     Quaternion<T>(b.x() * T(0.5), b.y() * T(0.5), b.z() * T(0.5),
+//   T(1)));
+//   // return normalized(qb * a);
+//
+//   // Quaternion<T> qb =
+//   //     Quaternion<T>(b.x() * T(0.5), b.y() * T(0.5), b.z() * T(0.5), T(1));
+//   // return qb * a;
+//
+//   // T angle = norm(b);
+//   // Vector3<T> axis_n = b / angle;
+//   //
+//   // T s = sin(angle * T(0.5));
+//   // T c = cos(angle * T(0.5));
+//   //
+//   // Quaternion<T> quat;
+//   //
+//   // quat.x() = axis_n.x() * s;
+//   // quat.y() = axis_n.y() * s;
+//   // quat.z() = axis_n.z() * s;
+//   // quat.w() = c;
+//   //
+//   // return quat * a;
+//
+//   // Quaternion<T> b_quat(a * b.x() * T(0.5), //
+//   //                      a * b.y() * T(0.5), //
+//   //                      a * b.z() * T(0.5), //
+//   //                      T(1));
+//
+//   // T norm = b.x() * b.x() + b.y() * b.y() + b.z() * b.z();
+//   // T angle = norm;
+//   // Vector3<T> axis = v / norm;
+//   // Quaternion<T> quat;
+//   // T s = sin(angle * T(0.5));
+//   // T c = cos(angle * T(0.5));
+//   // quat.x() = axis.x() * s;
+//   // quat.y() = axis.y() * s;
+//   // quat.z() = axis.z() * s;
+//   // quat.w() = c;
+//   // return quat;
+// }
+// template <class T>
+// Quaternion<T> &operator+=(Quaternion<T> &a, const Vector3<T> &b) {
+//   a = a + b;
+//   return a;
+// }
+// TRACTOR_OP_T(quat_vec3, add, (const Quaternion<T> &a, const Vector3<T> &b),
+//              { return a + b; })
+// // TRACTOR_D_T(prepare, quat_vec3, add,
+// //             (const Quaternion<T> &a, const Vector3<T> &b,
+// //              const Quaternion<T> &x, Quaternion<T> &va, Vector3<T> &vb),
+// //             {
+// //               va = a;
+// //               vb = b;
+// //               // T angle = norm(b);
+// //               // Vector3<T> axis = normalized(b);
+// //               // vb.axis_normalized = normalized(axis);
+// //               // vb.sin_angle_by_axis_length = T(sin(angle)) / norm(axis);
+// //               // vb.cos_angle_minus_one_by_axis_length =
+// //               //     (T(cos(angle)) - T(1)) / norm(axis);
+// //             })
+// template <class T> struct QuatVec3AddLinearization {
+//   Quaternion<T> bqn;
+//   T bqfh;
+// };
+// TRACTOR_D_T(prepare, quat_vec3, add,
+//             (const Quaternion<T> &a, const Vector3<T> &b,
+//              const Quaternion<T> &x, QuatVec3AddLinearization<T> &v),
+//             {
+//               Quaternion<T> bq = Quaternion<T>(b.x() * T(0.5), //
+//                                                b.y() * T(0.5), //
+//                                                b.z() * T(0.5), //
+//                                                T(1)            //
+//               );
+//               T bqf = T(1) / norm(bq);
+//               v.bqn = normalized(bq);
+//               v.bqfh = bqf * T(0.5);
+//             })
+// TRACTOR_D_T(forward, quat_vec3, add,
+//             (
+//                 // const Quaternion<T> &va, const Vector3<T> &vb,
+//                 // const Quaternion<T> &vx,
+//                 const QuatVec3AddLinearization<T> &v, const Vector3<T> &da,
+//                 const Vector3<T> &db, Vector3<T> &dx),
+//             {
+//               Vector3 dqb = quat_pack_forward(v.bqn, T(1),
+//                                               Quaternion<T>(       //
+//                                                   db.x() * v.bqfh, //
+//                                                   db.y() * v.bqfh, //
+//                                                   db.z() * v.bqfh, //
+//                                                   T(0)             //
+//                                                   ));
+//               dx = dqb + v.bqn * da;
+//
+//               // Quaternion<T> vbq = Quaternion<T>(vb.x() * T(0.5), //
+//               //                                   vb.y() * T(0.5), //
+//               //                                   vb.z() * T(0.5), //
+//               //                                   T(1)             //
+//               // );
+//               // T vbqf = T(1) / norm(vbq);
+//               // Quaternion<T> vbqn = normalized(vbq);
+//               // Vector3 dqb = quat_pack_forward(vbqn,
+//               //                                 Quaternion<T>( //
+//               //                                     db.x() * T(0.5) * vbqf,
+//               //
+//               //                                     db.y() * T(0.5) * vbqf,
+//               //
+//               //                                     db.z() * T(0.5) * vbqf,
+//               //
+//               //                                     T(0) //
+//               //                                     ));
+//               // dx = dqb + vbqn * da;
+//
+//               // T f = T(1) / norm(Quaternion<T>(vb.x() * T(0.5), //
+//               //                                 vb.y() * T(0.5), //
+//               //                                 vb.z() * T(0.5), //
+//               //                                 T(1)             //
+//               //                                 ));
+//               // Quaternion<T> vbq = normalized(Quaternion<T>(vb.x() *
+//               T(0.5),
+//               // //
+//               //                                              vb.y() *
+//               T(0.5),
+//               //                                              // vb.z() *
+//               //                                              T(0.5), // T(1)
+//               //
+//               //                                              ));
+//               // Vector3 dqb = quat_pack_forward(
+//               //     vbq, Quaternion<T>(db.x() * T(0.5) * f, db.y() * T(0.5)
+//               *
+//               //     f,
+//               //                        db.z() * T(0.5) * f, T(0)));
+//               // dx = dqb + vbq * da;
+//
+//               // Vector3<T> d_axis_p =
+//               //     (d_axis - v.axis_normalized * dot(v.axis_normalized,
+//               //     d_axis));
+//               //
+//               // d_rot = v.axis_normalized * d_angle             //
+//               //         + d_axis_p * v.sin_angle_by_axis_length //
+//               //         + cross(d_axis_p, v.axis_normalized) *
+//               //               v.cos_angle_minus_one_by_axis_length;
+//
+//               // x = a + b;
+//               // Quaternion<T> qvb = normalized(Quaternion<T>(
+//               //     vb.x() * T(0.5), vb.y() * T(0.5), vb.z() * T(0.5),
+//               T(1)));
+//               //
+//               // // dx = qvb * da + db * va;
+//               //
+//               // // dx = qvb * da + va.inverse() * db;
+//               // // dx = qvb * da + db;
+//               //
+//               // dx = qvb * da + db * va;
+//
+//               // static auto q = [](const Vector3<T> &v) {
+//               //   return Quaternion<T>(v.x() * T(0.5), v.y() * T(0.5),
+//               //                        v.z() * T(0.5), T(1.0));
+//               // };
+//               //
+//               // Quaternion<T> qdx = q(vb + db) * q(da) * va * vx.inverse();
+//               //
+//               // dx.x() = qdx.x() * T(2.0);
+//               // dx.y() = qdx.y() * T(2.0);
+//               // dx.z() = qdx.z() * T(2.0);
+//             })
+// TRACTOR_D_T(reverse, quat_vec3, add,
+//             (const QuatVec3AddLinearization<T> &v, Vector3<T> &da,
+//              Vector3<T> &db, const Vector3<T> &dx),
+//             {
+//               // da.setZero();
+//               // db.setZero();
+//
+//               da = v.bqn.inverse() * dx;
+//               Quaternion<T> qdb = quat_pack_reverse(v.bqn, T(1), dx *
+//               v.bqfh); db.x() = qdb.x(); db.y() = qdb.y(); db.z() = qdb.z();
+//
+//               // Vector3<T> xdb = dx;
+//               // Vector3<T> xda = v.bqn.inverse() * dx;
+//               //
+//               // Quaternion<T> qdb = quat_pack_reverse(v.bqn,
+//               //                                       Vector3<T>( //
+//               //                                           xdb.x() * v.bqfh,
+//               //
+//               //                                           xdb.y() * v.bqfh,
+//               //
+//               //                                           xdb.z() * v.bqfh
+//               //
+//               //                                           ));
+//               //
+//               // db.x() = qdb.x();
+//               // db.y() = qdb.y();
+//               // db.z() = qdb.z();
+//               //
+//               // da = xda;
+//             })
+
+template <class T>
+auto sinc(const T &x) -> typename std::enable_if<!IsVar<T>::value, T>::type {
+  typedef typename BatchScalar<T>::Type S;
+  T y;
+  makeBatchLoop([](const S &x, S &y) {
+    if (x != S(0)) {
+      y = S(sin(x)) / x;
+    } else {
+      y = S(1);
+    }
+  }).run(x, y);
+  return y;
+}
+
+template <class T>
+auto sinc_gradient(const T &x) ->
+    typename std::enable_if<!IsVar<T>::value, T>::type {
+  typedef typename BatchScalar<T>::Type S;
+  T y;
+  makeBatchLoop([](const S &x, S &y) {
+    if (x != S(0)) {
+      y = (x * cos(x) - sin(x)) / (x * x);
+    } else {
+      y = S(0);
+    }
+  }).run(x, y);
+  return y;
+}
+
+template <class T>
+auto quat_vec_add_gradient(const T &x) ->
+    typename std::enable_if<!IsVar<T>::value, T>::type {
+  typedef typename BatchScalar<T>::Type S;
+  T y;
+  makeBatchLoop([](const S &x, S &y) {
+    if (x != S(0)) {
+      y = sinc_gradient(x * S(0.5)) / x * S(0.25);
+    } else {
+      y = S(1) / S(3) * S(0.25);
+    }
+  }).run(x, y);
+  return y;
+}
+
+TRACTOR_OP(sinc, (const T &a), { return sinc(a); })
+TRACTOR_D(prepare, sinc, (const T &a, const T &x, T &p),
+          { p = sinc_gradient(a); })
+TRACTOR_D(forward, sinc, (const T &p, const T &da, T &dx), { dx = da * p; })
+TRACTOR_D(reverse, sinc, (const T &p, T &da, const T &dx), { da = dx * p; })
 
 template <class T>
 Quaternion<T> operator+(const Quaternion<T> &a, const Vector3<T> &b) {
-
-  // return normalized(normalized(Quaternion<T>(b.x() * T(0.5), b.y() * T(0.5),
-  //                                            b.z() * T(0.5), T(1.0))) *
-  //                   a);
-
-  // return normalized(angle_axis_quat(norm(b), normalized(b)) * a);
-
-  return normalized(normalized(Quaternion<T>(b.x() * T(0.5), b.y() * T(0.5),
-                                             b.z() * T(0.5), T(1))) *
-                    a);
-
-  // Quaternion<T> qb = normalized(
-  //     Quaternion<T>(b.x() * T(0.5), b.y() * T(0.5), b.z() * T(0.5), T(1)));
-  // return normalized(qb * a);
-
-  // Quaternion<T> qb =
-  //     Quaternion<T>(b.x() * T(0.5), b.y() * T(0.5), b.z() * T(0.5), T(1));
-  // return qb * a;
-
-  // T angle = norm(b);
-  // Vector3<T> axis_n = b / angle;
-  //
-  // T s = sin(angle * T(0.5));
-  // T c = cos(angle * T(0.5));
-  //
-  // Quaternion<T> quat;
-  //
-  // quat.x() = axis_n.x() * s;
-  // quat.y() = axis_n.y() * s;
-  // quat.z() = axis_n.z() * s;
-  // quat.w() = c;
-  //
-  // return quat * a;
-
-  // Quaternion<T> b_quat(a * b.x() * T(0.5), //
-  //                      a * b.y() * T(0.5), //
-  //                      a * b.z() * T(0.5), //
-  //                      T(1));
-
-  // T norm = b.x() * b.x() + b.y() * b.y() + b.z() * b.z();
-  // T angle = norm;
-  // Vector3<T> axis = v / norm;
-  // Quaternion<T> quat;
-  // T s = sin(angle * T(0.5));
-  // T c = cos(angle * T(0.5));
-  // quat.x() = axis.x() * s;
-  // quat.y() = axis.y() * s;
-  // quat.z() = axis.z() * s;
-  // quat.w() = c;
-  // return quat;
+  T angle = norm(b);
+  T f = sinc(angle * T(0.5)) * T(0.5);
+  T c = cos(angle * T(0.5));
+  Quaternion<T> quat;
+  quat.x() = b.x() * f;
+  quat.y() = b.y() * f;
+  quat.z() = b.z() * f;
+  quat.w() = c;
+  return quat * a;
 }
 template <class T>
 Quaternion<T> &operator+=(Quaternion<T> &a, const Vector3<T> &b) {
@@ -1095,144 +1316,126 @@ Quaternion<T> &operator+=(Quaternion<T> &a, const Vector3<T> &b) {
 }
 TRACTOR_OP_T(quat_vec3, add, (const Quaternion<T> &a, const Vector3<T> &b),
              { return a + b; })
-// TRACTOR_D_T(prepare, quat_vec3, add,
-//             (const Quaternion<T> &a, const Vector3<T> &b,
-//              const Quaternion<T> &x, Quaternion<T> &va, Vector3<T> &vb),
-//             {
-//               va = a;
-//               vb = b;
-//               // T angle = norm(b);
-//               // Vector3<T> axis = normalized(b);
-//               // vb.axis_normalized = normalized(axis);
-//               // vb.sin_angle_by_axis_length = T(sin(angle)) / norm(axis);
-//               // vb.cos_angle_minus_one_by_axis_length =
-//               //     (T(cos(angle)) - T(1)) / norm(axis);
-//             })
 template <class T> struct QuatVec3AddLinearization {
-  Quaternion<T> bqn;
-  T bqfh;
+  // Quaternion<T> a;
+  Vector3<T> b;
+  // Vector3<T> b_n;
+  Quaternion<T> quat;
+  T sgradn;
+  // T msinan;
+  T f;
+  // T c;
 };
 TRACTOR_D_T(prepare, quat_vec3, add,
             (const Quaternion<T> &a, const Vector3<T> &b,
              const Quaternion<T> &x, QuatVec3AddLinearization<T> &v),
             {
-              Quaternion<T> bq = Quaternion<T>(b.x() * T(0.5), //
-                                               b.y() * T(0.5), //
-                                               b.z() * T(0.5), //
-                                               T(1)            //
-              );
-              T bqf = T(1) / norm(bq);
-              v.bqn = normalized(bq);
-              v.bqfh = bqf * T(0.5);
+              T angle = norm(b);
+              T f = sinc(angle * T(0.5)) * T(0.5);
+              T c = cos(angle * T(0.5));
+              Quaternion<T> quat;
+              quat.x() = b.x() * f;
+              quat.y() = b.y() * f;
+              quat.z() = b.z() * f;
+              quat.w() = c;
+              // v.a = a;
+              v.b = b;
+              // v.b_n = normalized(b);
+              v.quat = quat;
+              // v.sgrad = sinc_gradient(angle * T(0.5));
+              // v.msina = -sin(angle * T(0.5));
+              // if (angle == T(0)) {
+              //   v.sgradn = T(1) / T(3) * T(0.25);
+              // } else {
+              //   v.sgradn = sinc_gradient(angle * T(0.5)) / angle * T(0.25);
+              // }
+              v.sgradn = quat_vec_add_gradient(angle);
+              // v.msinan = -sin(angle * T(0.5)) / angle;
+              // v.msinan = sinc(angle * T(0.5)) * T(0.5) * T(-0.5);
+              v.f = f;
+              // v.c = c;
+              // TRACTOR_ASSERT(std::isfinite(angle));
+              // TRACTOR_ASSERT(std::isfinite(f));
+              // TRACTOR_ASSERT(std::isfinite(c));
             })
 TRACTOR_D_T(forward, quat_vec3, add,
-            (
-                // const Quaternion<T> &va, const Vector3<T> &vb,
-                // const Quaternion<T> &vx,
-                const QuatVec3AddLinearization<T> &v, const Vector3<T> &da,
-                const Vector3<T> &db, Vector3<T> &dx),
+            (const QuatVec3AddLinearization<T> &v, const Vector3<T> &da,
+             const Vector3<T> &db, Vector3<T> &dx),
             {
-              Vector3 dqb = quat_pack_forward(v.bqn, T(1),
-                                              Quaternion<T>(       //
-                                                  db.x() * v.bqfh, //
-                                                  db.y() * v.bqfh, //
-                                                  db.z() * v.bqfh, //
-                                                  T(0)             //
-                                                  ));
-              dx = dqb + v.bqn * da;
+              T d_angle = dot(v.b, db);
 
-              // Quaternion<T> vbq = Quaternion<T>(vb.x() * T(0.5), //
-              //                                   vb.y() * T(0.5), //
-              //                                   vb.z() * T(0.5), //
-              //                                   T(1)             //
-              // );
-              // T vbqf = T(1) / norm(vbq);
-              // Quaternion<T> vbqn = normalized(vbq);
-              // Vector3 dqb = quat_pack_forward(vbqn,
-              //                                 Quaternion<T>(              //
-              //                                     db.x() * T(0.5) * vbqf, //
-              //                                     db.y() * T(0.5) * vbqf, //
-              //                                     db.z() * T(0.5) * vbqf, //
-              //                                     T(0)                    //
-              //                                     ));
-              // dx = dqb + vbqn * da;
+              T d_f = d_angle * v.sgradn;
+              // T d_c = d_angle * v.msinan;
+              T d_c = d_angle * v.f * T(-0.5);
 
-              // T f = T(1) / norm(Quaternion<T>(vb.x() * T(0.5), //
-              //                                 vb.y() * T(0.5), //
-              //                                 vb.z() * T(0.5), //
-              //                                 T(1)             //
-              //                                 ));
-              // Quaternion<T> vbq = normalized(Quaternion<T>(vb.x() * T(0.5),
-              // //
-              //                                              vb.y() * T(0.5),
-              //                                              // vb.z() *
-              //                                              T(0.5), // T(1) //
-              //                                              ));
-              // Vector3 dqb = quat_pack_forward(
-              //     vbq, Quaternion<T>(db.x() * T(0.5) * f, db.y() * T(0.5) *
-              //     f,
-              //                        db.z() * T(0.5) * f, T(0)));
-              // dx = dqb + vbq * da;
+              // Quaternion<T> v_quat;
+              // v_quat.x() = v.b.x() * v.f;
+              // v_quat.y() = v.b.y() * v.f;
+              // v_quat.z() = v.b.z() * v.f;
+              // v_quat.w() = v.c;
 
-              // Vector3<T> d_axis_p =
-              //     (d_axis - v.axis_normalized * dot(v.axis_normalized,
-              //     d_axis));
-              //
-              // d_rot = v.axis_normalized * d_angle             //
-              //         + d_axis_p * v.sin_angle_by_axis_length //
-              //         + cross(d_axis_p, v.axis_normalized) *
-              //               v.cos_angle_minus_one_by_axis_length;
+              Quaternion<T> d_quat;
+              d_quat.x() = v.b.x() * d_f + db.x() * v.f;
+              d_quat.y() = v.b.y() * d_f + db.y() * v.f;
+              d_quat.z() = v.b.z() * d_f + db.z() * v.f;
+              d_quat.w() = d_c;
 
-              // x = a + b;
-              // Quaternion<T> qvb = normalized(Quaternion<T>(
-              //     vb.x() * T(0.5), vb.y() * T(0.5), vb.z() * T(0.5), T(1)));
-              //
-              // // dx = qvb * da + db * va;
-              //
-              // // dx = qvb * da + va.inverse() * db;
-              // // dx = qvb * da + db;
-              //
-              // dx = qvb * da + db * va;
+              Vector3 d_vec = quat_pack_forward(v.quat, T(1), d_quat);
 
-              // static auto q = [](const Vector3<T> &v) {
-              //   return Quaternion<T>(v.x() * T(0.5), v.y() * T(0.5),
-              //                        v.z() * T(0.5), T(1.0));
-              // };
+              dx = d_vec + v.quat * da;
+
+              // T v_angle = norm(v.b);
+              // T d_angle = dot(normalized(v.b), db);
               //
-              // Quaternion<T> qdx = q(vb + db) * q(da) * va * vx.inverse();
+              // T v_angle_half = v_angle * T(0.5);
+              // T d_angle_half = d_angle * T(0.5);
               //
-              // dx.x() = qdx.x() * T(2.0);
-              // dx.y() = qdx.y() * T(2.0);
-              // dx.z() = qdx.z() * T(2.0);
+              // T v_f_2 = sinc(v_angle_half);
+              // T d_f_2 = d_angle_half * sinc_gradient(v_angle_half);
+              //
+              // T v_f = v_f_2 * T(0.5);
+              // T d_f = d_f_2 * T(0.5);
+              //
+              // T v_c = cos(v_angle_half);
+              // T d_c = d_angle_half * -sin(v_angle_half);
+              //
+              // Quaternion<T> v_quat;
+              // v_quat.x() = v.b.x() * v_f;
+              // v_quat.y() = v.b.y() * v_f;
+              // v_quat.z() = v.b.z() * v_f;
+              // v_quat.w() = v_c;
+              //
+              // Quaternion<T> d_quat;
+              // d_quat.x() = v.b.x() * d_f + db.x() * v_f;
+              // d_quat.y() = v.b.y() * d_f + db.y() * v_f;
+              // d_quat.z() = v.b.z() * d_f + db.z() * v_f;
+              // d_quat.w() = d_c;
+              //
+              // Vector3 d_vec = quat_pack_forward(v_quat, T(1), d_quat);
+              //
+              // dx = d_vec + v_quat * da;
             })
 TRACTOR_D_T(reverse, quat_vec3, add,
             (const QuatVec3AddLinearization<T> &v, Vector3<T> &da,
              Vector3<T> &db, const Vector3<T> &dx),
             {
-              // da.setZero();
-              // db.setZero();
+              da = v.quat.inverse() * dx;
 
-              da = v.bqn.inverse() * dx;
-              Quaternion<T> qdb = quat_pack_reverse(v.bqn, T(1), dx * v.bqfh);
-              db.x() = qdb.x();
-              db.y() = qdb.y();
-              db.z() = qdb.z();
+              Quaternion<T> d_quat = quat_pack_reverse(v.quat, T(1), dx);
 
-              // Vector3<T> xdb = dx;
-              // Vector3<T> xda = v.bqn.inverse() * dx;
-              //
-              // Quaternion<T> qdb = quat_pack_reverse(v.bqn,
-              //                                       Vector3<T>(           //
-              //                                           xdb.x() * v.bqfh, //
-              //                                           xdb.y() * v.bqfh, //
-              //                                           xdb.z() * v.bqfh  //
-              //                                           ));
-              //
-              // db.x() = qdb.x();
-              // db.y() = qdb.y();
-              // db.z() = qdb.z();
-              //
-              // da = xda;
+              db.x() = d_quat.x() * v.f;
+              db.y() = d_quat.y() * v.f;
+              db.z() = d_quat.z() * v.f;
+
+              T d_f = v.b.x() * d_quat.x() + v.b.y() * d_quat.y() +
+                      v.b.z() * d_quat.z();
+
+              T d_c = d_quat.w();
+
+              // T d_angle = d_f * v.sgradn + d_c * v.msinan;
+              T d_angle = d_f * v.sgradn + d_c * v.f * T(-0.5);
+
+              db += v.b * d_angle;
             })
 
 // TRACTOR_OP(vec_to_quat, (const Vector3<T> &a), {

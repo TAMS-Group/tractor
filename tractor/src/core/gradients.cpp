@@ -185,6 +185,10 @@ void buildGradients(const Program &src, Program &prep, Program *_fprop,
             sum_info.initialized = true;
           }
           if (sum_info.type_info != type_info) {
+            TRACTOR_FATAL("bprop sum tree data type mismatch "
+                          << sum_info.type_info.name() << " "
+                          << type_info.name() << " arg " << i << " op "
+                          << op->name());
             throw std::runtime_error("bprop sum tree data type mismatch");
           }
           if (op->arg(i).isInput()) {

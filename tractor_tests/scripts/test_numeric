@@ -56,43 +56,68 @@ class Tester:
             delta = 1e-5
 
             value = self.make_compute_input()
-            #self.run_compute(value)
+
+            if rep <= 20: value *= 0.0
 
             input_gradient = self.make_forward_input()
 
-            #output_gradient = self.run_forward(input_gradient)
+            # output_value = self.run_compute(value)
+            # output_gradient = self.run_forward(input_gradient)
+            # numeric_gradient = (self.run_compute(value + input_gradient * (delta * 0.5)) - self.run_compute(value - input_gradient * (delta * 0.5))) * (1 / delta)
 
-            #numeric_gradient = (self.run_compute(value + input_gradient * (delta * 0.5)) - self.run_compute(value - input_gradient * (delta * 0.5))) * (1 / delta)
+            # input_value_a = value + input_gradient * (delta * 0.5)
+            # output_value_a = self.run_compute(input_value_a)
+            # output_gradient_a = self.run_forward(input_gradient)
+            #
+            # input_value_b = value - input_gradient * (delta * 0.5)
+            # output_value_b = self.run_compute(input_value_b)
+            # output_gradient_b = self.run_forward(input_gradient)
+            #
+            # numeric_gradient = (output_value_a - output_value_b) * (1.0 / delta)
+            #
+            # output_gradient = (output_gradient_a + output_gradient_b) * 0.5
 
-            input_value_a = value + input_gradient * (delta * 0.5)
-            output_value_a = self.run_compute(input_value_a)
-            output_gradient_a = self.run_forward(input_gradient)
+            # ok = np.allclose(output_gradient, numeric_gradient)
 
-            input_value_b = value - input_gradient * (delta * 0.5)
-            output_value_b = self.run_compute(input_value_b)
-            output_gradient_b = self.run_forward(input_gradient)
+            input_value_0 = value - input_gradient * delta
+            input_value_1 = value
+            input_value_2 = value + input_gradient * delta
 
-            numeric_gradient = (output_value_a - output_value_b) * (1.0 / delta)
+            output_value_0 = self.run_compute(input_value_0)
+            output_value_1 = self.run_compute(input_value_1)
+            output_gradient = self.run_forward(input_gradient)
+            output_value_2 = self.run_compute(input_value_2)
 
-            output_gradient = (output_gradient_a + output_gradient_b) * 0.5
+            numeric_gradient_0 = (output_value_1 - output_value_0) * (1.0 / delta)
+            numeric_gradient_1 = (output_value_2 - output_value_1) * (1.0 / delta)
 
-            ok = np.allclose(output_gradient, numeric_gradient)
+            numeric_gradient = (numeric_gradient_1 + numeric_gradient_0) * 0.5
+
+            #okok = (np.abs(output_gradient - numeric_gradient) <= np.abs(numeric_gradient_1 - numeric_gradient_0))
+            #ok = okok.all()
+
+            uncertainty = np.max(np.abs(numeric_gradient_1 - numeric_gradient_0))
+            #print uncertainty
+            ok = np.allclose(output_gradient, numeric_gradient, atol=max(1e-08, uncertainty))
 
             if not ok:
                 print ""
-                print (self.function.__name__+"").ljust(25, ".") + " " + "\033[1m"+"\033[91m"+"ERROR"+"\033[0m"
-                print "iteration        ", rep
-                print "current value    ", value
-                print "output value a   ", output_value_a
-                print "output value b   ", output_value_b
-                print "input gradient   ", input_gradient
-                print "output gradient a", output_gradient_a
-                print "output gradient b", output_gradient_b
-                print "numeric gradient ", numeric_gradient
+                print (self.function.__name__+"").ljust(30, ".") + " " + "\033[1m"+"\033[91m"+"ERROR"+"\033[0m"
+                print "iteration          ", rep
+                print "current value      ", value
+                print "input_value_0      ", input_value_0
+                print "input_value_1      ", input_value_1
+                print "input_value_2      ", input_value_2
+                print "output_value_0     ", output_value_0
+                print "output_value_1     ", output_value_1
+                print "numeric_gradient_0 ", numeric_gradient_0
+                print "numeric_gradient_1 ", numeric_gradient_1
+                print "numeric_gradient   ", numeric_gradient
+                print "output_gradient    ", output_gradient
                 print ""
                 return
 
-        print (self.function.__name__+"").ljust(25, ".") + " " + "\033[1m"+"\033[92m"+"OK"+"\033[0m"
+        print (self.function.__name__+"").ljust(30, ".") + " " + "\033[1m"+"\033[92m"+"OK"+"\033[0m"
 
 for m in inspect.getmembers(src.tests.Tests(), predicate=inspect.ismethod):
     #print m[1]

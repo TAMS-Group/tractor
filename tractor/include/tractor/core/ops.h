@@ -17,6 +17,18 @@ using std::sin;
 using std::sqrt;
 using std::tanh;
 
+TRACTOR_OP_TYPED(
+    compute, , zero, (T & x), { x = T(0); }, uint64_t, i)
+
+TRACTOR_OP_TYPED(
+    compute, , move, (const T &a, T &x), { x = a; }, uint64_t, i)
+TRACTOR_OP_TYPED(prepare, prepare_, move, (const T &a, const T &x), {},
+                 uint64_t, i)
+TRACTOR_OP_TYPED(
+    forward, forward_, move, (const T &da, T &dx), { dx = da; }, uint64_t, i)
+TRACTOR_OP_TYPED(
+    reverse, reverse_, move, (T & da, const T &dx), { da = dx; }, uint64_t, i)
+
 TRACTOR_OP(move, (const T &a), { return a; })
 TRACTOR_D(prepare, move, (const T &a, const T &x), {})
 TRACTOR_D(forward, move, (const T &da, T &dx), { dx = da; })

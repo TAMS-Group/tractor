@@ -108,6 +108,8 @@ template <class Base> struct GeometryImpl : Base {
     return pose_translate(parent, translation);
   }
 
+  static Matrix3 inverse(const Matrix3 &mat) { return tractor::inverse(mat); }
+
   static Twist translationTwist(const Vector3 &translation) {
     return translation_twist(translation);
   }
@@ -160,6 +162,21 @@ template <class Base> struct GeometryImpl : Base {
     unpack(translation(pose), px, py, pz);
     unpack(orientation(pose), qx, qy, qz, qw);
   }
+
+  static void unpack(const Twist &twist, Vector3 &t, Vector3 &r) {
+    t = translation(twist);
+    r = rotation(twist);
+  }
+
+  static void unpack(const Pose &pose, Vector3 &p, Orientation &o) {
+    p = position(pose);
+    o = orientation(pose);
+  }
+
+  // static void unpack(const Twist &twist, Scalar &px, Scalar &py, Scalar &pz,
+  //                    Scalar &rx, Scalar &ry, Scalar &rz) {
+  //   twist_unpack(twist, px, py, pz, rx, ry, rz);
+  // }
 
   static Pose pack(const Scalar &px, const Scalar &py, const Scalar &pz,
                    const Scalar &qx, const Scalar &qy, const Scalar &qz,

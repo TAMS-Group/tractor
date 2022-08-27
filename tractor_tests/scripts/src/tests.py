@@ -9,7 +9,54 @@ import tractor
 import inspect
 import tractor.types_double as tt
 
+def var_vec3_zz(tg):
+    v = tg.Vector3()
+    t.variable(v)
+    return v
+
+def var_vec3_nn(tg):
+    v = tg.Vector3()
+    t.variable(v)
+    v += tg.Vector3(0.001,0,0)
+    return v
+
+def var_vec3_nz(tg):
+    v = tg.Vector3()
+    t.variable(v)
+    if tg == tractor.types_double_scalar:
+        v += tg.Vector3(1e-9,0,0)
+    return v
+
 class Tests:
+
+    def sinc(self, tg):
+        v = tt.Scalar()
+        t.variable(v)
+        t.goal(t.sinc(v))
+
+    def twist_unpack(self, tg):
+        twist = tg.Twist()
+        t.variable(twist)
+        p, r = t.unpack(twist)
+        t.goal(p)
+        t.goal(r)
+
+    def twist_scale(self, tg):
+        v = tg.Twist()
+        t.variable(v)
+        f = tt.Scalar()
+        t.variable(f)
+        t.goal(v * f)
+        t.goal(f * v)
+
+    def pose_unpack(self, tg):
+        twist = tg.Twist()
+        t.variable(twist)
+        twist += tg.Twist(tg.Vector3(0,0,0), tg.Vector3(0.001,0,0))
+        pose = tg.Pose.identity + twist
+        p, r = t.unpack(pose)
+        t.goal(p)
+        t.goal(t.residual(r))
 
     def pose_translation(self, tg):
         pos = tg.Vector3()
@@ -17,7 +64,7 @@ class Tests:
         xyzw = [tt.Scalar(1) for i in range(4)]
         for v in xyzw: t.variable(v)
         #q = tg.Orientation(xyzw)
-        q = tg.Orientation([v * tt.Scalar(10) for v in xyzw])
+        q = tg.Orientation([v * tt.Scalar(10) + tt.Scalar(0.01) for v in xyzw])
         pose = tg.Pose(pos, q)
         t.goal(t.translation(pose))
 
@@ -27,7 +74,7 @@ class Tests:
         xyzw = [tt.Scalar(1) for i in range(4)]
         for v in xyzw: t.variable(v)
         #q = tg.Orientation(xyzw)
-        q = tg.Orientation([v * tt.Scalar(10) for v in xyzw])
+        q = tg.Orientation([v * tt.Scalar(10) + tt.Scalar(0.01) for v in xyzw])
         pose = tg.Pose(pos, q)
         t.goal(t.residual(t.orientation(pose)))
 
@@ -37,7 +84,7 @@ class Tests:
         xyzw = [tt.Scalar(1) for i in range(4)]
         for v in xyzw: t.variable(v)
         #q = tg.Orientation(xyzw)
-        q = tg.Orientation([v * tt.Scalar(10) for v in xyzw])
+        q = tg.Orientation([v * tt.Scalar(10) + tt.Scalar(0.01) for v in xyzw])
         pose = tg.Pose(pos, q)
         t.goal(t.residual(pose))
 
@@ -49,7 +96,7 @@ class Tests:
 
         axis = t.normalized(tg.Vector3(1,6,-3))
 
-        t.goal(t.residual(tg.Orientation.angle_axis(angle, axis)))
+        t.goal(t.residual(tg.Orientation.angle_axis(angle, axis + tg.Vector3(0.0001,0,0))))
 
     def quat_residual_2(self, tg):
 
@@ -74,19 +121,19 @@ class Tests:
         axis = tg.Vector3()
         t.variable(axis)
 
-        t.goal(t.residual(tg.Orientation.angle_axis(angle, axis)))
+        t.goal(t.residual(tg.Orientation.angle_axis(angle, axis + tg.Vector3(0.0001,0,0))))
 
     def quat_pack_residual(self, tg):
         xyzw = [tt.Scalar() for i in range(4)]
         for v in xyzw: t.variable(v)
-        t.goal(t.residual(tg.Orientation([v * tt.Scalar(10) for v in xyzw])))
+        t.goal(t.residual(tg.Orientation([v * tt.Scalar(10) + tt.Scalar(0.001) for v in xyzw])))
 
     def make_pose(self, tg):
         pos = tg.Vector3()
         t.variable(pos)
         xyzw = [tt.Scalar(1) for i in range(4)]
         for v in xyzw: t.variable(v)
-        q = tg.Orientation(xyzw)
+        q = tg.Orientation([v + tt.Scalar(0.0001) for v in xyzw])
         pose = tg.Pose(pos, q)
         w = tg.Vector3()
         t.variable(w)
@@ -97,20 +144,24 @@ class Tests:
         angle = tt.Scalar()
         t.variable(angle)
 
-        axis = tg.Vector3()
-        t.variable(axis)
+        #axis = tg.Vector3()
+        #t.variable(axis)
+        axis = var_vec3_nn(tg)
 
-        quat = tg.Orientation.angle_axis(angle, axis)
+        quat = tg.Orientation.angle_axis(angle, axis + tg.Vector3(0.0001,0,0))
 
         pos = tg.Vector3()
         t.variable(pos)
 
         pose = tg.Pose(pos, quat)
 
-        twist_t = tg.Vector3([1,2,3])
-        twist_r = tg.Vector3([2,3,4])
-        t.variable(twist_t)
-        t.variable(twist_r)
+        #twist_t = tg.Vector3([1,2,3])
+        #twist_r = tg.Vector3([2,3,4])
+        #t.variable(twist_t)
+        #t.variable(twist_r)
+
+        twist_t = var_vec3_zz(tg)
+        twist_r = var_vec3_nn(tg)
 
         twist = tg.Twist(twist_t, twist_r) * tt.Scalar(10)
 
@@ -152,8 +203,9 @@ class Tests:
 
     def vec_to_quat(self, tg):
 
-        v = tg.Vector3()
-        t.variable(v)
+        #v = tg.Vector3()
+        #t.variable(v)
+        v = var_vec3_nn(tg)
 
         q = tg.Orientation().identity + v * tt.Scalar(10)
 
@@ -164,25 +216,29 @@ class Tests:
 
     def vec_to_quat_1(self, tg):
 
-        angle = tt.Scalar()
-        t.variable(angle)
+        #v = tg.Vector3()
+        #t.variable(v)
+        v = var_vec3_nn(tg)
 
-        axis = tg.Vector3()
-        t.variable(axis)
+        q = tg.Orientation.identity + v
 
-        q = tg.Orientation.angle_axis(angle, axis) + tg.Vector3(-1,3,2)
-        t.goal(q * tg.Vector3(5,1,3))
+        w = tg.Vector3()
+        t.variable(w)
+
+        t.goal(q * w)
 
     def vec_to_quat_2(self, tg):
 
         angle = tt.Scalar()
         t.variable(angle)
 
-        axis = tg.Vector3()
-        t.variable(axis)
+        #axis = tg.Vector3()
+        #t.variable(axis)
+        axis = var_vec3_nn(tg)
 
-        w = tg.Vector3()
-        t.variable(w)
+        #w = tg.Vector3()
+        #t.variable(w)
+        w = var_vec3_nn(tg)
 
         q = tg.Orientation.angle_axis(angle, axis) + w
 
@@ -194,11 +250,13 @@ class Tests:
         t.variable(angle_1)
         axis_1 = tg.Vector3()
         t.variable(axis_1)
+        axis_1 += tg.Vector3(0.01,0,0)
 
         angle_2 = tt.Scalar()
         t.variable(angle_2)
         axis_2 = tg.Vector3()
         t.variable(axis_2)
+        axis_2 += tg.Vector3(0.01,0,0)
 
         q = tg.Orientation.angle_axis(angle_1, axis_1) * tg.Orientation.angle_axis(angle_2, axis_2) + tg.Vector3(-1,3,2)
 
@@ -212,11 +270,15 @@ class Tests:
         angle = tt.Scalar()
         t.variable(angle)
 
-        axis = tg.Vector3()
-        t.variable(axis)
+        #axis = tg.Vector3()
+        #t.variable(axis)
+        #axis += tg.Vector3(0.01,0,0)
+        axis = var_vec3_nn(tg)
 
-        w = tg.Vector3()
-        t.variable(w)
+        w = var_vec3_nn(tg)
+        #w = tg.Vector3()
+        #t.variable(w)
+        #w += tg.Vector3(0.01,0,0)
 
         q = t.inverse(tg.Orientation.angle_axis(angle, axis)) + w
 
@@ -228,39 +290,33 @@ class Tests:
         x = tg.Twist(v, tg.Vector3.zero)
         t.goal(x)
 
-    def angle_axis_va_unpack(self, tg):
+    def quat_angle_axis_va_unpack(self, tg):
         a = tt.Scalar(1)
-        v = tg.Vector3([1,2,3])
-        w = tg.Vector3([2,3,4])
         t.variable(a)
-        t.variable(v)
-        t.variable(w)
+        v = var_vec3_nn(tg)
         q = tg.Orientation.angle_axis(a, v)
         q = t.unpack(q)
         for v in q:
             t.goal(v)
 
-    def angle_axis_va(self, tg):
+    def quat_angle_axis_va(self, tg):
         a = tt.Scalar(1)
-        v = tg.Vector3([1,2,3])
+        v = var_vec3_nn(tg)
         w = tg.Vector3([2,3,4])
         t.variable(a)
-        t.variable(v)
         t.variable(w)
         t.goal(tg.Orientation.angle_axis(a, v) * w)
 
-    def angle_axis_va_inv(self, tg):
+    def quat_angle_axis_va_inv(self, tg):
         a = tt.Scalar(1)
-        v = tg.Vector3([1,2,3])
+        v = var_vec3_nn(tg)
         w = tg.Vector3([2,3,4])
         t.variable(a)
-        t.variable(v)
         t.variable(w)
         t.goal(t.inverse(tg.Orientation.angle_axis(a, v)) * w)
 
-    def angle_axis_v(self, tg):
-        axis = tg.Vector3()
-        t.variable(axis)
+    def quat_angle_axis_v(self, tg):
+        axis = var_vec3_nn(tg)
         angle = tt.Scalar(1)
         testvector = tg.Vector3(0,1,0)
         t.goal(tg.Orientation.angle_axis(angle, t.normalized(axis)) * testvector - testvector)
@@ -301,9 +357,9 @@ class Tests:
         for v in xyzw: t.variable(v)
         w = tg.Vector3()
         t.variable(w)
-        t.goal(tg.Orientation(xyzw) * w)
+        t.goal(tg.Orientation([v + tt.Scalar(0.0001) for v in xyzw]) * w)
 
-    def angle_axis_a(self, tg):
+    def quat_angle_axis_a(self, tg):
         a = tt.Scalar()
         w = tg.Vector3()
         t.variable(a)
@@ -311,7 +367,7 @@ class Tests:
         v = t.normalized(tg.Vector3(1,2,3))
         t.goal(tg.Orientation.angle_axis(a, v) * w)
 
-    def angle_axis_pose_a(self, tg):
+    def pose_angle_axis_a(self, tg):
         a = tt.Scalar()
         w = tg.Vector3()
         t.variable(a)
@@ -319,39 +375,34 @@ class Tests:
         v = t.normalized(tg.Vector3(1,2,3))
         t.goal(tg.Pose.angle_axis(a, v) * w)
 
-    def angle_axis_pose_va(self, tg):
+    def pose_angle_axis_va(self, tg):
         a = tt.Scalar()
-        v = tg.Vector3()
+        v = var_vec3_nn(tg)
         w = tg.Vector3()
         t.variable(a)
-        t.variable(v)
         t.variable(w)
         t.goal(tg.Pose.angle_axis(a, v) * w)
 
-    def angle_axis_pose_p(self, tg):
+    def pose_angle_axis_p(self, tg):
 
         a = tt.Scalar()
-        v = tg.Vector3()
+        v = var_vec3_nn(tg)
         t.variable(a)
-        t.variable(v)
         pa = tg.Pose.angle_axis(a, v)
 
         a = tt.Scalar()
-        v = tg.Vector3()
+        v = var_vec3_nn(tg)
         t.variable(a)
-        t.variable(v)
         pb = tg.Pose.angle_axis(pa, a, v)
 
         a = tt.Scalar()
-        v = tg.Vector3()
+        v = var_vec3_nn(tg)
         t.variable(a)
-        t.variable(v)
         pc = tg.Pose.angle_axis(pb, a, v)
 
         a = tt.Scalar()
-        v = tg.Vector3()
+        v = var_vec3_nn(tg)
         t.variable(a)
-        t.variable(v)
         pd = t.inverse(tg.Pose.angle_axis(a, v)) * pa
 
         w = tg.Vector3()
@@ -359,18 +410,25 @@ class Tests:
 
         t.goal(pd * w)
 
-    def angle_axis_pose_inverse(self, tg):
+    def pose_angle_axis_inverse(self, tg):
 
         a = tt.Scalar()
-        v = tg.Vector3()
+        v = var_vec3_nn(tg)
         t.variable(a)
-        t.variable(v)
         p = t.inverse(tg.Pose.angle_axis(a * tt.Scalar(10), v))
 
         w = tg.Vector3()
         t.variable(w)
 
         t.goal(p * w)
+
+    def vec3_scale(self, tg):
+        v = tg.Vector3()
+        t.variable(v)
+        f = tt.Scalar()
+        t.variable(f)
+        t.goal(v * f)
+        t.goal(f * v)
 
     def vec3_unpack(self, tg):
         a = tg.Vector3()
@@ -398,13 +456,14 @@ class Tests:
     def vec3_norms(self, tg):
        a = tg.Vector3()
        t.variable(a)
-       t.goal(t.norm(a))
+       t.goal(t.norm(a + tg.Vector3(0.1,0,0)))
        t.goal(t.squaredNorm(a))
-       t.goal(t.normalized(a))
+       t.goal(t.normalized(a + tg.Vector3(0.1,0,0)))
 
     def vec3_normalize(self, tg):
        a = tg.Vector3()
        t.variable(a)
+       a += tg.Vector3(0.1,0,0)
        t.goal(t.normalized(a))
 
     def vec3_dot(self, tg):
@@ -418,11 +477,18 @@ class Tests:
         vec = tg.Vector3()
         mat1 = tg.Matrix3()
         mat2 = tg.Matrix3()
+        mat3 = tg.Matrix3()
         t.variable(vec)
         t.variable(mat1)
         t.variable(mat2)
-        vec = (mat1 + mat2) * -vec
+        t.variable(mat3)
+        vec = (mat1 + -mat2 - mat3) * -vec
         t.goal(vec)
+
+    def mat3_inverse(self, tg):
+        m = tg.Matrix3()
+        t.variable(m)
+        t.goal(t.inverse(m + tg.Matrix3.identity + tg.Matrix3.identity))
 
     def stuff(self, tg):
         vec = tg.Vector3()
@@ -442,10 +508,36 @@ class Tests:
             vec = orientation * vec + vec
         t.goal(vec)
 
-    def test_sin(self, tg):
+    def sin_cos(self, tg):
         a = tt.Scalar()
         t.variable(a)
         t.goal(t.sin(a))
+        t.goal(t.cos(a))
+        s = tt.Scalar()
+        c = tt.Scalar()
+        t.sincos(a, s, c)
+        t.variable(s)
+        t.variable(c)
+
+    def exp(self, tg):
+        a = tt.Scalar()
+        t.variable(a)
+        t.goal(t.exp(a))
+
+    def log(self, tg):
+        a = tt.Scalar()
+        t.variable(a)
+        t.goal(t.log(a * a + tt.Scalar(0.1)))
+
+    def sqrt(self, tg):
+        a = tt.Scalar()
+        t.variable(a)
+        t.goal(t.sqrt(a * a + tt.Scalar(0.001)))
+
+    def tanh(self, tg):
+        a = tt.Scalar()
+        t.variable(a)
+        t.goal(t.tanh(a))
 
     # def test_fail(self, tg):
     #     a = tt.Scalar()

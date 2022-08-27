@@ -17,7 +17,12 @@ class Variant:
     def __init__(self, function, module):
         self.program = tractor.record(lambda: function(module))
         # print self.program
-        self.derivatives = tractor.derive(self.program)
+        try:
+            self.derivatives = tractor.derive(self.program)
+        except Exception as ex:
+            print self.program
+            print ex
+            raise
         self.x_compute = engine.compile(self.program)
         self.x_prepare = engine.compile(self.derivatives.prepare)
         self.x_forward = engine.compile(self.derivatives.forward)
@@ -91,7 +96,7 @@ class GradientTester:
         return all_ok
 
     def test(self, function):
-        print (function.__name__+"").ljust(25, "."),
+        print (function.__name__+"").ljust(30, "."),
 
         variants = [Variant(function, m) for m in self.modules]
         all_ok = np.full(len(self.modes), True, dtype=bool)
@@ -101,6 +106,8 @@ class GradientTester:
             compute_input = variants[0].make_compute_input()
             forward_input = variants[0].make_forward_input()
             reverse_input = variants[0].make_reverse_input()
+
+            if i <= 20: compute_input *= 0.0
 
             outputs = [v.run(compute_input, forward_input, reverse_input) for v in variants]
             ok = self.check_outputs(outputs)

@@ -54,6 +54,8 @@ public:
     }
     return ret;
   }
+  const Scalar *data() const { return _data; }
+  Scalar *data() { return _data; }
 };
 
 template <class T> void variable(Matrix3<Var<T>> &v) {
@@ -121,6 +123,17 @@ Matrix3<T> operator+(const Matrix3<T> &a, const Matrix3<T> &b) {
   for (size_t row = 0; row < 3; row++) {
     for (size_t col = 0; col < 3; col++) {
       ret(row, col) = a(row, col) + b(row, col);
+    }
+  }
+  return ret;
+}
+
+template <class T>
+Matrix3<T> operator-(const Matrix3<T> &a, const Matrix3<T> &b) {
+  Matrix3<T> ret;
+  for (size_t row = 0; row < 3; row++) {
+    for (size_t col = 0; col < 3; col++) {
+      ret(row, col) = a(row, col) - b(row, col);
     }
   }
   return ret;

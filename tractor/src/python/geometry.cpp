@@ -53,9 +53,16 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
                py::overload_cast<const Twist &>(&Geometry::translation));
   mod_main.def("rotation",
                py::overload_cast<const Twist &>(&Geometry::rotation));
-  // mod_main.def("translation_twist",
-  //              py::overload_cast<const Vector3
-  //              &>(&Geometry::translationTwist));
+  mod_main.def("unpack", [](const Twist &twist) {
+    Vector3 t, r;
+    Geometry::unpack(twist, t, r);
+    return std::make_tuple(t, r);
+  });
+  // mod_main.def("unpack", py::overload_cast<const Twist
+  // &>(&Geometry::unpack));
+  //  mod_main.def("translation_twist",
+  //               py::overload_cast<const Vector3
+  //               &>(&Geometry::translationTwist));
 
   // -------------------------------------------------------------
   // Pose
@@ -88,6 +95,12 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
                                &Geometry::residual));
   mod_main.def("residual",
                py::overload_cast<const Pose &>(&Geometry::residual));
+  mod_main.def("unpack", [](const Pose &twist) {
+    Vector3 p;
+    Orientation o;
+    Geometry::unpack(twist, p, o);
+    return std::make_tuple(p, o);
+  });
   // mod_main.def(
   //     "residual",
   //     py::overload_cast<const Pose &,
@@ -182,6 +195,7 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
       }))
       .def(py::self * Vector3())
       .def(py::self + py::self)
+      .def(py::self - py::self)
       .def(-py::self)
       .def_property(
           "value",
@@ -205,6 +219,8 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
             }
           })
       .def(-py::self);
+  mod_main.def("inverse",
+               py::overload_cast<const Matrix3 &>(&Geometry::inverse));
 
   // -------------------------------------------------------------
   // Vector3
