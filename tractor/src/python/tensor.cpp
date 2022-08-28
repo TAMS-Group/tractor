@@ -9,10 +9,12 @@
 
 namespace tractor {
 
-template <class Scalar>
-static void pythonizeTensor(py::module main_module, py::module type_module) {
+template <class Scalar, class Enable = void> struct PythonTensorUtils;
 
-  static auto find_shape = [](const py::array_t<Scalar> &array) {
+template <class Scalar>
+struct PythonTensorUtils<
+    Scalar, typename std::enable_if_t<std::is_pod<Scalar>::value, void>::type> {
+  static TensorShape findShape(const py::array_t<Scalar> &array) {
     std::vector<size_t> ss;
     ss.resize(array.ndim());
     for (size_t i = 0; i < array.ndim(); i++) {
@@ -20,19 +22,85 @@ static void pythonizeTensor(py::module main_module, py::module type_module) {
     }
     return TensorShape(ss);
   };
+  static Tensor<Scalar> makeTensor(const py::array_t<Scalar> &array) {
+    auto tensor_shape = findShape(array);
+    auto element_count = tensor_shape.elementCount();
+    auto array_data = array.data();
+    std::vector<Scalar> tensor_data(element_count);
+    for (size_t i = 0; i < element_count; i++) {
+      tensor_data[i] = *array_data;
+      array_data++;
+    }
+    return Tensor<Scalar>(tensor_shape, tensor_data.data());
+  }
+  static void setValue(Tensor<Scalar> &tensor,
+                       const py::array_t<Scalar> &array) {
+    auto tensor_shape = find_shape(array);
+    if (tensor_shape != tensor.shape()) {
+      if (tensor.empty()) {
+        tensor = Tensor<Scalar>(tensor_shape);
+      } else {
+        throw std::runtime_error("tensor shape mismatch");
+      }
+    }
+    auto element_count = tensor_shape.elementCount();
+    auto array_data = array.data();
+    for (size_t i = 0; i < element_count; i++) {
+      tensor.data()[i] = *array_data;
+      array_data++;
+    }
+  }
+  static py::array_t<Scalar> getValue(const Tensor<Scalar> &tensor) {
+    py::array_t<Scalar> ret;
+    ret.resize(tensor.shape());
+    {
+      auto r = ret.mutable_data();
+      for (size_t i = 0; i < tensor.shape().elementCount(); i++) {
+        *r = tensor.data()[i];
+        r++;
+      }
+    }
+    return ret;
+  }
+};
+
+template <class Scalar>
+struct PythonTensorUtils<
+    Scalar, typename std::enable_if_t<!std::is_pod<Scalar>::value>::type> {
+  static Tensor<Scalar> makeTensor(const std::vector<Scalar> &array) {
+    return pack_tensor(array);
+  }
+  static void setValue(Tensor<Scalar> &tensor,
+                       const std::vector<Scalar> &array) {
+    TRACTOR_ASSERT(tensor.shape().dimensions() == 1);
+    auto tensor_shape = TensorShape({array.size()});
+    if (tensor_shape != tensor.shape()) {
+      if (tensor.empty()) {
+        tensor = Tensor<Scalar>(tensor_shape);
+      } else {
+        throw std::runtime_error("tensor shape mismatch");
+      }
+    }
+    auto element_count = tensor_shape.elementCount();
+    for (size_t i = 0; i < element_count; i++) {
+      tensor.data()[i] = array[i];
+    }
+  }
+  static std::vector<Scalar> getValue(const Tensor<Scalar> &tensor) {
+    TRACTOR_ASSERT(tensor.shape().dimensions() == 1);
+    std::vector<Scalar> ret(tensor.shape().elementCount());
+    for (size_t i = 0; i < ret.size(); i++) {
+      ret[i] = tensor.data()[i];
+    }
+    return ret;
+  }
+};
+
+template <class Scalar>
+static void pythonizeTensor(py::module main_module, py::module type_module) {
 
   pythonizeType<Tensor<Scalar>>(main_module, type_module, "Tensor")
-      .def(py::init([](const py::array_t<Scalar> &array) {
-        auto tensor_shape = find_shape(array);
-        auto element_count = tensor_shape.elementCount();
-        auto array_data = array.data();
-        std::vector<Scalar> tensor_data(element_count);
-        for (size_t i = 0; i < element_count; i++) {
-          tensor_data[i] = *array_data;
-          array_data++;
-        }
-        return Tensor<Scalar>(tensor_shape, tensor_data.data());
-      }))
+      .def(py::init(&PythonTensorUtils<Scalar>::makeTensor))
       .def(py::init(
           [](const std::vector<Var<Scalar>> &a) { return pack_tensor(a); }))
       .def("copy",
@@ -52,36 +120,8 @@ static void pythonizeTensor(py::module main_module, py::module type_module) {
       .def_property_readonly(
           "dimensions",
           [](const Tensor<Scalar> &t) { return t.shape().dimensions(); })
-      .def_property(
-          "value",
-          [](const Tensor<Scalar> &tensor) {
-            py::array_t<Scalar> ret;
-            ret.resize(tensor.shape());
-            {
-              auto r = ret.mutable_data();
-              for (size_t i = 0; i < tensor.shape().elementCount(); i++) {
-                *r = tensor.data()[i];
-                r++;
-              }
-            }
-            return ret;
-          },
-          [](Tensor<Scalar> &tensor, const py::array_t<Scalar> &array) {
-            auto tensor_shape = find_shape(array);
-            if (tensor_shape != tensor.shape()) {
-              if (tensor.empty()) {
-                tensor = Tensor<Scalar>(tensor_shape);
-              } else {
-                throw std::runtime_error("tensor shape mismatch");
-              }
-            }
-            auto element_count = tensor_shape.elementCount();
-            auto array_data = array.data();
-            for (size_t i = 0; i < element_count; i++) {
-              tensor.data()[i] = *array_data;
-              array_data++;
-            }
-          })
+      .def_property("value", &PythonTensorUtils<Scalar>::getValue,
+                    &PythonTensorUtils<Scalar>::setValue)
       .def(py::self + py::self)
       .def(py::self - py::self)
       .def(py::self * py::self)
@@ -106,6 +146,6 @@ static void pythonizeTensor(py::module main_module, py::module type_module) {
   //     });
 }
 
-TRACTOR_PYTHON_TYPED(pythonizeTensor);
+TRACTOR_PYTHON_TYPED_BATCH(pythonizeTensor);
 
 } // namespace tractor

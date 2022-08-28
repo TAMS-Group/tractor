@@ -143,16 +143,14 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
       .def_property(
           "value",
           [](const Orientation &_this) {
-            py::array_t<Value> r(4);
-            r.mutable_at(0) = value(value(_this).x());
-            r.mutable_at(1) = value(value(_this).y());
-            r.mutable_at(2) = value(value(_this).z());
-            r.mutable_at(3) = value(value(_this).w());
+            std::array<Value, 4> r;
+            r[0] = value(value(_this).x());
+            r[1] = value(value(_this).y());
+            r[2] = value(value(_this).z());
+            r[3] = value(value(_this).w());
             return r;
           },
-          [](Orientation &_this, const py::array_t<Value> &array) {
-            TRACTOR_ASSERT(array.ndim() == 1);
-            TRACTOR_ASSERT(array.size() == 4);
+          [](Orientation &_this, const std::array<Value, 4> &array) {
             value(value(_this).x()) = array.at(0);
             value(value(_this).y()) = array.at(1);
             value(value(_this).z()) = array.at(2);
@@ -190,34 +188,83 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
       .def_property_readonly_static(
           "zero", [](const py::object &) { return Geometry::Matrix3Zero(); })
       .def(py::init([]() { return Geometry::Matrix3Zero(); }))
-      .def(py::init([](const Eigen::Matrix<Value, 3, 3> &value) {
-        return Geometry::import(value);
+      // .def(py::init([](const Eigen::Matrix<Value, 3, 3> &value) {
+      //   return Geometry::import(value);
+      // }))
+      .def(py::init([](const std::array<std::array<Value, 3>, 3> &array) {
+        Eigen::Matrix<Value, 3, 3> r;
+        for (size_t i = 0; i < 3; i++) {
+          for (size_t j = 0; j < 3; j++) {
+            r(i, j) = array[i][j];
+          }
+        }
+        return Geometry::import(r);
       }))
       .def(py::self * Vector3())
       .def(py::self + py::self)
       .def(py::self - py::self)
       .def(-py::self)
+
       .def_property(
           "value",
           [](const Matrix3 &_this) {
-            py::array_t<Value> r({3, 3});
+            std::array<std::array<Value, 3>, 3> r;
             for (size_t i = 0; i < 3; i++) {
               for (size_t j = 0; j < 3; j++) {
-                r.mutable_at(i, j) = value(value(_this)(i, j));
+                r[i][j] = value(value(_this)(i, j));
               }
             }
             return r;
           },
-          [](Matrix3 &_this, const py::array_t<Value> &array) {
-            TRACTOR_ASSERT(array.ndim() == 2);
-            TRACTOR_ASSERT(array.shape(0) == 3);
-            TRACTOR_ASSERT(array.shape(1) == 3);
+          [](Matrix3 &_this, const std::array<std::array<Value, 3>, 3> &array) {
             for (size_t i = 0; i < 3; i++) {
               for (size_t j = 0; j < 3; j++) {
-                value(value(_this)(i, j)) = array.at(i, j);
+                value(value(_this)(i, j)) = array[i][j];
               }
             }
           })
+
+      // .def_property(
+      //     "value",
+      //     [](const Matrix3 &_this) {
+      //       Eigen::Matrix<Value, 3, 3, Eigen::RowMajor> r;
+      //       for (size_t i = 0; i < 3; i++) {
+      //         for (size_t j = 0; j < 3; j++) {
+      //           r(i, j) = value(value(_this)(i, j));
+      //         }
+      //       }
+      //       return r;
+      //     },
+      //     [](Matrix3 &_this,
+      //        const Eigen::Matrix<Value, 3, 3, Eigen::RowMajor> &array) {
+      //       for (size_t i = 0; i < 3; i++) {
+      //         for (size_t j = 0; j < 3; j++) {
+      //           value(value(_this)(i, j)) = array(i, j);
+      //         }
+      //       }
+      //     })
+
+      // .def_property(
+      //     "value",
+      //     [](const Matrix3 &_this) {
+      //       py::array_t<Value> r({3, 3});
+      //       for (size_t i = 0; i < 3; i++) {
+      //         for (size_t j = 0; j < 3; j++) {
+      //           r.mutable_at(i, j) = value(value(_this)(i, j));
+      //         }
+      //       }
+      //       return r;
+      //     },
+      //     [](Matrix3 &_this, const py::array_t<Value> &array) {
+      //       TRACTOR_ASSERT(array.ndim() == 2);
+      //       TRACTOR_ASSERT(array.shape(0) == 3);
+      //       TRACTOR_ASSERT(array.shape(1) == 3);
+      //       for (size_t i = 0; i < 3; i++) {
+      //         for (size_t j = 0; j < 3; j++) {
+      //           value(value(_this)(i, j)) = array.at(i, j);
+      //         }
+      //       }
+      //     })
       .def(-py::self);
   mod_main.def("inverse",
                py::overload_cast<const Matrix3 &>(&Geometry::inverse));
@@ -242,15 +289,13 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
       .def_property(
           "value",
           [](const Vector3 &_this) {
-            py::array_t<Value> r(3);
-            r.mutable_at(0) = value(value(_this).x());
-            r.mutable_at(1) = value(value(_this).y());
-            r.mutable_at(2) = value(value(_this).z());
+            std::array<Value, 3> r;
+            r.at(0) = value(value(_this).x());
+            r.at(1) = value(value(_this).y());
+            r.at(2) = value(value(_this).z());
             return r;
           },
-          [](Vector3 &_this, const py::array_t<Value> &array) {
-            TRACTOR_ASSERT(array.ndim() == 1);
-            TRACTOR_ASSERT(array.size() == 3);
+          [](Vector3 &_this, const std::array<Value, 3> &array) {
             value(value(_this).x()) = array.at(0);
             value(value(_this).y()) = array.at(1);
             value(value(_this).z()) = array.at(2);
@@ -282,7 +327,7 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
   // -------------------------------------------------------------
 }
 
-TRACTOR_PYTHON_GEOMETRY(pythonizeGeometry);
+TRACTOR_PYTHON_GEOMETRY_BATCH(pythonizeGeometry);
 
 // static int _tractor_python_geometry = []() {
 //   PythonRegistry::instance()->add([](py::module mod_main) {

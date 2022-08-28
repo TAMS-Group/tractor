@@ -33,8 +33,7 @@ static void pythonizeGeometryScalar(py::module main_module,
       .def(py::self *= py::self)
       .def(py::self /= py::self);
 }
-
-TRACTOR_PYTHON_TYPED(pythonizeGeometryScalar);
+TRACTOR_PYTHON_TYPED_BATCH(pythonizeGeometryScalar);
 
 static void pythonizeMain(py::module &m) {
 
@@ -77,6 +76,12 @@ static void pythonizeMain(py::module &m) {
 
   m.attr("__version__") = "0.0.0";
   // m.doc();
+
+  m.def_submodule("types_float_4");
+  m.def_submodule("types_double_4");
+
+  m.def_submodule("types_float_4_twist");
+  m.def_submodule("types_double_4_twist");
 
   m.def_submodule("types_float");
   m.def_submodule("types_double");

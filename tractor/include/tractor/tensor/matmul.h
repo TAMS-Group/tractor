@@ -72,43 +72,43 @@ void matmul_compute(size_t batch_size, size_t input_neurons,
 
   TRACTOR_PROFILER("matmul compute");
 
-  // for (size_t batch_index = 0; batch_index < batch_size; batch_index++) {
-  //   for (size_t output_neuron = 0; output_neuron < output_neurons;
-  //        output_neuron++) {
-  //     X v = X(0);
-  //     for (size_t input_neuron = 0; input_neuron < input_neurons;
-  //          input_neuron++) {
-  //       v += X(a[batch_index * input_neurons + input_neuron] *
-  //              b[input_neuron * output_neurons + output_neuron]);
-  //     }
-  //     x[batch_index * output_neurons + output_neuron] = v;
-  //   }
-  // }
-
-  if (true) {
-    Eigen::internal::set_is_malloc_allowed(false);
-    auto ma = Eigen::Map<
-        const Eigen::Matrix<A, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
-        // , Eigen::Unaligned
-        >(a, batch_size, input_neurons);
-    auto mb = Eigen::Map<
-        const Eigen::Matrix<B, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
-        // , Eigen::Unaligned
-        >(b, input_neurons, output_neurons);
-    auto mx = Eigen::Map<
-        Eigen::Matrix<X, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
-        // , Eigen::Unaligned
-        >(x, batch_size, output_neurons);
-    // mx.noalias() = ma.cast<X>() * mb.cast<X>();
-    // mx.noalias() = ma * mb;
-    // mx.noalias() = ma.lazyProduct(mb);
-    // mx.noalias() = ma.unaryExpr([](const A &a) { return X(a); }) *
-    //                mb.unaryExpr([](const B &b) { return X(b); });
-    auto xma = ma.unaryExpr([](const A &a) { return X(a); });
-    auto xmb = mb.unaryExpr([](const B &b) { return X(b); });
-    mx.noalias() = xma.lazyProduct(xmb);
-    Eigen::internal::set_is_malloc_allowed(true);
+  for (size_t batch_index = 0; batch_index < batch_size; batch_index++) {
+    for (size_t output_neuron = 0; output_neuron < output_neurons;
+         output_neuron++) {
+      X v = X(0);
+      for (size_t input_neuron = 0; input_neuron < input_neurons;
+           input_neuron++) {
+        v += X(a[batch_index * input_neurons + input_neuron] *
+               b[input_neuron * output_neurons + output_neuron]);
+      }
+      x[batch_index * output_neurons + output_neuron] = v;
+    }
   }
+
+  // if (true) {
+  //   Eigen::internal::set_is_malloc_allowed(false);
+  //   auto ma = Eigen::Map<
+  //       const Eigen::Matrix<A, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
+  //       // , Eigen::Unaligned
+  //       >(a, batch_size, input_neurons);
+  //   auto mb = Eigen::Map<
+  //       const Eigen::Matrix<B, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
+  //       // , Eigen::Unaligned
+  //       >(b, input_neurons, output_neurons);
+  //   auto mx = Eigen::Map<
+  //       Eigen::Matrix<X, Eigen::Dynamic, Eigen::Dynamic, Eigen::RowMajor>
+  //       // , Eigen::Unaligned
+  //       >(x, batch_size, output_neurons);
+  //   // mx.noalias() = ma.cast<X>() * mb.cast<X>();
+  //   // mx.noalias() = ma * mb;
+  //   // mx.noalias() = ma.lazyProduct(mb);
+  //   // mx.noalias() = ma.unaryExpr([](const A &a) { return X(a); }) *
+  //   //                mb.unaryExpr([](const B &b) { return X(b); });
+  //   auto xma = ma.unaryExpr([](const A &a) { return X(a); });
+  //   auto xmb = mb.unaryExpr([](const B &b) { return X(b); });
+  //   mx.noalias() = xma.lazyProduct(xmb);
+  //   Eigen::internal::set_is_malloc_allowed(true);
+  // }
 
   // #ifdef CHECK_TENSOR_MATMUL
   //   for (size_t batch_index = 0; batch_index < batch_size; batch_index++) {

@@ -70,6 +70,19 @@ public:
     return 0;                                                                  \
   }();
 
+#define TRACTOR_PYTHON_TYPED_BATCH(name)                                       \
+  static int _tractor_python_typed = []() {                                    \
+    PythonRegistry::instance()->add([](py::module m) {                         \
+      name<float>(m, m.attr("types_float").cast<py::module>());                \
+      name<double>(m, m.attr("types_double").cast<py::module>());              \
+      name<tractor::Batch<float, 4>>(                                          \
+          m, m.attr("types_float_4").cast<py::module>());                      \
+      name<tractor::Batch<double, 4>>(                                         \
+          m, m.attr("types_double_4").cast<py::module>());                     \
+    });                                                                        \
+    return 0;                                                                  \
+  }();
+
 #define TRACTOR_PYTHON_TWIST(name)                                             \
   static int _tractor_python_twist = []() {                                    \
     PythonRegistry::instance()->add([](py::module m) {                         \
@@ -97,6 +110,25 @@ public:
           m, m.attr("types_float_scalar").cast<py::module>());                 \
       name<GeometryScalar<Var<double>>>(                                       \
           m, m.attr("types_double_scalar").cast<py::module>());                \
+    });                                                                        \
+    return 0;                                                                  \
+  }();
+
+#define TRACTOR_PYTHON_GEOMETRY_BATCH(name)                                    \
+  static int _tractor_python_geometry = []() {                                 \
+    PythonRegistry::instance()->add([](py::module m) {                         \
+      name<GeometryFast<Var<float>>>(                                          \
+          m, m.attr("types_float_twist").cast<py::module>());                  \
+      name<GeometryFast<Var<double>>>(                                         \
+          m, m.attr("types_double_twist").cast<py::module>());                 \
+      name<GeometryScalar<Var<float>>>(                                        \
+          m, m.attr("types_float_scalar").cast<py::module>());                 \
+      name<GeometryScalar<Var<double>>>(                                       \
+          m, m.attr("types_double_scalar").cast<py::module>());                \
+      name<GeometryFast<Var<Batch<float, 4>>>>(                                \
+          m, m.attr("types_float_4_twist").cast<py::module>());                \
+      name<GeometryFast<Var<Batch<double, 4>>>>(                               \
+          m, m.attr("types_double_4_twist").cast<py::module>());               \
     });                                                                        \
     return 0;                                                                  \
   }();
