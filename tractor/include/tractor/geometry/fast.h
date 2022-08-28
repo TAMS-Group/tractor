@@ -74,6 +74,9 @@ template <class Base> struct GeometryImpl : Base {
   static auto OrientationIdentity() {
     return Orientation(tractor::Quaternion<Value>::Identity());
   }
+  static auto UnitX() { return pack(Value(1), Value(0), Value(0)); }
+  static auto UnitY() { return pack(Value(0), Value(1), Value(0)); }
+  static auto UnitZ() { return pack(Value(0), Value(0), Value(1)); }
 
   static Orientation angleAxisOrientation(const Scalar &angle,
                                           const Vector3 &axis) {
@@ -271,12 +274,15 @@ template <class Base> struct GeometryImpl : Base {
   template <class T, int Mode, int Flags>
   static Pose import(const Eigen::Transform<T, 3, Mode, Flags> &pose) {
     auto q = Eigen::Quaterniond(Eigen::AngleAxisd(pose.linear()));
-    return Pose(tractor::Pose<Value>(
-        tractor::Vector3<Value>(Value(pose.translation().x()),
-                                Value(pose.translation().y()),
-                                Value(pose.translation().z())),
-        tractor::Quaternion<Value>(Value(q.x()), Value(q.y()), Value(q.z()),
-                                   Value(q.w()))));
+    // return Pose(tractor::Pose<Value>(
+    //     tractor::Vector3<Value>(Value(pose.translation().x()),
+    //                             Value(pose.translation().y()),
+    //                             Value(pose.translation().z())),
+    //     tractor::Quaternion<Value>(Value(q.x()), Value(q.y()), Value(q.z()),
+    //                                Value(q.w()))));
+    return pack(Value(pose.translation().x()), Value(pose.translation().y()),
+                Value(pose.translation().z()), Value(q.x()), Value(q.y()),
+                Value(q.z()), Value(q.w()));
   }
 
   template <class T>

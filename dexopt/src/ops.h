@@ -21,13 +21,13 @@ template <class T> struct BarrierTypes {
 
 // ------------------------------------------
 
-TRACTOR_OP(acos, (const T &a),
-           { return std::max(T(-1), std::min(T(1), T(std::acos(a)))); })
-TRACTOR_D(prepare, acos, (const T &a, const T &x, T &p), {
-  p = T(-1) / std::max(T(1e-9), T(std::sqrt(std::max(T(0), T(1) - a * a))));
-})
-TRACTOR_D(forward, acos, (const T &p, const T &da, T &dx), { dx = da * p; })
-TRACTOR_D(reverse, acos, (const T &p, T &da, const T &dx), { da = dx * p; })
+// TRACTOR_OP(acos, (const T &a),
+//            { return std::max(T(-1), std::min(T(1), T(std::acos(a)))); })
+// TRACTOR_D(prepare, acos, (const T &a, const T &x, T &p), {
+//   p = T(-1) / std::max(T(1e-9), T(std::sqrt(std::max(T(0), T(1) - a * a))));
+// })
+// TRACTOR_D(forward, acos, (const T &p, const T &da, T &dx), { dx = da * p; })
+// TRACTOR_D(reverse, acos, (const T &p, T &da, const T &dx), { da = dx * p; })
 
 // ------------------------------------------
 

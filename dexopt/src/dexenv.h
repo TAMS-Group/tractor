@@ -2,6 +2,8 @@
 
 #pragma once
 
+#include <tractor/core/eigen.h>
+
 #include <ros/ros.h>
 
 #include <eigen_conversions/eigen_msg.h>

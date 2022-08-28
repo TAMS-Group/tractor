@@ -196,8 +196,7 @@ template <class ValueSingle, class ValueBatch> class DexLearn {
     //   return;
     // }
 
-    if (auto *poly =
-            dynamic_cast<const ConvexPolyhedralCollisionShape *>(shape)) {
+    if (auto *poly = dynamic_cast<const ConvexCollisionMesh *>(shape)) {
       for (auto &plane : poly->planes()) {
         auto plane_normal = GeometryBatch::pack(ValueBatch(plane.normal().x()),
                                                 ValueBatch(plane.normal().y()),

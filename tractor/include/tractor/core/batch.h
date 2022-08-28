@@ -4,8 +4,11 @@
 
 #include <tractor/core/platform.h>
 
-#include <Eigen/Dense>
+#include <cmath>
 #include <cstdint>
+#include <iostream>
+#include <stdexcept>
+#include <type_traits>
 
 #include <immintrin.h>
 
@@ -68,6 +71,13 @@ public:
       this->_data[i] = v;
     }
   }
+  Batch &operator=(const T &v) {
+    this->_check();
+    for (size_t i = 0; i < S; i++) {
+      this->_data[i] = v;
+    }
+    return *this;
+  }
   inline auto &data() const {
     this->_check();
     return this->_data;
@@ -117,12 +127,37 @@ template <class T, size_t S> inline auto operator-(const Batch<T, S> &v) {
 
 template <class T, size_t S> auto operator+(const Batch<T, S> &v) { return v; }
 
+// template <class L, class R, size_t S>                                        \
+// inline auto operator op(const Batch<L, S> &l, const Batch<R, S> &r) {        \
+//   Batch<decltype(l[0] op r[0]), S> ret;                                      \
+//   for (size_t i = 0; i < S; i++) {                                           \
+//     ret[i] = l[i] op r[i];                                                   \
+//   }                                                                          \
+//   return ret;                                                                \
+// }                                                                            \
+
 #define BATCH_OP_2(op)                                                         \
-  template <class L, class R, size_t S>                                        \
-  inline auto operator op(const Batch<L, S> &l, const Batch<R, S> &r) {        \
-    Batch<decltype(l[0] op r[0]), S> ret;                                      \
+  template <class T, size_t S>                                                 \
+  inline Batch<T, S> operator op(const Batch<T, S> &l, const Batch<T, S> &r) { \
+    Batch<T, S> ret;                                                           \
     for (size_t i = 0; i < S; i++) {                                           \
       ret[i] = l[i] op r[i];                                                   \
+    }                                                                          \
+    return ret;                                                                \
+  }                                                                            \
+  template <class T, size_t S>                                                 \
+  inline Batch<T, S> operator op(const Batch<T, S> &l, const T &r) {           \
+    Batch<T, S> ret;                                                           \
+    for (size_t i = 0; i < S; i++) {                                           \
+      ret[i] = l[i] op r;                                                      \
+    }                                                                          \
+    return ret;                                                                \
+  }                                                                            \
+  template <class T, size_t S>                                                 \
+  inline Batch<T, S> operator op(const T &l, const Batch<T, S> &r) {           \
+    Batch<T, S> ret;                                                           \
+    for (size_t i = 0; i < S; i++) {                                           \
+      ret[i] = l op r[i];                                                      \
     }                                                                          \
     return ret;                                                                \
   }
@@ -131,9 +166,24 @@ BATCH_OP_2(-)
 BATCH_OP_2(*)
 BATCH_OP_2(/)
 
+// template <class L, class R, size_t S>                                        \
+// inline Batch<L, S> &operator op(Batch<L, S> &l, const Batch<R, S> &r) {      \
+//   for (size_t i = 0; i < S; i++) {                                           \
+//     l[i] op r[i];                                                            \
+//   }                                                                          \
+//   return l;                                                                  \
+// }                                                                            \
+
 #define BATCH_OP_2_X(op)                                                       \
-  template <class L, class R, size_t S>                                        \
-  inline Batch<L, S> &operator op(Batch<L, S> &l, const Batch<R, S> &r) {      \
+  template <class T, size_t S>                                                 \
+  inline Batch<T, S> &operator op(Batch<T, S> &l, const Batch<T, S> &r) {      \
+    for (size_t i = 0; i < S; i++) {                                           \
+      l[i] op r[i];                                                            \
+    }                                                                          \
+    return l;                                                                  \
+  }                                                                            \
+  template <class T, size_t S>                                                 \
+  inline Batch<T, S> &operator op(Batch<T, S> &l, const T &r) {                \
     for (size_t i = 0; i < S; i++) {                                           \
       l[i] op r[i];                                                            \
     }                                                                          \
@@ -356,6 +406,15 @@ BATCH_FN(asin)
 BATCH_FN(atan)
 
 namespace std {
+
+template <class T, size_t S>
+tractor::Batch<T, S> abs(const tractor::Batch<T, S> &a) {
+  tractor::Batch<T, S> x;
+  for (size_t i = 0; i < S; i++) {
+    x[i] = std::abs(a[i]);
+  }
+  return x;
+}
 
 template <class T, size_t S>
 tractor::Batch<T, S> max(const tractor::Batch<T, S> &l,

@@ -10,11 +10,11 @@ import numpy.random
 
 #tr.logger.verbosity = 2
 
-count = 512
+count = 32
 noise = 0.2
 stdev = 0.2
 activation = "tanh"
-units = 256
+units = 32
 weight_regularization = 0.1
 activity_regularization = 0.01
 bias_regularization = 0.1

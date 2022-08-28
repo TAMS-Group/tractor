@@ -199,7 +199,7 @@ public:
           const typename Geometry::Pose &parent) const override {
     return Geometry::angleAxisPose(
         Geometry::translationPose(parent, _x, _y, typename Geometry::Value(0)),
-        _angle, Geometry::import(Eigen::Vector3d::UnitZ().eval()));
+        _angle, Geometry::UnitZ());
   }
   virtual void
   makeVariables(const JointModelBase<Geometry> &model,

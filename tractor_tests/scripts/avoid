@@ -72,7 +72,7 @@ solver.line_search = False
 solver.step_scaling = 1
 
 while True:
-    tr.interact("world", "object", object_goal_pose, 0.1)
+    tr.interact("world", "object", object_goal_pose, 0.2)
     solver.solve()
     tr.visualize("/display_robot_state", joint_states)
     f()

@@ -6,6 +6,8 @@
 #include <tractor/geometry/matrix3.h>
 #include <tractor/geometry/vector3_ops.h>
 
+#include <Eigen/Dense>
+
 namespace tractor {
 
 TRACTOR_VAR_OP(inverse)

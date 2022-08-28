@@ -3,6 +3,8 @@
 #include <tractor/core/profiler.h>
 #include <tractor/engines/parallel.h>
 
+#include <omp.h>
+
 namespace tractor {
 
 void ParallelEngine::ExecutableImpl::_compile(const Program &program) {

@@ -2,6 +2,9 @@
 
 #pragma once
 
+#define EIGEN_RUNTIME_NO_MALLOC 1
+
+#include <tractor/core/batch.h>
 #include <tractor/core/engine.h>
 
 #include <Eigen/Dense>
@@ -119,11 +122,32 @@ struct generic_product_impl<tractor::MatrixReplacement<ScalarType>, Rhs,
 } // namespace Eigen
 
 namespace Eigen {
+
 template <class T>
 struct NumTraits<tractor::Var<T>> : GenericNumTraits<tractor::Var<T>> {
   typedef tractor::Var<T> Real;
   typedef tractor::Var<T> NonInteger;
   typedef tractor::Var<T> Nested;
+  static inline Real epsilon() { return 0; }
+  static inline Real dummy_precision() { return 0; }
+  static inline int digits10() { return 0; }
+  enum {
+    IsComplex = 0,
+    IsInteger = 0,
+    IsSigned = 1,
+    RequireInitialization = 1,
+    ReadCost = 1,
+    AddCost = 3,
+    MulCost = 3
+  };
+};
+
+template <class T, size_t S>
+struct NumTraits<tractor::Batch<T, S>>
+    : GenericNumTraits<tractor::Batch<T, S>> {
+  typedef tractor::Batch<T, S> Real;
+  typedef tractor::Batch<T, S> NonInteger;
+  typedef tractor::Batch<T, S> Nested;
   static inline Real epsilon() { return 0; }
   static inline Real dummy_precision() { return 0; }
   static inline int digits10() { return 0; }

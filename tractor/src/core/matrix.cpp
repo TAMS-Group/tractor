@@ -2,6 +2,8 @@
 
 #include <tractor/core/matrix.h>
 
+#include <tractor/core/eigen.h>
+
 namespace tractor {
 
 template <class Matrix, class Vector, class Scalar>

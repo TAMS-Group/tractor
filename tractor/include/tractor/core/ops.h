@@ -92,26 +92,27 @@ TRACTOR_D(reverse, div, (const std::array<T, 3> &p, T &da, T &db, const T &dx),
             db = -(dx * p[0]) * (r * r);
           })
 
-template <class T> T madd(const T &a, const T &b, const T &c) {
-  return a * b + c;
-}
-TRACTOR_OP(madd, (const T &a, const T &b, const T &c), { return a * b + c; })
-TRACTOR_D(prepare, madd,
-          (const T &a, const T &b, const T &c, const T &x, std::array<T, 2> &p),
-          {
-            p[0] = a;
-            p[1] = b;
-          })
-TRACTOR_D(forward, madd,
-          (const std::array<T, 2> &p, const T &da, const T &db, const T &dc,
-           T &dx),
-          { dx = da * p[1] + p[0] * db + dc; })
-TRACTOR_D(reverse, madd,
-          (const std::array<T, 2> &p, T &da, T &db, T &dc, const T &dx), {
-            da = dx * p[1];
-            db = dx * p[0];
-            dc = dx;
-          })
+// template <class T> T madd(const T &a, const T &b, const T &c) {
+//   return a * b + c;
+// }
+// TRACTOR_OP(madd, (const T &a, const T &b, const T &c), { return a * b + c; })
+// TRACTOR_D(prepare, madd,
+//           (const T &a, const T &b, const T &c, const T &x, std::array<T, 2>
+//           &p),
+//           {
+//             p[0] = a;
+//             p[1] = b;
+//           })
+// TRACTOR_D(forward, madd,
+//           (const std::array<T, 2> &p, const T &da, const T &db, const T &dc,
+//            T &dx),
+//           { dx = da * p[1] + p[0] * db + dc; })
+// TRACTOR_D(reverse, madd,
+//           (const std::array<T, 2> &p, T &da, T &db, T &dc, const T &dx), {
+//             da = dx * p[1];
+//             db = dx * p[0];
+//             dc = dx;
+//           })
 
 TRACTOR_OP(sin, (const T &a), { return T(sin(a)); })
 TRACTOR_D(prepare, sin, (const T &a, const T &x, T &p), { p = cos(a); })

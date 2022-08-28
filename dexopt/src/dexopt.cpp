@@ -2,6 +2,8 @@
 
 //#include <tractor/tractor.h>
 
+#include <tractor/core/eigen.h>
+
 #include "dexlearn.h"
 
 #include "dexenv_grasp.h"

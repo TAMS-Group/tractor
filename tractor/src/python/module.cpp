@@ -11,6 +11,8 @@
 
 #include <signal.h>
 
+#include <mcheck.h>
+
 namespace tractor {
 
 template <class Scalar>
@@ -42,6 +44,8 @@ static void pythonizeMain(py::module &m) {
   // auto mod_scalar = m.def_submodule("scalar");
   // pythonizeGeometryScalar<float>(m, mod_scalar.def_submodule("float"));
   // pythonizeGeometryScalar<double>(m, mod_scalar.def_submodule("double"));
+
+  // mtrace();
 
   m.def("debug", []() {
     static auto printStackTrace = []() {

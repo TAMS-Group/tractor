@@ -7,6 +7,7 @@
 #include <tractor/core/list.h>
 #include <tractor/core/ops.h>
 #include <tractor/core/profiler.h>
+#include <tractor/tensor/matmul.h>
 
 #define TRACTOR_CHECK_TENSOR_DIMENSIONS(module, input, dims)                   \
   {                                                                            \
@@ -192,48 +193,48 @@ Tensor<Value> make_tensor(const TensorShape &shape, const Value &v) {
 
 // ------------------------------------------
 
-template <class Activation, class Weight>
-Tensor<Activation> matmul(const Tensor<Activation> &inputs,
-                          const Tensor<Weight> &weights) {
+template <class A, class B,
+          class X = decltype(std::declval<A>() * std::declval<B>())>
+Tensor<X> matmul(const Tensor<A> &tensor_a, const Tensor<B> &tensor_b) {
 
-  if (weights.shape().dimensions() != 2) {
+  if (tensor_b.shape().dimensions() != 2) {
     throw std::runtime_error(
         "matmul invalid number of dimensions for weight matrix");
   }
-  size_t input_neurons = weights.shape()[0];
-  size_t output_neurons = weights.shape()[1];
+  size_t a_cols_b_rows = tensor_b.shape()[0];
+  size_t b_cols = tensor_b.shape()[1];
 
-  size_t batch_size = 0;
+  size_t a_rows = 0;
   size_t input_vector_neurons = 0;
   TensorShape output_shape;
-  switch (inputs.shape().dimensions()) {
+  switch (tensor_a.shape().dimensions()) {
   case 1:
-    batch_size = 1;
-    input_vector_neurons = inputs.shape()[0];
-    output_shape = TensorShape({output_neurons});
+    a_rows = 1;
+    input_vector_neurons = tensor_a.shape()[0];
+    output_shape = TensorShape({b_cols});
     break;
   case 2:
-    batch_size = inputs.shape()[0];
-    input_vector_neurons = inputs.shape()[1];
-    output_shape = TensorShape({batch_size, output_neurons});
+    a_rows = tensor_a.shape()[0];
+    input_vector_neurons = tensor_a.shape()[1];
+    output_shape = TensorShape({a_rows, b_cols});
     break;
   default:
     throw std::runtime_error("matmul invalid input shape for "
                              "activation vector or batch of vectors");
   }
-  if (input_vector_neurons != input_neurons) {
+  if (input_vector_neurons != a_cols_b_rows) {
     throw std::runtime_error("matmul input vector length does not "
                              "match weight matrix size");
   }
 
-  Tensor<Activation> outputs(output_shape);
+  Tensor<X> tensor_x(output_shape);
 
   static Factory::Key<const TensorInfo *, const TensorInfo *,
                       const TensorInfo *, size_t, size_t,
                       size_t>::Value<const Operator *>
       factory{[](const TensorInfo *input_info, const TensorInfo *weight_info,
-                 const TensorInfo *output_info, size_t input_neurons,
-                 size_t output_neurons, size_t batch_size) {
+                 const TensorInfo *output_info, size_t a_cols_b_rows,
+                 size_t b_cols, size_t a_rows) {
         std::vector<Operator::Argument> args = {
             Operator::Argument::makeInput(input_info->type()),
             Operator::Argument::makeInput(weight_info->type()),
@@ -259,551 +260,45 @@ Tensor<Activation> matmul(const Tensor<Activation> &inputs,
             Profiler::instance()->track(std::make_shared<ProfilerTrack>(
                 __PRETTY_FUNCTION__, base_name + "_" + variant_name + "_r"));
 
-        static const bool check = false;
-
         const Operator *op = makePointerOp(
             base_name, variant_name, args,
 
-            [batch_size, input_neurons, output_neurons,
-             profiler_nonlinear](const Activation *a, const Weight *b,
-                                 Activation *x) TRACTOR_FAST {
+            [a_rows, a_cols_b_rows, b_cols,
+             profiler_nonlinear](const A *a, const B *b, X *x) TRACTOR_FAST {
               ProfilerScope profiler_scope(*profiler_nonlinear);
-
-              if (true) {
-                auto ma = Eigen::Map<
-                    const Eigen::Matrix<Activation, Eigen::Dynamic,
-                                        Eigen::Dynamic, Eigen::RowMajor>,
-                    Eigen::Unaligned>(a, batch_size, input_neurons);
-                auto mb = Eigen::Map<
-                    const Eigen::Matrix<Weight, Eigen::Dynamic, Eigen::Dynamic,
-                                        Eigen::RowMajor>,
-                    Eigen::Unaligned>(b, input_neurons, output_neurons);
-                auto mx =
-                    Eigen::Map<Eigen::Matrix<Activation, Eigen::Dynamic,
-                                             Eigen::Dynamic, Eigen::RowMajor>,
-                               Eigen::Unaligned>(x, batch_size, output_neurons);
-                mx.noalias() = ma * mb;
-              }
-
-              if (check) {
-                for (size_t batch_index = 0; batch_index < batch_size;
-                     batch_index++) {
-                  for (size_t output_neuron = 0; output_neuron < output_neurons;
-                       output_neuron++) {
-                    Activation v = Activation(0);
-                    for (size_t input_neuron = 0; input_neuron < input_neurons;
-                         input_neuron++) {
-                      v +=
-                          a[batch_index * input_neurons + input_neuron] *
-                          Activation(
-                              b[input_neuron * output_neurons + output_neuron]);
-                    }
-                    TRACTOR_ASSERT(
-                        std::abs(
-                            x[batch_index * output_neurons + output_neuron] -
-                            v) < 1e-9);
-                  }
-                }
-              }
+              matmul_compute(a_rows, a_cols_b_rows, b_cols, a, b, x);
             },
 
-            [batch_size, input_neurons, output_neurons,
-             profiler_forward](const Activation *a, const Weight *b,
-                               const Activation *x, const Activation *da,
-                               const Weight *db, Activation *dx) TRACTOR_FAST {
+            [a_rows, a_cols_b_rows, b_cols,
+             profiler_forward](const A *a, const B *b, const X *x, const A *da,
+                               const B *db, X *dx) TRACTOR_FAST {
               ProfilerScope profiler_scope(*profiler_forward);
-
-              if (true) {
-                // TRACTOR_INFO("pointer a " << a);
-                // TRACTOR_INFO("pointer b " << b);
-                // TRACTOR_INFO("pointer da " << da);
-                // TRACTOR_INFO("pointer db " << db);
-                // TRACTOR_INFO("pointer dx " << dx);
-                {
-                  auto ma = Eigen::Map<
-                      const Eigen::Matrix<Activation, Eigen::Dynamic,
-                                          Eigen::Dynamic, Eigen::RowMajor>,
-                      Eigen::Unaligned>(a, batch_size, input_neurons);
-                  auto mb = Eigen::Map<
-                      const Eigen::Matrix<Weight, Eigen::Dynamic,
-                                          Eigen::Dynamic, Eigen::RowMajor>,
-                      Eigen::Unaligned>(b, input_neurons, output_neurons);
-                  auto mda = Eigen::Map<
-                      const Eigen::Matrix<Activation, Eigen::Dynamic,
-                                          Eigen::Dynamic, Eigen::RowMajor>,
-                      Eigen::Unaligned>(da, batch_size, input_neurons);
-                  auto mdb = Eigen::Map<
-                      const Eigen::Matrix<Weight, Eigen::Dynamic,
-                                          Eigen::Dynamic, Eigen::RowMajor>,
-                      Eigen::Unaligned>(db, input_neurons, output_neurons);
-                  auto mdx =
-                      Eigen::Map<Eigen::Matrix<Activation, Eigen::Dynamic,
-                                               Eigen::Dynamic, Eigen::RowMajor>,
-                                 Eigen::Unaligned>(dx, batch_size,
-                                                   output_neurons);
-                  // mdx.noalias() = (ma * mdb + mda * mb);
-                  mdx.noalias() = ma * mdb;
-                  mdx.noalias() += mda * mb;
-                }
-                if (check) {
-                  bool error = false;
-                  for (size_t batch_index = 0; batch_index < batch_size;
-                       batch_index++) {
-                    for (size_t output_neuron = 0;
-                         output_neuron < output_neurons; output_neuron++) {
-                      Activation dv = Activation(0);
-                      for (size_t input_neuron = 0;
-                           input_neuron < input_neurons; input_neuron++) {
-                        dv += da[batch_index * input_neurons + input_neuron] *
-                                  Activation(b[input_neuron * output_neurons +
-                                               output_neuron]) +
-                              a[batch_index * input_neurons + input_neuron] *
-                                  Activation(db[input_neuron * output_neurons +
-                                                output_neuron]);
-                      }
-                      if (!(abs(dx[batch_index * output_neurons +
-                                   output_neuron] -
-                                dv) <= 1e-9)) {
-                        error = true;
-                      }
-                    }
-                  }
-                  if (error) {
-                    for (size_t batch_index = 0; batch_index < batch_size;
-                         batch_index++) {
-                      for (size_t output_neuron = 0;
-                           output_neuron < output_neurons; output_neuron++) {
-                        Activation dv = Activation(0);
-                        for (size_t input_neuron = 0;
-                             input_neuron < input_neurons; input_neuron++) {
-                          dv +=
-                              da[batch_index * input_neurons + input_neuron] *
-                                  Activation(b[input_neuron * output_neurons +
-                                               output_neuron]) +
-                              a[batch_index * input_neurons + input_neuron] *
-                                  Activation(db[input_neuron * output_neurons +
-                                                output_neuron]);
-                        }
-                        std::cout
-                            << dx[batch_index * output_neurons + output_neuron]
-                            << "/" << dv << " ";
-                      }
-                      std::cout << "\n";
-                    }
-                    std::cout << "\n";
-                    throw std::runtime_error("matmul error");
-                  }
-                }
-              }
-
-              if (false) {
-                for (size_t batch_index = 0; batch_index < batch_size;
-                     batch_index++) {
-                  for (size_t output_neuron = 0; output_neuron < output_neurons;
-                       output_neuron++) {
-                    Activation dv = Activation(0);
-                    for (size_t input_neuron = 0; input_neuron < input_neurons;
-                         input_neuron++) {
-                      dv += da[batch_index * input_neurons + input_neuron] *
-                                Activation(b[input_neuron * output_neurons +
-                                             output_neuron]) +
-                            a[batch_index * input_neurons + input_neuron] *
-                                Activation(db[input_neuron * output_neurons +
-                                              output_neuron]);
-                    }
-                    dx[batch_index * output_neurons + output_neuron] = dv;
-                  }
-                }
-              }
+              matmul_forward(a_rows, a_cols_b_rows, b_cols, a, b, x, da, db,
+                             dx);
             },
 
-            [batch_size, input_neurons, output_neurons, profiler_reverse](
-                const Activation *a, const Weight *b, const Activation *x,
-                Activation *da, Weight *db, const Activation *dx) TRACTOR_FAST {
-              ProfilerScope profiler_scope(*profiler_reverse);
-
-              if (false) {
-                {
-                  auto *da_p = da;
-                  for (size_t batch_index = 0; batch_index < batch_size;
-                       batch_index++) {
-                    for (size_t input_neuron = 0; input_neuron < input_neurons;
-                         input_neuron++) {
-                      Activation dv = Activation(0);
-                      auto *dx_base = dx + batch_index * output_neurons;
-                      auto *b_base = b + input_neuron * output_neurons;
-                      for (size_t output_neuron = 0;
-                           output_neuron < output_neurons; output_neuron++) {
-                        dv += dx_base[output_neuron] *
-                              Activation(b_base[output_neuron]);
-                      }
-                      *da_p = dv;
-                      da_p++;
-                    }
-                  }
-                }
-                {
-                  auto *db_p = db;
-                  for (size_t input_neuron = 0; input_neuron < input_neurons;
-                       input_neuron++) {
-                    for (size_t output_neuron = 0;
-                         output_neuron < output_neurons; output_neuron++) {
-                      Weight w = Weight(0);
-                      for (size_t batch_index = 0; batch_index < batch_size;
-                           batch_index++) {
-                        Weight v = Weight(0);
-                        batch_sum(
-                            dx[batch_index * output_neurons + output_neuron] *
-                                a[batch_index * input_neurons + input_neuron],
-                            v);
-                        w += v;
-                      }
-                      *db_p = w;
-                      db_p++;
-                    }
-                  }
-                }
-              }
-
-              if (false) {
-                {
-                  TRACTOR_PROFILER("dense backprop left");
-                  for (size_t batch_index = 0; batch_index < batch_size;
-                       batch_index++) {
-                    for (size_t input_neuron = 0; input_neuron < input_neurons;
-                         input_neuron++) {
-                      Activation dv = Activation(0);
-                      for (size_t output_neuron = 0;
-                           output_neuron < output_neurons; output_neuron++) {
-                        dv += dx[batch_index * output_neurons + output_neuron] *
-                              Activation(b[input_neuron * output_neurons +
-                                           output_neuron]);
-                      }
-                      da[batch_index * input_neurons + input_neuron] = dv;
-                    }
-                  }
-                }
-                {
-                  TRACTOR_PROFILER("dense backprop right");
-                  for (size_t input_neuron = 0; input_neuron < input_neurons;
-                       input_neuron++) {
-                    for (size_t output_neuron = 0;
-                         output_neuron < output_neurons; output_neuron++) {
-                      Weight w = Weight(0);
-                      for (size_t batch_index = 0; batch_index < batch_size;
-                           batch_index++) {
-                        Weight v = Weight(0);
-                        batch_sum(
-                            dx[batch_index * output_neurons + output_neuron] *
-                                a[batch_index * input_neurons + input_neuron],
-                            v);
-                        w += v;
-                      }
-                      db[input_neuron * output_neurons + output_neuron] = w;
-                    }
-                  }
-                }
-              }
-
-              if (false) {
-                {
-                  TRACTOR_PROFILER("dense backprop left");
-                  for (size_t batch_index = 0; batch_index < batch_size;
-                       batch_index++) {
-                    for (size_t input_neuron = 0; input_neuron < input_neurons;
-                         input_neuron++) {
-                      Activation dv = Activation(0);
-                      for (size_t output_neuron = 0;
-                           output_neuron < output_neurons; output_neuron++) {
-                        dv += dx[batch_index * output_neurons + output_neuron] *
-                              Activation(b[input_neuron * output_neurons +
-                                           output_neuron]);
-                      }
-                      da[batch_index * input_neurons + input_neuron] = dv;
-                    }
-                  }
-                }
-                {
-                  TRACTOR_PROFILER("dense backprop right");
-                  for (size_t input_neuron = 0; input_neuron < input_neurons;
-                       input_neuron++) {
-                    for (size_t output_neuron = 0;
-                         output_neuron < output_neurons; output_neuron++) {
-                      Weight w = Weight(0);
-                      for (size_t batch_index = 0; batch_index < batch_size;
-                           batch_index++) {
-                        w += batch_sum(
-                            dx[batch_index * output_neurons + output_neuron] *
-                            a[batch_index * input_neurons + input_neuron]);
-                      }
-                      db[input_neuron * output_neurons + output_neuron] = w;
-                    }
-                  }
-                }
-              }
-
-              if (false) {
-                // {
-                //   TRACTOR_PROFILER("dense backprop left");
-                //   for (size_t batch_index = 0; batch_index < batch_size;
-                //        batch_index++) {
-                //     for (size_t input_neuron = 0; input_neuron <
-                //     input_neurons;
-                //          input_neuron++) {
-                //       Activation dv = Activation(0);
-                //       for (size_t output_neuron = 0;
-                //            output_neuron < output_neurons; output_neuron++) {
-                //         dv += dx[batch_index * output_neurons +
-                //         output_neuron] *
-                //               Activation(b[input_neuron * output_neurons +
-                //                            output_neuron]);
-                //       }
-                //       da[batch_index * input_neurons + input_neuron] = dv;
-                //     }
-                //   }
-                // }
-
-                {
-                  TRACTOR_PROFILER("dense backprop left");
-                  auto mb = Eigen::Map<
-                      const Eigen::Matrix<Weight, Eigen::Dynamic,
-                                          Eigen::Dynamic, Eigen::RowMajor>,
-                      Eigen::Unaligned>(b, input_neurons, output_neurons);
-                  auto mda =
-                      Eigen::Map<Eigen::Matrix<Activation, Eigen::Dynamic,
-                                               Eigen::Dynamic, Eigen::RowMajor>,
-                                 Eigen::Unaligned>(da, batch_size,
-                                                   input_neurons);
-                  auto mdx = Eigen::Map<
-                      const Eigen::Matrix<Activation, Eigen::Dynamic,
-                                          Eigen::Dynamic, Eigen::RowMajor>,
-                      Eigen::Unaligned>(dx, batch_size, output_neurons);
-                  mda = mdx * mb.transpose();
-                }
-
-                // {
-                //   TRACTOR_PROFILER("check dense backprop left");
-                //   for (size_t batch_index = 0; batch_index < batch_size;
-                //        batch_index++) {
-                //     for (size_t input_neuron = 0; input_neuron <
-                //     input_neurons;
-                //          input_neuron++) {
-                //       Activation dv = Activation(0);
-                //       for (size_t output_neuron = 0;
-                //            output_neuron < output_neurons; output_neuron++) {
-                //         dv += dx[batch_index * output_neurons +
-                //         output_neuron] *
-                //               Activation(b[input_neuron * output_neurons +
-                //                            output_neuron]);
-                //       }
-                //       TRACTOR_ASSERT(
-                //           std::abs(
-                //               da[batch_index * input_neurons + input_neuron]
-                //               - dv) < 1e-9);
-                //     }
-                //   }
-                // }
-
-                {
-                  TRACTOR_PROFILER("dense backprop zero");
-                  std::memset(db, 0,
-                              sizeof(Weight) * input_neurons * output_neurons);
-                }
-
-                // {
-                //   TRACTOR_PROFILER("dense backprop right");
-                //   for (size_t input_neuron = 0; input_neuron < input_neurons;
-                //        input_neuron++) {
-                //     for (size_t output_neuron = 0;
-                //          output_neuron < output_neurons; output_neuron++) {
-                //       for (size_t batch_index = 0; batch_index < batch_size;
-                //            batch_index++) {
-                //         db[input_neuron * output_neurons + output_neuron] +=
-                //             batch_sum(
-                //                 dx[batch_index * output_neurons +
-                //                    output_neuron] *
-                //                 a[batch_index * input_neurons +
-                //                 input_neuron]);
-                //       }
-                //     }
-                //   }
-                // }
-
-                // {
-                //   TRACTOR_PROFILER("dense backprop right");
-                //   for (size_t input_neuron = 0; input_neuron < input_neurons;
-                //        input_neuron++) {
-                //     for (size_t batch_index = 0; batch_index < batch_size;
-                //          batch_index++) {
-                //       for (size_t output_neuron = 0;
-                //            output_neuron < output_neurons; output_neuron++) {
-                //         db[input_neuron * output_neurons + output_neuron] +=
-                //             batch_sum(
-                //                 dx[batch_index * output_neurons +
-                //                    output_neuron] *
-                //                 a[batch_index * input_neurons +
-                //                 input_neuron]);
-                //       }
-                //     }
-                //   }
-                // }
-
-                {
-                  TRACTOR_PROFILER("dense backprop right");
-                  for (size_t batch_index = 0; batch_index < batch_size;
-                       batch_index++) {
-                    for (size_t input_neuron = 0; input_neuron < input_neurons;
-                         input_neuron++) {
-                      for (size_t output_neuron = 0;
-                           output_neuron < output_neurons; output_neuron++) {
-                        db[input_neuron * output_neurons + output_neuron] +=
-                            batch_sum(
-                                dx[batch_index * output_neurons +
-                                   output_neuron] *
-                                a[batch_index * input_neurons + input_neuron]);
-                      }
-                    }
-                  }
-                }
-              }
-
-              if (true) {
-                {
-                  // TRACTOR_PROFILER("dense backprop left");
-                  auto mb = Eigen::Map<
-                      const Eigen::Matrix<Weight, Eigen::Dynamic,
-                                          Eigen::Dynamic, Eigen::RowMajor>,
-                      Eigen::Unaligned>(b, input_neurons, output_neurons);
-                  auto mda =
-                      Eigen::Map<Eigen::Matrix<Activation, Eigen::Dynamic,
-                                               Eigen::Dynamic, Eigen::RowMajor>,
-                                 Eigen::Unaligned>(da, batch_size,
-                                                   input_neurons);
-                  auto mdx = Eigen::Map<
-                      const Eigen::Matrix<Activation, Eigen::Dynamic,
-                                          Eigen::Dynamic, Eigen::RowMajor>,
-                      Eigen::Unaligned>(dx, batch_size, output_neurons);
-                  mda.noalias() = mdx * mb.transpose();
-                }
-                if (check) {
-                  TRACTOR_PROFILER("check dense backprop left");
-                  for (size_t batch_index = 0; batch_index < batch_size;
-                       batch_index++) {
-                    for (size_t input_neuron = 0; input_neuron < input_neurons;
-                         input_neuron++) {
-                      Activation dv = Activation(0);
-                      for (size_t output_neuron = 0;
-                           output_neuron < output_neurons; output_neuron++) {
-                        dv += dx[batch_index * output_neurons + output_neuron] *
-                              Activation(b[input_neuron * output_neurons +
-                                           output_neuron]);
-                      }
-                      TRACTOR_ASSERT(
-                          std::abs(
-                              da[batch_index * input_neurons + input_neuron] -
-                              dv) < 1e-9);
-                    }
-                  }
-                }
-                {
-                  // TRACTOR_PROFILER("dense backprop right");
-                  auto ma = Eigen::Map<
-                      const Eigen::Matrix<Activation, Eigen::Dynamic,
-                                          Eigen::Dynamic, Eigen::RowMajor>,
-                      Eigen::Unaligned>(a, batch_size, input_neurons);
-                  auto mdb =
-                      Eigen::Map<Eigen::Matrix<Weight, Eigen::Dynamic,
-                                               Eigen::Dynamic, Eigen::RowMajor>,
-                                 Eigen::Unaligned>(db, input_neurons,
-                                                   output_neurons);
-                  auto mdx = Eigen::Map<
-                      const Eigen::Matrix<Activation, Eigen::Dynamic,
-                                          Eigen::Dynamic, Eigen::RowMajor>,
-                      Eigen::Unaligned>(dx, batch_size, output_neurons);
-                  mdb.noalias() = ma.transpose() * mdx;
-                }
-                if (check) {
-                  TRACTOR_PROFILER("check dense backprop right");
-                  for (size_t input_neuron = 0; input_neuron < input_neurons;
-                       input_neuron++) {
-                    for (size_t output_neuron = 0;
-                         output_neuron < output_neurons; output_neuron++) {
-                      Weight w = Weight(0);
-                      for (size_t batch_index = 0; batch_index < batch_size;
-                           batch_index++) {
-                        w += batch_sum(
-                            dx[batch_index * output_neurons + output_neuron] *
-                            a[batch_index * input_neurons + input_neuron]);
-                      }
-                      TRACTOR_ASSERT(std::abs(db[input_neuron * output_neurons +
-                                                 output_neuron] -
-                                              w) < 1e-9);
-                    }
-                  }
-                }
-              }
-
-              if (false) {
-                {
-                  TRACTOR_PROFILER("dense backprop left");
-                  for (size_t batch_index = 0; batch_index < batch_size;
-                       batch_index++) {
-                    for (size_t input_neuron = 0; input_neuron < input_neurons;
-                         input_neuron++) {
-                      Activation dv = Activation(0);
-                      for (size_t output_neuron = 0;
-                           output_neuron < output_neurons; output_neuron++) {
-                        dv += dx[batch_index * output_neurons + output_neuron] *
-                              Activation(b[input_neuron * output_neurons +
-                                           output_neuron]);
-                      }
-                      da[batch_index * input_neurons + input_neuron] = dv;
-                    }
-                  }
-                }
-                {
-                  TRACTOR_PROFILER("dense backprop right");
-                  size_t input_neuron_output_neurons = 0;
-                  for (size_t input_neuron = 0; input_neuron < input_neurons;
-                       input_neuron++) {
-                    for (size_t output_neuron = 0;
-                         output_neuron < output_neurons; output_neuron++) {
-                      Weight w = Weight(0);
-                      size_t batch_index_input_neurons = 0;
-                      size_t batch_index_output_neurons = 0;
-                      for (size_t batch_index = 0; batch_index < batch_size;
-                           batch_index++) {
-                        Weight v = Weight(0);
-                        batch_sum(
-                            dx[batch_index_output_neurons + output_neuron] *
-                                a[batch_index_input_neurons + input_neuron],
-                            v);
-                        w += v;
-                        batch_index_input_neurons += input_neurons;
-                        batch_index_output_neurons += output_neurons;
-                      }
-                      db[input_neuron_output_neurons + output_neuron] = w;
-                    }
-                    input_neuron_output_neurons += output_neurons;
-                  }
-                }
-              }
-            });
+            [a_rows, a_cols_b_rows, b_cols, profiler_reverse](
+                const A *a, const B *b, const X *x, A *da, B *db, const X *dx)
+                TRACTOR_FAST {
+                  ProfilerScope profiler_scope(*profiler_reverse);
+                  matmul_reverse(a_rows, a_cols_b_rows, b_cols, a, b, x, da, db,
+                                 dx);
+                });
 
         return op;
       }};
 
-  auto *op = factory.get(inputs.info(), weights.info(), outputs.info(),
-                         input_neurons, output_neurons, batch_size);
+  auto *op = factory.get(tensor_a.info(), tensor_b.info(), tensor_x.info(),
+                         a_cols_b_rows, b_cols, a_rows);
 
   std::array<void *, 3> args = {
-      (void *)inputs.data(),
-      (void *)weights.data(),
-      (void *)outputs.data(),
+      (void *)tensor_a.data(),
+      (void *)tensor_b.data(),
+      (void *)tensor_x.data(),
   };
   callAndRecord(op, args.data());
 
-  return outputs;
+  return tensor_x;
 }
 
 } // namespace tractor
