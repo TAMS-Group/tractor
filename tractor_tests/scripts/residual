@@ -3,7 +3,6 @@
 import time
 import tractor as tr
 import tractor.types_double as tt
-import tractor.types_double_twist as tg
 import math
 import numpy as np
 import random
@@ -13,10 +12,18 @@ for i in range(100):
     # angle = random.uniform(-10, 10)
     xyzw = np.random.normal(0.0, 10.0, size=4)
 
-    quat1 = tg.Orientation(xyzw)
+    quat1 = tt.Orientation(xyzw)
     vec1 = tr.residual(quat1)
 
-    quat2 = tg.Orientation.angle_axis(tr.norm(vec1), tr.normalized(vec1))
+    quat2 = tt.Orientation.angle_axis(tr.norm(vec1), tr.normalized(vec1))
+    vec2 = tr.residual(quat2)
+
+    print i, quat1, quat2, vec1, vec2
+
+    assert(np.allclose(vec1.value, vec2.value))
+    assert(np.allclose(quat1.value, quat2.value) or np.allclose(quat1.value, -quat2.value))
+
+    quat2 = tt.Orientation() + vec1
     vec2 = tr.residual(quat2)
 
     print i, quat1, quat2, vec1, vec2
@@ -26,23 +33,23 @@ for i in range(100):
 
 print ""
 
-print tr.residual(tg.Orientation(0,0,0,1))
-print tr.residual(tg.Orientation(1,0,0,0))
-print tr.residual(tg.Orientation(math.sqrt(0.5),0,0,math.sqrt(0.5)))
-print tr.residual(tg.Orientation(-math.sqrt(0.5),0,0,-math.sqrt(0.5)))
+print tr.residual(tt.Orientation(0,0,0,1))
+print tr.residual(tt.Orientation(1,0,0,0))
+print tr.residual(tt.Orientation(math.sqrt(0.5),0,0,math.sqrt(0.5)))
+print tr.residual(tt.Orientation(-math.sqrt(0.5),0,0,-math.sqrt(0.5)))
 
 print ""
 
-print tg.Orientation.angle_axis(tt.Scalar(0), tg.Vector3(1,0,0))
-print tg.Orientation.angle_axis(tt.Scalar(math.pi), tg.Vector3(1,0,0))
-print tg.Orientation.angle_axis(tt.Scalar(math.pi*2), tg.Vector3(1,0,0))
-print tg.Orientation.angle_axis(tt.Scalar(math.pi*2.5), tg.Vector3(1,0,0))
-print tg.Orientation.angle_axis(tt.Scalar(math.pi*3), tg.Vector3(1,0,0))
+print tt.Orientation.angle_axis(tt.Scalar(0), tt.Vector3(1,0,0))
+print tt.Orientation.angle_axis(tt.Scalar(math.pi), tt.Vector3(1,0,0))
+print tt.Orientation.angle_axis(tt.Scalar(math.pi*2), tt.Vector3(1,0,0))
+print tt.Orientation.angle_axis(tt.Scalar(math.pi*2.5), tt.Vector3(1,0,0))
+print tt.Orientation.angle_axis(tt.Scalar(math.pi*3), tt.Vector3(1,0,0))
 
 print ""
 
-print tr.residual(tg.Orientation.angle_axis(tt.Scalar(0), tg.Vector3(1,0,0)))
-print tr.residual(tg.Orientation.angle_axis(tt.Scalar(math.pi), tg.Vector3(1,0,0)))
-print tr.residual(tg.Orientation.angle_axis(tt.Scalar(math.pi*2), tg.Vector3(1,0,0)))
-print tr.residual(tg.Orientation.angle_axis(tt.Scalar(math.pi*2.5), tg.Vector3(1,0,0)))
-print tr.residual(tg.Orientation.angle_axis(tt.Scalar(math.pi*3), tg.Vector3(1,0,0)))
+print tr.residual(tt.Orientation.angle_axis(tt.Scalar(0), tt.Vector3(1,0,0)))
+print tr.residual(tt.Orientation.angle_axis(tt.Scalar(math.pi), tt.Vector3(1,0,0)))
+print tr.residual(tt.Orientation.angle_axis(tt.Scalar(math.pi*2), tt.Vector3(1,0,0)))
+print tr.residual(tt.Orientation.angle_axis(tt.Scalar(math.pi*2.5), tt.Vector3(1,0,0)))
+print tr.residual(tt.Orientation.angle_axis(tt.Scalar(math.pi*3), tt.Vector3(1,0,0)))

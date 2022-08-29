@@ -139,7 +139,7 @@ class GradientTester:
         #         print ""
 
 modules = [
-    tractor.types_double_twist,
+    tractor.types_double,
     tractor.types_double_scalar,
 ]
 

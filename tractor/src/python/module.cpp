@@ -15,23 +15,56 @@
 
 namespace tractor {
 
+template <class Scalar> struct PythonScalarInit {
+  template <class Class> static void init(Class cls) {
+    cls.def(py::init<Scalar>());
+    cls.def_property(
+        "value", [](const Var<Scalar> &_this) { return (Scalar)_this.value(); },
+        [](Var<Scalar> &_this, const Scalar &v) { _this.value() = v; });
+  }
+};
+
+template <class Scalar, size_t Size>
+struct PythonScalarInit<Batch<Scalar, Size>> {
+  template <class Class> static void init(Class cls) {
+    cls.def(py::init([](const std::array<Scalar, Size> &v) {
+      Batch<Scalar, Size> _this;
+      for (size_t i = 0; i < Size; i++) {
+        _this[i] = v[i];
+      }
+      return Var<Batch<Scalar, Size>>(_this);
+    }));
+    cls.def_property(
+        "value",
+        [](const Var<Batch<Scalar, Size>> &_this) {
+          std::array<Scalar, Size> ret;
+          for (size_t i = 0; i < Size; i++) {
+            ret[i] = _this.value()[i];
+          }
+          return ret;
+        },
+        [](Var<Batch<Scalar, Size>> &_this, const std::array<Scalar, Size> &v) {
+          for (size_t i = 0; i < Size; i++) {
+            _this.value()[i] = v[i];
+          }
+        });
+  }
+};
+
 template <class Scalar>
 static void pythonizeGeometryScalar(py::module main_module,
                                     py::module type_module) {
-  pythonizeType<Var<Scalar>>(main_module, type_module, "Scalar")
-      .def(py::init<Scalar>())
-      .def_property(
-          "value",
-          [](const Var<Scalar> &_this) { return (Scalar)_this.value(); },
-          [](Var<Scalar> &_this, const Scalar &v) { _this.value() = v; })
-      .def(py::self + py::self)
-      .def(py::self - py::self)
-      .def(py::self * py::self)
-      .def(py::self / py::self)
-      .def(py::self += py::self)
-      .def(py::self -= py::self)
-      .def(py::self *= py::self)
-      .def(py::self /= py::self);
+  auto cls = pythonizeType<Var<Scalar>>(main_module, type_module, "Scalar")
+                 .def(py::init<>())
+                 .def(py::self + py::self)
+                 .def(py::self - py::self)
+                 .def(py::self * py::self)
+                 .def(py::self / py::self)
+                 .def(py::self += py::self)
+                 .def(py::self -= py::self)
+                 .def(py::self *= py::self)
+                 .def(py::self /= py::self);
+  PythonScalarInit<Scalar>::init(cls);
 }
 TRACTOR_PYTHON_TYPED_BATCH(pythonizeGeometryScalar);
 
@@ -80,14 +113,8 @@ static void pythonizeMain(py::module &m) {
   m.def_submodule("types_float_4");
   m.def_submodule("types_double_4");
 
-  m.def_submodule("types_float_4_twist");
-  m.def_submodule("types_double_4_twist");
-
   m.def_submodule("types_float");
   m.def_submodule("types_double");
-
-  m.def_submodule("types_float_twist");
-  m.def_submodule("types_double_twist");
 
   m.def_submodule("types_float_scalar");
   m.def_submodule("types_double_scalar");

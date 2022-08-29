@@ -3,7 +3,6 @@
 import time
 import tractor as tr
 import tractor.types_double as tt
-import tractor.types_double_twist as tg
 
 print dir(tr)
 print dir(tt)
@@ -18,11 +17,11 @@ print tr.tanh(tt.Scalar(0.3))
 print tr.tanh(tt.Scalar(1.0))
 print tr.sin(tt.Scalar(5.0))
 
-v = tg.Vector3(3, 4, 5)
+v = tt.Vector3(3, 4, 5)
 print v
 tr.vec3_pack(tt.Scalar(1), tt.Scalar(2), tt.Scalar(3), v)
 print v
-print tg.Vector3(tt.Scalar(1), tt.Scalar(5), tt.Scalar(3))
-print tg.Vector3(1,2,3) + tg.Vector3(2,3,4)
+print tt.Vector3(tt.Scalar(1), tt.Scalar(5), tt.Scalar(3))
+print tt.Vector3(1,2,3) + tt.Vector3(2,3,4)
 
 print tt.Scalar(10)

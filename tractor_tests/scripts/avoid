@@ -3,7 +3,6 @@
 import time
 import tractor as tr
 import tractor.types_double as tt
-import tractor.types_double_twist as tg
 import rospy
 import sys
 import sklearn
@@ -15,17 +14,17 @@ if len(sys.argv) < 2:
     exit(-1)
 
 robot_description = sys.argv[1]
-robot_model = tg.RobotModel(robot_description)
-collision_robot = tg.CollisionRobot(robot_model)
-joint_states = tg.JointStates(robot_model)
-object_goal_pose = tg.Pose()
+robot_model = tt.RobotModel(robot_description)
+collision_robot = tt.CollisionRobot(robot_model)
+joint_states = tt.JointStates(robot_model)
+object_goal_pose = tt.Pose()
 
 def f():
     tr.parameter(object_goal_pose)
     for i in range(robot_model.joint_count):
         joint_model = robot_model.joint_model(i)
         joint_state = joint_states.joint_state(i)
-        if isinstance(joint_model, tg.FloatingJointModel):
+        if isinstance(joint_model, tt.FloatingJointModel):
             tr.variable(joint_state.pose)
     link_states = robot_model.forward_kinematics(joint_states)
     tr.goal(tr.residual(link_states.link_pose("object"), object_goal_pose))
@@ -37,12 +36,12 @@ def f():
     # tr.goal(tr.pose_translation(link_states.link_pose("object")) - tr.pose_translation(object_goal_pose))
     #tr.goal(tr.quat_residual(tr.quat_inverse(tr.pose_orientation(link_states.link_pose("object"))) * tr.pose_orientation(object_goal_pose)) * tt.Scalar(0.05))
     # for v in [
-    #     tg.Vector3(+1,0,0),
-    #     tg.Vector3(0,+1,0),
-    #     tg.Vector3(0,0,+1),
-    #     tg.Vector3(-1,0,0),
-    #     tg.Vector3(0,-1,0),
-    #     tg.Vector3(0,0,-1),
+    #     tt.Vector3(+1,0,0),
+    #     tt.Vector3(0,+1,0),
+    #     tt.Vector3(0,0,+1),
+    #     tt.Vector3(-1,0,0),
+    #     tt.Vector3(0,-1,0),
+    #     tt.Vector3(0,0,-1),
     # ]:
     #     tr.goal((tr.inverse(link_states.link_pose("object")) * object_goal_pose) * v - v)
     collision = tr.collide(
@@ -54,7 +53,7 @@ def f():
     #tr.goal(tr.relu(tt.Scalar(1) * tr.dot(collision.point_b - collision.point_a, collision.normal)))
     for shape in collision_robot.link("object").shapes:
         for vertex in shape.vertices:
-            tr.goal(tr.relu(tt.Scalar(2) * tr.dot(collision.point_b - link_states.link_pose("object") * tg.Vector3(vertex), collision.normal)))
+            tr.goal(tr.relu(tt.Scalar(2) * tr.dot(collision.point_b - link_states.link_pose("object") * tt.Vector3(vertex), collision.normal)))
     tr.visualize_lines("contacts", 0.01, (1,1,1,1), [ collision.point_b.value, collision.point_a.value ])
 
 prog = tr.record(f)
@@ -67,7 +66,7 @@ solver.adaptive_regularization = False
 #solver.timeout = 0.05
 solver.timeout = 0.000000001
 solver.max_linear_iterations = 20
-solver.regularization = 1
+solver.regularization = 0.01
 solver.line_search = False
 solver.step_scaling = 1
 

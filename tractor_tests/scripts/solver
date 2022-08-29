@@ -3,21 +3,20 @@
 import time
 import tractor as tr
 import tractor.types_double as tt
-import tractor.types_double_twist as tg
 import math
 
 print tr.__dict__.keys()
 
-b = tg.Vector3(1,2,3)
+b = tt.Vector3(1,2,3)
 
 def f():
     global a
-    a = tg.Vector3(2,3,4)
+    a = tt.Vector3(2,3,4)
     tr.variable(a)
     tr.variable(b)
     tr.goal(a * tt.Scalar(0.1))
     tr.goal(b * tt.Scalar(0.1))
-    tr.goal(a - tg.Vector3(0.1,0.1,0.1))
+    tr.goal(a - tt.Vector3(0.1,0.1,0.1))
 
 prog = tr.record(f)
 

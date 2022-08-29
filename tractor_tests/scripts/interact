@@ -3,7 +3,6 @@
 import time
 import tractor as tr
 import tractor.types_double as tt
-import tractor.types_double_twist as tg
 import rospy
 import sys
 import time
@@ -13,7 +12,7 @@ print sys.argv
 tr.logger.verbosity = 10
 tr.init_ros("test")
 
-v = tg.Vector3(.1,.2,.3)
+v = tt.Vector3(.1,.2,.3)
 
 while True:
     tr.interact("base_frame", "test", v, 0.1)

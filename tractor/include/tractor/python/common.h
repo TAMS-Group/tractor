@@ -84,28 +84,28 @@ public:
   }();
 
 #define TRACTOR_PYTHON_TWIST(name)                                             \
-  static int _tractor_python_twist = []() {                                    \
+  static int _tractor_python = []() {                                          \
     PythonRegistry::instance()->add([](py::module m) {                         \
       name<GeometryFast<Var<float>>>(                                          \
-          m, m.attr("types_float_twist").cast<py::module>());                  \
+          m, m.attr("types_float").cast<py::module>());                        \
       name<GeometryFast<Var<double>>>(                                         \
-          m, m.attr("types_double_twist").cast<py::module>());                 \
+          m, m.attr("types_double").cast<py::module>());                       \
     });                                                                        \
     return 0;                                                                  \
   }();
 
 // name<GeometryFast<Var<Batch<float, 4>>>>(                                \
-//     m, m.attr("types_float_twist_4").cast<py::module>());                \
+//     m, m.attr("types_float_4").cast<py::module>());                \
 // name<GeometryFast<Var<Batch<double, 4>>>>(                               \
-//     m, m.attr("types_double_twist_4").cast<py::module>());               \
+//     m, m.attr("types_double_4").cast<py::module>());               \
 
 #define TRACTOR_PYTHON_GEOMETRY(name)                                          \
   static int _tractor_python_geometry = []() {                                 \
     PythonRegistry::instance()->add([](py::module m) {                         \
       name<GeometryFast<Var<float>>>(                                          \
-          m, m.attr("types_float_twist").cast<py::module>());                  \
+          m, m.attr("types_float").cast<py::module>());                        \
       name<GeometryFast<Var<double>>>(                                         \
-          m, m.attr("types_double_twist").cast<py::module>());                 \
+          m, m.attr("types_double").cast<py::module>());                       \
       name<GeometryScalar<Var<float>>>(                                        \
           m, m.attr("types_float_scalar").cast<py::module>());                 \
       name<GeometryScalar<Var<double>>>(                                       \
@@ -118,17 +118,17 @@ public:
   static int _tractor_python_geometry = []() {                                 \
     PythonRegistry::instance()->add([](py::module m) {                         \
       name<GeometryFast<Var<float>>>(                                          \
-          m, m.attr("types_float_twist").cast<py::module>());                  \
+          m, m.attr("types_float").cast<py::module>());                        \
       name<GeometryFast<Var<double>>>(                                         \
-          m, m.attr("types_double_twist").cast<py::module>());                 \
+          m, m.attr("types_double").cast<py::module>());                       \
       name<GeometryScalar<Var<float>>>(                                        \
           m, m.attr("types_float_scalar").cast<py::module>());                 \
       name<GeometryScalar<Var<double>>>(                                       \
           m, m.attr("types_double_scalar").cast<py::module>());                \
       name<GeometryFast<Var<Batch<float, 4>>>>(                                \
-          m, m.attr("types_float_4_twist").cast<py::module>());                \
+          m, m.attr("types_float_4").cast<py::module>());                      \
       name<GeometryFast<Var<Batch<double, 4>>>>(                               \
-          m, m.attr("types_double_4_twist").cast<py::module>());               \
+          m, m.attr("types_double_4").cast<py::module>());                     \
     });                                                                        \
     return 0;                                                                  \
   }();
@@ -138,7 +138,7 @@ static auto pythonizeTypeBase(py::module &main_module, py::module &type_module,
                               const char *name) {
   main_module.def("goal", [](const Type &var) { goal(var); });
   return ptr_class<Type>(type_module, name)
-      .def(py::init<>())
+      //.def(py::init<>())
       .def("__repr__",
            [name](const Type &v) {
              std::stringstream ss;

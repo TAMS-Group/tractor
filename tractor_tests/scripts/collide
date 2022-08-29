@@ -7,7 +7,6 @@ import rospy
 import sys
 import sklearn
 import sklearn.cluster
-import tractor.types_double_twist as tg
 
 tr.logger.verbosity = 10
 tr.init_ros("test")
@@ -18,11 +17,11 @@ if len(sys.argv) < 2:
     exit(-1)
 
 robot_description = sys.argv[1]
-robot_model = tg.RobotModel(robot_description)
+robot_model = tt.RobotModel(robot_description)
 
-collision_robot = tg.CollisionRobot(robot_model)
+collision_robot = tt.CollisionRobot(robot_model)
 
-goal_pose = tg.Pose()
+goal_pose = tt.Pose()
 
 samples = collision_robot.link("object").shapes[0].sample(500)
 samples = sklearn.cluster.KMeans(n_clusters=50).fit(samples).cluster_centers_
@@ -31,7 +30,7 @@ while True:
 
     tr.interact("world", "object", goal_pose, 0.1)
 
-    joint_states = tg.JointStates(robot_model)
+    joint_states = tt.JointStates(robot_model)
     joint_states.joint_state("object_joint").pose = goal_pose
 
     link_states = robot_model.forward_kinematics(joint_states)
@@ -61,13 +60,13 @@ while True:
 
     points = [ ]
     for sample in samples:
-        points.append((object_pose * tg.Vector3(sample[0:3])).value)
+        points.append((object_pose * tt.Vector3(sample[0:3])).value)
     tr.visualize_points("s", 0.01, (1,0,1,1), points)
 
     lines = [ ]
     for sample in samples:
-        lines.append((object_pose * tg.Vector3(sample[0:3])).value)
-        lines.append((object_pose * (tg.Vector3(sample[0:3] + sample[3:6] * 0.03))).value)
+        lines.append((object_pose * tt.Vector3(sample[0:3])).value)
+        lines.append((object_pose * (tt.Vector3(sample[0:3] + sample[3:6] * 0.03))).value)
     tr.visualize_lines("sl", 0.005, (1,1,0,1), lines)
 
     tr.visualize("/display_robot_state", joint_states)

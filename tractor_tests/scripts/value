@@ -2,9 +2,8 @@
 
 import tractor as tr
 import tractor.types_double as tt
-import tractor.types_double_twist as tg
 
-v = tg.Vector3()
+v = tt.Vector3()
 print v
 print v.value
 print ""
@@ -12,12 +11,12 @@ v.value = [1,2,3]
 print v
 print v.value
 print ""
-v = tg.Vector3([2,3,4])
+v = tt.Vector3([2,3,4])
 print v
 print v.value
 print ""
 
-v = tg.Orientation()
+v = tt.Orientation()
 print v
 print v.value
 print ""
@@ -25,12 +24,12 @@ v.value = [1,2,3,4]
 print v
 print v.value
 print ""
-v = tg.Orientation([2,3,4,5])
+v = tt.Orientation([2,3,4,5])
 print v
 print v.value
 print ""
 
-v = tg.Matrix3()
+v = tt.Matrix3()
 print v
 print v.value
 print ""
@@ -38,7 +37,7 @@ v.value = [[1,2,3],[2,3,4],[3,4,5]]
 print v
 print v.value
 print ""
-v = tg.Matrix3([[2,3,4],[3,4,5],[4,5,6]])
+v = tt.Matrix3([[2,3,4],[3,4,5],[4,5,6]])
 print v
 print v.value
 print ""

@@ -19,7 +19,7 @@ class Tester:
 
     def __init__(self, function):
         self.function = function
-        self.program = tractor.record(lambda: function(tractor.types_double_twist))
+        self.program = tractor.record(lambda: function(tractor.types_double))
         self.derivatives = tractor.derive(self.program)
         self.x_compute = engine.compile(self.program)
         self.x_prepare = engine.compile(self.derivatives.prepare)

@@ -3,7 +3,6 @@
 import time
 import tractor as tr
 import tractor.types_double as tt
-import tractor.types_double_twist as tg
 import rospy
 import sys
 import math
@@ -17,11 +16,11 @@ if len(sys.argv) < 2:
     exit(-1)
 
 robot_description = sys.argv[1]
-robot_model = tg.RobotModel(robot_description)
+robot_model = tt.RobotModel(robot_description)
 
-collision_robot = tg.CollisionRobot(robot_model)
+collision_robot = tt.CollisionRobot(robot_model)
 
-object_start_pose = tg.Pose()
+object_start_pose = tt.Pose()
 
 fps = 50
 substeps = 20
@@ -30,12 +29,12 @@ while True:
 
     tr.interact("world", "object", object_start_pose, 0.12)
 
-    joint_states = tg.JointStates(robot_model)
+    joint_states = tt.JointStates(robot_model)
 
     #p = object_start_pose * tr.angle_axis_pose(tt.Scalar(math.pi), tt.Vector3(0,1,0))
     p = object_start_pose
 
-    object_body = tg.RigidBody(p, robot_model.joint_model("object_joint").inertia)
+    object_body = tt.RigidBody(p, robot_model.joint_model("object_joint").inertia)
     print "pose", object_body.pose
     print "center", object_body.inertia.center
     print "mass",  object_body.inertia.mass
@@ -52,20 +51,20 @@ while True:
             c = tr.collide(
                 object_body.pose,
                 collision_robot.link("object"),
-                tg.Pose.identity,
+                tt.Pose.identity,
                 collision_robot.link("world")
             )
 
             for shape in collision_robot.link("object").shapes:
                 for vertex in shape.vertices:
-                    v = object_body.pose * tg.Vector3(vertex)
+                    v = object_body.pose * tt.Vector3(vertex)
                     d = tr.dot(v - c.point_b, c.normal)
                     if d.value < 0:
                         object_body.apply_force(v, c.normal * d * tt.Scalar(-5))
 
             object_body.apply_damping(tt.Scalar(5), tt.Scalar(5))
 
-            object_body.apply_acceleration(tg.Vector3(0, 0, -9.81))
+            object_body.apply_acceleration(tt.Vector3(0, 0, -9.81))
 
             object_body.integrate(1.0/substeps/fps)
 

@@ -5,17 +5,18 @@ project(tractor)
 
 # uncomment for better runtime performance but longer build times
 #set(OPT_FLAGS -O3)
-set(OPT_FLAGS -O2)
+#set(OPT_FLAGS -O2)
 
 # uncomment for faster build times but lower runtime performance
-#set(OPT_FLAGS -O0)
+set(OPT_FLAGS -O0)
 
 # uncomment to enable address sanatizer
 #set(ASAN_FLAGS -fsanitize=address)
 
 # ------------------------------------------------------------------
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ASAN_FLAGS} -Wfatal-errors -ffast-math -g -Wno-register -std=c++17 ${OPT_FLAGS} -mavx -U__AVX__ -fopenmp")
+# -Wfatal-errors
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ASAN_FLAGS} -ffast-math -g -Wno-register -std=c++17 ${OPT_FLAGS} -mavx -U__AVX__ -fopenmp")
 
 message(STATUS "compiler options: ${CMAKE_CXX_FLAGS}")
 

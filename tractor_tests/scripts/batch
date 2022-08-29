@@ -1,0 +1,27 @@
+#!/usr/bin/env python
+
+import tractor as tr
+import tractor.types_double_4 as tb
+
+v = tb.Scalar([1,2,3,4])
+print v
+
+t = tb.Tensor([tb.Scalar([1,2,3,4]), tb.Scalar([2,3,4,5])])
+print t
+t += t
+print t
+print tr.unpack(t)
+
+t = tb.Vector3Tensor([tb.Vector3(tb.Scalar([1,2,3,4]),tb.Scalar([2,3,4,5]),tb.Scalar([3,4,5,6]))])
+print "Vector3Tensor", tr.unpack(t)
+print tr.unpack(t)[0].value
+
+v = tb.Vector3()
+v.value = [
+    [1,2,3,4],
+    [2,3,4,5],
+    [5,6,7,8],
+]
+print v.value
+v.value = v.value
+print v.value

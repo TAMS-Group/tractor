@@ -10,6 +10,51 @@
 
 namespace tractor {
 
+// template <class Type, size_t Size>
+// static const std::array<Type, Size> &
+// returnPythonArray(const std::array<Type, Size> &a) {
+//   return a;
+// }
+
+template <class Type, size_t ArraySize> struct PythonArrayHelper {
+  typedef std::array<Type, ArraySize> ImportType;
+  typedef std::array<Type, ArraySize> InternalType;
+  typedef py::array_t<Type> ExportType;
+  static ExportType toPython(const InternalType &a) {
+    py::array_t<Type> x({ArraySize});
+    for (size_t i = 0; i < ArraySize; i++) {
+      x.mutable_at(i) = a[i];
+    }
+    return x;
+  }
+  static InternalType fromPython(const ImportType &a) { return a; }
+};
+
+template <class ElementType, size_t BatchSize, size_t ArraySize>
+struct PythonArrayHelper<Batch<ElementType, BatchSize>, ArraySize> {
+  typedef std::array<std::array<ElementType, BatchSize>, ArraySize> ImportType;
+  typedef std::array<Batch<ElementType, BatchSize>, ArraySize> InternalType;
+  typedef py::array_t<ElementType> ExportType;
+  static ExportType toPython(const InternalType &a) {
+    py::array_t<ElementType> x({ArraySize, BatchSize});
+    for (size_t ia = 0; ia < ArraySize; ia++) {
+      for (size_t ib = 0; ib < BatchSize; ib++) {
+        x.mutable_at(ia, ib) = a[ia][ib];
+      }
+    }
+    return x;
+  }
+  static InternalType fromPython(const ImportType &a) {
+    InternalType x;
+    for (size_t ia = 0; ia < ArraySize; ia++) {
+      for (size_t ib = 0; ib < BatchSize; ib++) {
+        x[ia][ib] = a[ia][ib];
+      }
+    }
+    return x;
+  }
+};
+
 template <class Geometry>
 static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
 
@@ -25,6 +70,7 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
   // -------------------------------------------------------------
   // Twist
   pythonizeType<Twist>(mod_main, mod_type, "Twist")
+      .def(py::init([]() { return Geometry::TwistZero(); }))
       // .def_static(
       //     "translation",
       //     [](const Vector3 &v) { return Geometry::translationTwist(v); })
@@ -34,7 +80,6 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
                                       //           << std::endl;
                                       return Geometry::TwistZero();
                                     })
-      .def(py::init([]() { return Geometry::TwistZero(); }))
       .def(py::init([](const Vector3 &translation, const Vector3 &rotation) {
         return Geometry::twist(translation, rotation);
       }))
@@ -67,6 +112,7 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
   // -------------------------------------------------------------
   // Pose
   pythonizeType<Pose>(mod_main, mod_type, "Pose")
+      .def(py::init([]() { return Geometry::PoseIdentity(); }))
       .def_static("angle_axis",
                   py::overload_cast<const Scalar &, const Vector3 &>(
                       &Geometry::angleAxisPose))
@@ -77,7 +123,6 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
       .def_property_readonly_static(
           "identity",
           [](const py::object &) { return Geometry::PoseIdentity(); })
-      .def(py::init([]() { return Geometry::PoseIdentity(); }))
       .def(py::init(
           [](const Vector3 &translation, const Orientation &orientation) {
             return Geometry::pack(translation, orientation);
@@ -123,13 +168,13 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
   // -------------------------------------------------------------
   // Orientation
   pythonizeType<Orientation>(mod_main, mod_type, "Orientation")
+      .def(py::init([]() { return Geometry::OrientationIdentity(); }))
       .def_static("angle_axis",
                   py::overload_cast<const Scalar &, const Vector3 &>(
                       &Geometry::angleAxisOrientation))
       .def_property_readonly_static(
           "identity",
           [](const py::object &) { return Geometry::OrientationIdentity(); })
-      .def(py::init([]() { return Geometry::OrientationIdentity(); }))
       .def(py::init([](const Scalar &x, const Scalar &y, const Scalar &z,
                        const Scalar &w) { return Geometry::pack(x, y, z, w); }))
       .def(py::init([](const Value &x, const Value &y, const Value &z,
@@ -143,14 +188,16 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
       .def_property(
           "value",
           [](const Orientation &_this) {
-            std::array<Value, 4> r;
+            typename PythonArrayHelper<Value, 4>::InternalType r;
             r[0] = value(value(_this).x());
             r[1] = value(value(_this).y());
             r[2] = value(value(_this).z());
             r[3] = value(value(_this).w());
-            return r;
+            return PythonArrayHelper<Value, 4>::toPython(r);
           },
-          [](Orientation &_this, const std::array<Value, 4> &array) {
+          [](Orientation &_this,
+             const typename PythonArrayHelper<Value, 4>::ImportType &py_array) {
+            auto array = PythonArrayHelper<Value, 4>::fromPython(py_array);
             value(value(_this).x()) = array.at(0);
             value(value(_this).y()) = array.at(1);
             value(value(_this).z()) = array.at(2);
@@ -182,12 +229,12 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
   // -------------------------------------------------------------
   // Matrix3
   pythonizeType<Matrix3>(mod_main, mod_type, "Matrix3")
+      .def(py::init([]() { return Geometry::Matrix3Zero(); }))
       .def_property_readonly_static(
           "identity",
           [](const py::object &) { return Geometry::Matrix3Identity(); })
       .def_property_readonly_static(
           "zero", [](const py::object &) { return Geometry::Matrix3Zero(); })
-      .def(py::init([]() { return Geometry::Matrix3Zero(); }))
       // .def(py::init([](const Eigen::Matrix<Value, 3, 3> &value) {
       //   return Geometry::import(value);
       // }))
@@ -272,6 +319,7 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
   // -------------------------------------------------------------
   // Vector3
   pythonizeType<Vector3>(mod_main, mod_type, "Vector3")
+      .def(py::init([]() { return Geometry::Vector3Zero(); }))
       .def_property_readonly_static(
           "zero", [](const py::object &) { return Geometry::Vector3Zero(); })
       .def(py::init([](const std::array<Value, 3> &array) {
@@ -289,13 +337,15 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
       .def_property(
           "value",
           [](const Vector3 &_this) {
-            std::array<Value, 3> r;
+            typename PythonArrayHelper<Value, 3>::InternalType r;
             r.at(0) = value(value(_this).x());
             r.at(1) = value(value(_this).y());
             r.at(2) = value(value(_this).z());
-            return r;
+            return PythonArrayHelper<Value, 3>::toPython(r);
           },
-          [](Vector3 &_this, const std::array<Value, 3> &array) {
+          [](Vector3 &_this,
+             const typename PythonArrayHelper<Value, 3>::ImportType &py_array) {
+            auto array = PythonArrayHelper<Value, 3>::fromPython(py_array);
             value(value(_this).x()) = array.at(0);
             value(value(_this).y()) = array.at(1);
             value(value(_this).z()) = array.at(2);
