@@ -13,6 +13,22 @@ template <class T> struct TypeInfoID {
   static void id() {}
 };
 
+template <class T> struct TypeNameHelper {
+  static const char *name() { return typeid(T).name(); }
+};
+
+#define TRACTOR_TYPE_NAME_OVERRIDE(type, namestr)                              \
+  template <> struct TypeNameHelper<type> {                                    \
+    static const char *name() { return namestr; }                              \
+  };
+
+TRACTOR_TYPE_NAME_OVERRIDE(float, "float")
+TRACTOR_TYPE_NAME_OVERRIDE(double, "double")
+TRACTOR_TYPE_NAME_OVERRIDE(uint64_t, "uint64")
+TRACTOR_TYPE_NAME_OVERRIDE(uint32_t, "uint32")
+TRACTOR_TYPE_NAME_OVERRIDE(int64_t, "int64")
+TRACTOR_TYPE_NAME_OVERRIDE(int32_t, "int32")
+
 class TypeInfo {
   struct Data {
     const void *id = nullptr;
@@ -25,7 +41,8 @@ class TypeInfo {
       data.id = makeId(typeid(T));
       data.size = sizeof(T);
       data.alignment = std::alignment_of<T>::value;
-      data.name = typeid(T).name();
+      // data.name = typeid(T).name();
+      data.name = TypeNameHelper<T>::name();
       return data;
     }
   };

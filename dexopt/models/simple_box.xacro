@@ -5,7 +5,7 @@
     xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface"
     xmlns:xacro="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface"
     name="simple_box">
-    
+
     <!-- idea and easy_box borrowed from B21.xacro, <url>http://ros.org/wiki/b21_description</url>, BSD license (C) 2016 fnh, hendrich@informatik.uni-hamburg.de (c) 2020 Philipp Ruppel -->
     <xacro:macro name="simple_box" params="name parent sx sy sz mass type:=fixed color:='1 1 1 1' *origin">
         <material name="${name}_material">
@@ -15,9 +15,9 @@
             <inertial>
                 <mass value="${mass}"/>
                 <origin xyz="0 0 0" rpy="0 0 0"/>
-                <inertia 
-                    ixx="${1.0/12*mass*(sy*sy+sz*sz)}" ixy="0" ixz="0" 
-                    iyy="${1.0/12*mass*(sx*sx+sz*sz)}" iyz="0" 
+                <inertia
+                    ixx="${1.0/12*mass*(sy*sy+sz*sz)}" ixy="0" ixz="0"
+                    iyy="${1.0/12*mass*(sx*sx+sz*sz)}" iyz="0"
                     izz="${1.0/12*mass*(sx*sx+sy*sy)}"
                     />
             </inertial>
@@ -41,26 +41,26 @@
             <xacro:insert_block name="origin"/>
         </joint>
     </xacro:macro>
-    
-    
-    
+
+
+
     <xacro:macro name="simple_cylinder" params="name parent length radius mass type:=fixed color:='1 1 1 1' *origin">
-        
+
         <material name="${name}_material">
             <color rgba="${color}"/>
         </material>
-        
+
         <material name="${name}_material_2">
             <color rgba="0 0 0 1"/>
         </material>
-        
+
         <link name="${name}">
             <inertial>
                 <mass value="${mass}"/>
                 <origin xyz="0 0 0" rpy="0 0 0"/>
-                <inertia 
-                    ixx="${1.0/12*mass*(3*radius*radius+length*length)}" ixy="0" ixz="0" 
-                    iyy="${1.0/12*mass*(3*radius*radius+length*length)}" iyz="0" 
+                <inertia
+                    ixx="${1.0/12*mass*(3*radius*radius+length*length)}" ixy="0" ixz="0"
+                    iyy="${1.0/12*mass*(3*radius*radius+length*length)}" iyz="0"
                     izz="${1.0/2*mass*radius*radius}"
                     />
             </inertial>
@@ -84,14 +84,15 @@
             <child link="${name}"/>
             <xacro:insert_block name="origin"/>
         </joint>
-        
+
+        <!--
         <link name="${name}_box">
             <inertial>
                 <mass value="0"/>
                 <origin xyz="0 0 0" rpy="0 0 0"/>
-                <inertia 
-                    ixx="0" ixy="0" ixz="0" 
-                    iyy="0" iyz="0" 
+                <inertia
+                    ixx="0" ixy="0" ixz="0"
+                    iyy="0" iyz="0"
                     izz="0"
                     />
             </inertial>
@@ -108,26 +109,27 @@
             <child link="${name}_box"/>
             <xacro:insert_block name="origin"/>
         </joint>
-        
+      -->
+
     </xacro:macro>
-    
+
     <xacro:macro name="invisible_cylinder" params="name parent length radius mass type:=fixed color:='1 1 1 1' *origin">
-        
+
         <material name="${name}_material">
             <color rgba="${color}"/>
         </material>
-        
+
         <material name="${name}_material_2">
             <color rgba="0 0 0 1"/>
         </material>
-        
+
         <link name="${name}">
             <inertial>
                 <mass value="${mass}"/>
                 <origin xyz="0 0 0" rpy="0 0 0"/>
-                <inertia 
-                    ixx="${1.0/12*mass*(3*radius*radius+length*length)}" ixy="0" ixz="0" 
-                    iyy="${1.0/12*mass*(3*radius*radius+length*length)}" iyz="0" 
+                <inertia
+                    ixx="${1.0/12*mass*(3*radius*radius+length*length)}" ixy="0" ixz="0"
+                    iyy="${1.0/12*mass*(3*radius*radius+length*length)}" iyz="0"
                     izz="${1.0/2*mass*radius*radius}"
                     />
             </inertial>
@@ -143,7 +145,7 @@
             <child link="${name}"/>
             <xacro:insert_block name="origin"/>
         </joint>
-        
+
     </xacro:macro>
-    
+
 </robot>

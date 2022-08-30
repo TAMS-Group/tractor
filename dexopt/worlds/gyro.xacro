@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<robot
+    name="test"
+    xmlns:xacro="http://www.ros.org/wiki/xacro"
+    xmlns:sensor="http://playerstage.sourceforge.net/gazebo/xmlschema/#sensor"
+    xmlns:controller="http://playerstage.sourceforge.net/gazebo/xmlschema/#controller"
+    xmlns:interface="http://playerstage.sourceforge.net/gazebo/xmlschema/#interface">
+
+    <xacro:include filename="$(find dexopt)/models/simple_box.xacro"/>
+    <xacro:include filename="$(find dexopt)/models/invisible_box.xacro"/>
+
+    <link name="world"/>
+
+    <xacro:include filename="$(find dexopt)/models/simple_box.xacro"/>
+
+    <xacro:simple_cylinder name="object" parent="world" type="floating" length="0.2" radius="0.01" mass="0.01" color="1 0 0 1">
+      <origin xyz="0 0 0.05" rpy="0 0 0"/>
+    </xacro:simple_cylinder>
+
+    <xacro:if value="1">
+      <xacro:simple_cylinder name="wheel" parent="object" type="fixed" length="0.015" radius="0.1" mass="0.1" color="0 1 0 1">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+      </xacro:simple_cylinder>
+    </xacro:if>
+
+    <xacro:simple_box type="fixed" name="marker" parent="object" sx="0.15" sy="0.15" sz="0.001" mass="0" color="0 0 0.5 0.5">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+    </xacro:simple_box>
+
+    <xacro:simple_box type="fixed" name="floor" parent="world" sx="0.5" sy="0.5" sz="0.4" mass="1" color="0.5 0.5 0.5 1">
+        <origin xyz="0 0 -0.2" rpy="0 0 0"/>
+    </xacro:simple_box>
+
+</robot>

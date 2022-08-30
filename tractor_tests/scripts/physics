@@ -22,8 +22,9 @@ collision_robot = tt.CollisionRobot(robot_model)
 
 object_start_pose = tt.Pose()
 
-fps = 50
-substeps = 20
+steps = 500
+step = 1.0 / 300
+stiffness = 30
 
 while True:
 
@@ -32,43 +33,67 @@ while True:
     joint_states = tt.JointStates(robot_model)
 
     #p = object_start_pose * tr.angle_axis_pose(tt.Scalar(math.pi), tt.Vector3(0,1,0))
-    p = object_start_pose
+    #p = object_start_pose
 
-    object_body = tt.RigidBody(p, robot_model.joint_model("object_joint").inertia)
+    object_body = tt.RigidBody(
+        object_start_pose,
+        robot_model.joint_model("object_joint").inertia,
+        tt.Twist(tt.Vector3(0,0,0), tt.Vector3(0,0,1000))
+    )
     print "pose", object_body.pose
     print "center", object_body.inertia.center
     print "mass",  object_body.inertia.mass
     print "moment", object_body.inertia.moment
 
-    for k in range(fps*1):
+    #spin = 0.01
+    #object_body.apply_force(object_body.position + tt.Vector3(0,+1,0), tt.Vector3(+spin,0,0));
+    #object_body.apply_force(object_body.position + tt.Vector3(0,-1,0), tt.Vector3(-spin,0,0));
+
+    #object_body.apply_torque(tt.Vector3(0,0,0.05))
+
+    #object_body.apply_wrench(object_body.pose, tt.Twist(tt.Vector3.zero, tt.Vector3(0,0,100)))
+
+    for k in range(steps):
+
+        print k
+
+        print object_body.local_velocity
+        #object_body = tt.RigidBody(object_body.pose, object_body.inertia, object_body.local_velocity)
 
         joint_states.joint_state("object_joint").pose = object_body.pose
         tr.visualize("/display_robot_state", joint_states)
-        time.sleep(1.0/fps)
+        #time.sleep(1.0/steps)
 
-        for j in range(substeps):
+        #object_body.apply_torque(object_body.orientation * tt.Vector3(0,0,0.0001))
 
-            c = tr.collide(
-                object_body.pose,
-                collision_robot.link("object"),
-                tt.Pose.identity,
-                collision_robot.link("world")
-            )
+        #object_body.apply_wrench(object_body.pose, tt.Twist(tt.Vector3.zero, tt.Vector3(0,0,0.0001)))
 
-            for shape in collision_robot.link("object").shapes:
-                for vertex in shape.vertices:
+        #object_body.pose = object_body.pose
+        #object_body.position = object_body.position
+        #object_body.orientation = object_body.orientation
+
+        points = [ ]
+
+        for world_shape in collision_robot.link("world").shapes:
+            for object_shape in collision_robot.link("object").shapes:
+                c = tr.collide(
+                    object_body.pose,
+                    object_shape,
+                    tt.Pose.identity,
+                    world_shape
+                )
+                points.append(c.point_a.value)
+                points.append(c.point_b.value)
+                for vertex in object_shape.vertices:
                     v = object_body.pose * tt.Vector3(vertex)
                     d = tr.dot(v - c.point_b, c.normal)
                     if d.value < 0:
-                        object_body.apply_force(v, c.normal * d * tt.Scalar(-5))
+                        object_body.apply_force(v, c.normal * d * tt.Scalar(-stiffness))
 
-            object_body.apply_damping(tt.Scalar(5), tt.Scalar(5))
+        object_body.apply_damping(tt.Scalar(1), tt.Scalar(1))
 
-            object_body.apply_acceleration(tt.Vector3(0, 0, -9.81))
+        object_body.apply_acceleration(tt.Vector3(0, 0, -9.81))
 
-            object_body.integrate(1.0/substeps/fps)
+        object_body.integrate(step)
 
-        points = [ ]
-        points.append(c.point_a.value)
-        points.append(c.point_b.value)
         tr.visualize_points("collisions", 0.01, (1,1,0,1), points)
