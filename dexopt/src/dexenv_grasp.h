@@ -158,7 +158,7 @@ struct DexEnvGrasp : tractor::DexEnv<ValueSingle, ValueBatch> {
     {
       auto rot = GeometryBatch::angleAxisOrientation(
           add_random_uniform(this->makeZero(), 0, M_PI * 2),
-          GeometryBatch::import(Eigen::Vector3d(0, 0, 1)));
+          GeometryBatch::importVector3(Eigen::Vector3d(0, 0, 1)));
       simulator.rotateBody("object", rot);
     }
   }

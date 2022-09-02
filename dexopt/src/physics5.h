@@ -7,6 +7,7 @@
 #include <tractor/collision/loader.h>
 #include <tractor/collision/ops.h>
 #include <tractor/collision/robot.h>
+#include <tractor/geometry/eigen.h>
 
 #include <deque>
 #include <random>
@@ -134,7 +135,7 @@ private:
       auto &joint_model = _robot_model->joint(joint);
       if (auto *revolute_joint_model =
               dynamic_cast<const RevoluteJointModel<Geometry> *>(
-                  &joint_model)) {
+                  joint_model.get())) {
         if (auto *revolute_joint_state =
                 dynamic_cast<RevoluteJointState<Geometry> *>(&joint_state)) {
           auto joint_axis =
@@ -467,7 +468,8 @@ private:
     body.joint = joint_model->getJointIndex();
     body.name = joint_model->getChildLinkModel()->getName();
     body.link = joint_model->getChildLinkModel()->getLinkIndex();
-    body.inverse_anchor = Geometry::import(Eigen::Isometry3d(anchor.inverse()));
+    body.inverse_anchor =
+        convertEigenToPose<Geometry>(Eigen::Isometry3d(anchor.inverse()));
     if (auto *parent_link = joint_model->getParentLinkModel()) {
       body.parent_link = parent_link->getLinkIndex();
     } else {
@@ -481,11 +483,11 @@ private:
     if ((inertia.getMass() > 0) &&
         (joint_model->getType() == moveit::core::JointModel::FLOATING)) {
       body.dynamic = true;
-      body.center = Geometry::import(Eigen::Vector3d(
+      body.center = Geometry::importVector3(Eigen::Vector3d(
           inertia.getCOG().x(), inertia.getCOG().y(), inertia.getCOG().z()));
       body.mass = typename Geometry::Value(inertia.getMass());
       body.inverse_mass = typename Geometry::Value(1.0 / inertia.getMass());
-      body.inverse_inertia = Geometry::import(Eigen::Matrix3d(
+      body.inverse_inertia = Geometry::importMatrix3(Eigen::Matrix3d(
           Eigen::Map<const Eigen::Matrix3d>(inertia.getRotationalInertia().data)
               .inverse()));
     } else {

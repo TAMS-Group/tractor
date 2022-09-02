@@ -316,11 +316,11 @@ template <class Base> struct GeometryImpl : Base {
     return Scalar(Value(value));
   }
 
-  template <class T>
-  static auto import(const T &value)
-      -> decltype(Scalar(Value(std::declval<T>()))) {
-    return Scalar(Value(value));
-  }
+  // template <class T>
+  // static auto import(const T &value)
+  //     -> decltype(Scalar(Value(std::declval<T>()))) {
+  //   return Scalar(Value(value));
+  // }
 };
 
 template <class ScalarType>

@@ -34,7 +34,7 @@ template <class Geometry> struct RotationGoal : public MotionGoal<Geometry> {
   virtual void
   apply(TrajectoryOptimization<Geometry> &trajectory_opt) override {
     auto &trajectory = trajectory_opt.trajectory();
-    auto rot = Geometry::import(Eigen::Vector3d(0, 0, 0));
+    auto rot = Geometry::importVector3(Eigen::Vector3d(0, 0, 0));
     for (size_t i = 1; i < trajectory.size(); i++) {
       auto &pa = trajectory.state(i - 1).links().pose(link);
       auto &pb = trajectory.state(i).links().pose(link);
@@ -78,9 +78,9 @@ template <class Geometry> struct NoRotationGoal : public MotionGoal<Geometry> {
     auto &pa = trajectory.state(0).links().pose(link);
     auto &pb = trajectory.state(trajectory.size() - 1).links().pose(link);
     for (auto &axis : {
-             Geometry::import(Eigen::Vector3d(1, 0, 0)),
-             Geometry::import(Eigen::Vector3d(0, 1, 0)),
-             Geometry::import(Eigen::Vector3d(0, 0, 1)),
+             Geometry::importVector3(Eigen::Vector3d(1, 0, 0)),
+             Geometry::importVector3(Eigen::Vector3d(0, 1, 0)),
+             Geometry::importVector3(Eigen::Vector3d(0, 0, 1)),
          }) {
       goal((pa * axis - pb * axis) * weight);
     }

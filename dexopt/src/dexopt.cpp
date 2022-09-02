@@ -3,6 +3,7 @@
 //#include <tractor/tractor.h>
 
 #include <tractor/core/eigen.h>
+#include <tractor/geometry/eigen.h>
 
 #include "dexlearn.h"
 
@@ -24,6 +25,7 @@
 #include <tractor/core/var.h>
 #include <tractor/engines/parallel.h>
 #include <tractor/engines/simple.h>
+#include <tractor/robot/robotmodel.h>
 #include <tractor/robot/robotstate.h>
 #include <tractor/solvers/gd.h>
 #include <tractor/solvers/sq.h>
@@ -272,7 +274,7 @@ int main(int argc, char **argv) {
 
     dexlearn.setInitializer(
         [&](tractor::PhysicsSimulator<GeometryBatch> &simulator) {
-          auto pose = GeometryBatch::import(
+          auto pose = tractor::convertEigenToPose<GeometryBatch>(
               /*object_marker.initialPose().inverse() **/ object_marker.pose());
 
           simulator.setBodyPose("object", pose);

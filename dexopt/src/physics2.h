@@ -137,10 +137,10 @@ public:
     _link_poses.resize(_link_count);
     for (size_t link_i = 0; link_i < _link_count; link_i++) {
       _link_poses.at(link_i) = _robot_state.links().pose(link_i);
-      _link_velocities.at(link_i) =
-          Geometry::import(Eigen::Vector3d(0, 0, 0), Eigen::Vector3d(0, 0, 0));
-      _link_accelerations.at(link_i) =
-          Geometry::import(Eigen::Vector3d(0, 0, 0), Eigen::Vector3d(0, 0, 0));
+      _link_velocities.at(link_i) = Geometry::importTwist(
+          Eigen::Vector3d(0, 0, 0), Eigen::Vector3d(0, 0, 0));
+      _link_accelerations.at(link_i) = Geometry::importTwist(
+          Eigen::Vector3d(0, 0, 0), Eigen::Vector3d(0, 0, 0));
     }
     _previous_link_poses = _link_poses;
   }
@@ -154,14 +154,13 @@ public:
 
     // init accelerations
     for (size_t link_i = 0; link_i < _link_count; link_i++) {
-      _link_accelerations.at(link_i) =
-          Geometry::import(Eigen::Vector3d(0, 0, 0), Eigen::Vector3d(0, 0, 0));
+      _link_accelerations.at(link_i) = Geometry::TwistZero();
     }
 
     // apply external forces
     for (size_t link_i = 0; link_i < _link_count; link_i++) {
       if (_is_object_part.at(link_i)) {
-        _link_accelerations.at(link_i) += Geometry::import(
+        _link_accelerations.at(link_i) += Geometry::importTwist(
             Eigen::Vector3d(0.0, 0.0, -0.002), Eigen::Vector3d(0, 0, 0));
       }
     }
@@ -181,7 +180,7 @@ public:
               auto &pose_a = _link_poses.at(link_a);
               auto &pose_b = _link_poses.at(link_b);
 
-              // axis = Geometry::import(Eigen::Vector3d(0, 0, 1));
+              // axis = Geometry::importVector3(Eigen::Vector3d(0, 0, 1));
 
               if (_is_moving_part.at(link_a)) {
                 // if (1) {
@@ -319,10 +318,10 @@ public:
                       &trajectory.state(frame_index)
                            .joints()
                            .joint(joint_name))) {
-            auto pose =
-                Geometry::inverse(_link_poses.at(joint_info.parentLinkIndex()) *
-                                  Geometry::import(joint_info.origin())) *
-                _link_poses.at(joint_info.childLinkIndex());
+            auto pose = Geometry::inverse(
+                            _link_poses.at(joint_info.parentLinkIndex()) *
+                            Geometry::importVector3(joint_info.origin())) *
+                        _link_poses.at(joint_info.childLinkIndex());
             joint_state->pose(pose);
           }
         }
@@ -360,13 +359,13 @@ template <class Geometry> struct NewPhysicsGoal : public MotionGoal<Geometry> {
       // goals
       if (_simulator.model()->info()->links().contains("object")) {
         goal(_simulator.linkVelocity("object") -
-             Geometry::import(Eigen::Vector3d(0.0, 0.0, 0.0),
-                              Eigen::Vector3d(0.0, 0.0, -0.1)) *
+             Geometry::importTwist(Eigen::Vector3d(0.0, 0.0, 0.0),
+                                   Eigen::Vector3d(0.0, 0.0, -0.1)) *
                  5);
         goal(dot(Geometry::translation(_simulator.linkPose("object")),
-                 Geometry::import(Eigen::Vector3d(1, 0, 0))));
+                 Geometry::importVector3(Eigen::Vector3d(1, 0, 0))));
         goal(dot(Geometry::translation(_simulator.linkPose("object")),
-                 Geometry::import(Eigen::Vector3d(0, 1, 0))));
+                 Geometry::importVector3(Eigen::Vector3d(0, 1, 0))));
       }
 
       // apply positions

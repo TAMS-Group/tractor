@@ -293,7 +293,7 @@ namespace tractor {
 //     &origin) {
 //       if (shape->type == shapes::SPHERE) {
 //         ROS_INFO_STREAM("collision shape sphere");
-//         points.push_back(Geometry::import(origin.translation().eval()));
+//         points.push_back(Geometry::importVector3(origin.translation().eval()));
 //         // Eigen::Matrix3d rotation;
 //         // Eigen::Vector3d scaling;
 //         // origin.computeRotationScaling(&rotation, &scaling);
@@ -313,7 +313,7 @@ namespace tractor {
 //                                      mesh.vertices[i * 3 + 1],
 //                                      mesh.vertices[i * 3 + 2]);
 //         ROS_INFO_STREAM("p " << pos);
-//         points.push_back(Geometry::import(pos));
+//         points.push_back(Geometry::importVector3(pos));
 //       }
 //     }
 //   };
@@ -402,7 +402,7 @@ namespace tractor {
 //
 //             Eigen::Vector3d plane_normal_1 = (pa - pb).normalized().eval();
 //             _plane_normals.push_back(plane_normal_1);
-//             auto plane_normal = Geometry::import(plane_normal_1);
+//             auto plane_normal = Geometry::importVector3(plane_normal_1);
 //
 //             typename Geometry::Scalar plane_position =
 //                 plane_normal_1.dot((pa + pb) * 0.5);

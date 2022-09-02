@@ -10,6 +10,7 @@
 
 #include <moveit_msgs/DisplayTrajectory.h>
 
+#include <tractor/robot/robotmodel.h>
 #include <tractor/robot/robotstate.h>
 #include <tractor/robot/trajectory.h>
 
@@ -319,12 +320,12 @@ public:
             _trajectory.state(i)
                 .joints()
                 .joint(joint->getName())
-                .makeParameters(_robot_model->joint(joint->getName()));
+                .makeParameters(*_robot_model->joint(joint->getName()));
           } else {
             _trajectory.state(i)
                 .joints()
                 .joint(joint->getName())
-                .makeVariables(_robot_model->joint(joint->getName()),
+                .makeVariables(*_robot_model->joint(joint->getName()),
                                joint_variable_options);
           }
         }
