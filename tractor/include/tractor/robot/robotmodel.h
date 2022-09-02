@@ -16,11 +16,11 @@ template <class Geometry> class LinkState;
 
 template <class Geometry> class RobotModel {
   std::shared_ptr<const RobotInfo> _robot_info;
-  AlignedStdVector<JointVariant<JointModelBase<Geometry>>> _joint_models;
+  std::vector<std::shared_ptr<const JointModelBase<Geometry>>> _joint_models;
   AlignedStdVector<JointVariant<JointStateBase<Geometry>>>
       _default_joint_states;
   AlignedStdVector<typename Geometry::Scalar> _default_positions;
-  // AlignedStdVector<LinkModel<Geometry>> _link_models;
+  std::vector<std::shared_ptr<const LinkModel<Geometry>>> _link_models;
 
   struct JointInfo {
     ssize_t parent_link_index = -1;
@@ -28,21 +28,24 @@ template <class Geometry> class RobotModel {
   };
   std::vector<JointInfo> _joint_infos;
 
-  template <class Model, class State>
+  template <class State>
   void addJoint(const RobotJointInfo &robot_joint_info,
-                const Model &joint_model_in, const State &joint_state_in) {
+                std::vector<std::shared_ptr<LinkModel<Geometry>>> &link_models,
+                const std::shared_ptr<JointModelBase<Geometry>> &joint_model) {
 
-    Model joint_model = joint_model_in;
-    State joint_state = joint_state_in;
+    State joint_state;
 
-    joint_model.inertia() = Inertia<Geometry>(
-        Geometry::import(robot_joint_info.inertia().center()),
-        Geometry::import(robot_joint_info.inertia().mass()),
-        Geometry::import(robot_joint_info.inertia().massInverse()),
-        Geometry::import(robot_joint_info.inertia().moment()),
-        Geometry::import(robot_joint_info.inertia().momentInverse()));
+    auto inertia = Inertia<Geometry>(
+        Geometry::importVector3(robot_joint_info.inertia().center()),
+        Geometry::importScalar(robot_joint_info.inertia().mass()),
+        Geometry::importScalar(robot_joint_info.inertia().massInverse()),
+        Geometry::importMatrix3(robot_joint_info.inertia().moment()),
+        Geometry::importMatrix3(robot_joint_info.inertia().momentInverse()));
 
-    joint_model.origin() = Geometry::import(robot_joint_info.origin());
+    auto origin = Geometry::pack(
+        Geometry::importVector3(robot_joint_info.origin().position()),
+        Geometry::importQuaternion(robot_joint_info.origin().orientation()));
+
     _joint_models.emplace_back(joint_model);
 
     joint_state.deserializePositions(_default_positions.data() +
@@ -53,13 +56,31 @@ template <class Geometry> class RobotModel {
     joint_info.parent_link_index = robot_joint_info.parentLinkIndex();
     joint_info.child_link_index = robot_joint_info.childLinkIndex();
     _joint_infos.emplace_back(joint_info);
+
+    auto child_link = std::make_shared<LinkModel<Geometry>>(
+        joint_model,
+        _robot_info->links().name(robot_joint_info.childLinkIndex()), inertia);
+    link_models.at(robot_joint_info.childLinkIndex()) = child_link;
+
+    std::shared_ptr<LinkModel<Geometry>> parent_link;
+    if (robot_joint_info.parentLinkIndex() >= 0) {
+      parent_link = link_models.at(robot_joint_info.parentLinkIndex());
+      parent_link->addChildJoint(joint_model);
+    }
+
+    joint_model->init(parent_link, robot_joint_info.name(), origin,
+                      // inertia,
+                      child_link);
   }
 
 public:
   RobotModel() {}
 
   RobotModel(const moveit::core::RobotModel &moveit_robot)
-      : _robot_info(std::make_shared<RobotInfo>(moveit_robot)) {
+      : RobotModel(std::make_shared<RobotInfo>(moveit_robot)) {}
+
+  RobotModel(const std::shared_ptr<const RobotInfo> &robot_info)
+      : _robot_info(robot_info) {
 
     _default_positions.clear();
     for (auto &p : _robot_info->joints().defaultPositions()) {
@@ -67,59 +88,63 @@ public:
     }
 
     // for (auto &m_link : moveit_robot->getLinkModels()) {
-    //   _link_models.emplace_back(m_link->getName(), )
+    //   _link_models.push_back(
+    //       std::make_shared<LinkModel>(, m_link->getName(), ));
     // }
+
+    std::vector<std::shared_ptr<LinkModel<Geometry>>> link_models;
+    link_models.resize(_robot_info->links().size());
 
     for (size_t joint_index = 0; joint_index < _robot_info->joints().size();
          joint_index++) {
-      auto &joint = _robot_info->joints().info(joint_index);
+      auto &joint_info = _robot_info->joints().info(joint_index);
 
-      switch (joint.type()) {
+      switch (joint_info.type()) {
 
       case JointType::Fixed: {
-        FixedJointModel<Geometry> joint_model;
-        FixedJointState<Geometry> joint_state;
-        addJoint(joint, joint_model, joint_state);
+        addJoint<FixedJointState<Geometry>>(
+            joint_info, link_models,
+            std::make_shared<FixedJointModel<Geometry>>());
         break;
       }
 
       case JointType::Revolute: {
-        RevoluteJointModel<Geometry> joint_model;
-        joint_model.axis() = Geometry::import(joint.axis());
-        if (joint.hasBounds()) {
-          joint_model.limits() = JointLimits<Geometry>(
-              typename Geometry::Value(joint.lowerBound()),
-              typename Geometry::Value(joint.upperBound()));
+        auto joint_model = std::make_shared<RevoluteJointModel<Geometry>>();
+        joint_model->axis() = Geometry::importVector3(joint_info.axis());
+        if (joint_info.hasBounds()) {
+          joint_model->limits() = JointLimits<Geometry>(
+              typename Geometry::Value(joint_info.lowerBound()),
+              typename Geometry::Value(joint_info.upperBound()));
         }
-        RevoluteJointState<Geometry> joint_state;
-        addJoint(joint, joint_model, joint_state);
+        addJoint<RevoluteJointState<Geometry>>(joint_info, link_models,
+                                               joint_model);
         break;
       }
 
       case JointType::Prismatic: {
-        PrismaticJointModel<Geometry> joint_model;
-        joint_model.axis() = Geometry::import(joint.axis());
-        if (joint.hasBounds()) {
-          joint_model.limits() = JointLimits<Geometry>(
-              typename Geometry::Value(joint.lowerBound()),
-              typename Geometry::Value(joint.upperBound()));
+        auto joint_model = std::make_shared<PrismaticJointModel<Geometry>>();
+        joint_model->axis() = Geometry::importVector3(joint_info.axis());
+        if (joint_info.hasBounds()) {
+          joint_model->limits() = JointLimits<Geometry>(
+              typename Geometry::Value(joint_info.lowerBound()),
+              typename Geometry::Value(joint_info.upperBound()));
         }
-        PrismaticJointState<Geometry> joint_state;
-        addJoint(joint, joint_model, joint_state);
+        addJoint<PrismaticJointState<Geometry>>(joint_info, link_models,
+                                                joint_model);
         break;
       }
 
       case JointType::Planar: {
-        PlanarJointModel<Geometry> joint_model;
-        PlanarJointState<Geometry> joint_state;
-        addJoint(joint, joint_model, joint_state);
+        addJoint<PlanarJointState<Geometry>>(
+            joint_info, link_models,
+            std::make_shared<PlanarJointModel<Geometry>>());
         break;
       }
 
       case JointType::Floating: {
-        FloatingJointModel<Geometry> joint_model;
-        FloatingJointState<Geometry> joint_state;
-        addJoint(joint, joint_model, joint_state);
+        addJoint<FloatingJointState<Geometry>>(
+            joint_info, link_models,
+            std::make_shared<FloatingJointModel<Geometry>>());
         break;
       }
 
@@ -128,18 +153,27 @@ public:
       }
     }
 
-    //_importBodyInertia(robot_model, robot_model.getRootJoint(),
-    //                   Eigen::Isometry3d::Identity());
+    for (auto &link_model : link_models) {
+      TRACTOR_ASSERT(link_model != nullptr);
+      _link_models.push_back(link_model);
+    }
   }
 
-  auto &joint(size_t i) const { return *_joint_models.at(i); }
-  auto &joint(size_t i) { return *_joint_models.at(i); }
+  auto &joint(size_t i) const { return _joint_models.at(i); }
   auto &joint(const std::string &name) const {
-    return *_joint_models.at(_robot_info->joints().index(name));
+    return _joint_models.at(_robot_info->joints().index(name));
   }
-  auto &joint(const std::string &name) {
-    return *_joint_models.at(_robot_info->joints().index(name));
+
+  auto &link(size_t i) const { return _link_models.at(i); }
+  auto &link(const std::string &name) const {
+    return _link_models.at(_robot_info->links().index(name));
   }
+
+  auto &joints() const { return _joint_models; }
+
+  auto &links() const { return _link_models; }
+
+  auto &rootJoint() const { return joint(0); }
 
   void computeFK(const JointState<Geometry> &joint_state,
                  LinkState<Geometry> &link_state) const {

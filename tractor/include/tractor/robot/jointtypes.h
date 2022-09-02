@@ -11,6 +11,8 @@
 
 namespace tractor {
 
+template <class Geometry> class LinkModel;
+
 template <class Geometry> struct JointVariableOptions {
   double trust_region = -1;
 };
@@ -18,11 +20,25 @@ template <class Geometry> struct JointVariableOptions {
 template <class Geometry> class alignas(32) JointModelBase {
   typename Geometry::Pose _origin;
   // typename Geometry::Value _trust_region = typename Geometry::Value(-1);
+  std::string _name;
   Inertia<Geometry> _inertia;
+  std::shared_ptr<const LinkModel<Geometry>> _parent_link, _child_link;
 
 public:
+  void init(const std::shared_ptr<const LinkModel<Geometry>> &parent_link,
+            const std::string &name, const typename Geometry::Pose &origin,
+            // const Inertia<Geometry> &inertia,
+            const std::shared_ptr<const LinkModel<Geometry>> &child_link) {
+    _parent_link = parent_link;
+    _name = name;
+    //_inertia = inertia;
+    _origin = origin;
+    _child_link = child_link;
+  }
+
+  auto &name() const { return _name; }
   const typename Geometry::Pose &origin() const { return _origin; }
-  typename Geometry::Pose &origin() { return _origin; }
+  // typename Geometry::Pose &origin() { return _origin; }
   virtual ~JointModelBase() {}
   // auto &trustRegion() const { return _trust_region; }
   // auto &trustRegion() { return _trust_region; }
@@ -32,8 +48,10 @@ public:
 
   // combined inertia of all fixed child links, zero for fixed joints,
   // in the local joint frame
-  auto &inertia() const { return _inertia; }
-  auto &inertia() { return _inertia; }
+  // auto &inertia() const { return _inertia; }
+  // auto &inertia() { return _inertia; }
+  auto &parentLink() const { return _parent_link; }
+  auto &childLink() const { return _child_link; }
 };
 template <class Geometry> class alignas(32) JointStateBase {
 public:

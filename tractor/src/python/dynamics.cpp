@@ -33,6 +33,12 @@ static void pythonizeDynamics(py::module main_module, py::module type_module) {
 
       .def_property_readonly("local_velocity",
                              &RigidBody<Geometry>::localVelocity)
+      .def_property_readonly("global_velocity",
+                             &RigidBody<Geometry>::globalVelocity)
+      .def_property_readonly("global_linear_velocity",
+                             &RigidBody<Geometry>::globalLinearVelocity)
+      .def_property_readonly("global_angular_velocity",
+                             &RigidBody<Geometry>::globalAngularVelocity)
 
       // .def_property(
       //     "pose", [](const RigidBody<Geometry> &_this) { return _this.pose();

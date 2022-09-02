@@ -4,9 +4,11 @@
 
 #include "jointstate.h"
 #include "linkstate.h"
-#include "robotmodel.h"
+//#include "robotmodel.h"
 
 namespace tractor {
+
+template <class Geometry> class RobotModel;
 
 template <class Geometry> class RobotState {
   std::shared_ptr<const RobotModel<Geometry>> _model;

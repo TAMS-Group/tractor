@@ -6,6 +6,7 @@
 #include <tractor/collision/loader.h>
 #include <tractor/collision/ops.h>
 #include <tractor/collision/robot.h>
+#include <tractor/geometry/eigen.h>
 #include <tractor/geometry/fast.h>
 #include <tractor/robot/robot.h>
 

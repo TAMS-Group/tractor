@@ -5,18 +5,18 @@ project(tractor)
 
 # uncomment for better runtime performance but longer build times
 #set(OPT_FLAGS -O3)
-#set(OPT_FLAGS -O2)
+set(OPT_FLAGS -O2)
 
 # uncomment for faster build times but lower runtime performance
-set(OPT_FLAGS -O0)
+#set(OPT_FLAGS -O0)
 
 # uncomment to enable address sanatizer
 #set(ASAN_FLAGS -fsanitize=address)
 
 # ------------------------------------------------------------------
 
-# -Wfatal-errors
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ASAN_FLAGS} -ffast-math -g -Wno-register -std=c++17 ${OPT_FLAGS} -mavx -U__AVX__ -fopenmp")
+#
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${ASAN_FLAGS} -ftemplate-backtrace-limit=0 -Wfatal-errors -ffast-math -g -Wno-register -std=c++17 ${OPT_FLAGS} -mavx -U__AVX__ -fopenmp")
 
 message(STATUS "compiler options: ${CMAKE_CXX_FLAGS}")
 
@@ -104,7 +104,8 @@ add_library(${LIBNAME}
     src/engines/loop.cpp
     src/engines/parallel.cpp
     src/engines/simple.cpp
-    src/geometry/convert.cpp
+    src/geometry/eigen.cpp
+    src/geometry/eigen_ops.cpp
     src/geometry/eigenmat.cpp
     src/geometry/eigenquat.cpp
     src/geometry/fast.cpp

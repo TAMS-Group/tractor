@@ -111,6 +111,13 @@ public:
                           orientation_inverse * _global_angular_velocity);
   }
 
+  auto globalVelocity() const {
+    return Geometry::pack(_global_linear_velocity, _global_angular_velocity);
+  }
+
+  auto globalLinearVelocity() const { return _global_linear_velocity; }
+  auto globalAngularVelocity() const { return _global_angular_velocity; }
+
   auto pose() const { return Geometry::pack(_position, _orientation); }
   // void pose(const typename Geometry::Pose &pose) {
   //   _position = Geometry::position(pose);

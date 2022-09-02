@@ -2,7 +2,6 @@
 
 #pragma once
 
-#include <tractor/core/eigen.h>
 #include <tractor/core/recorder.h>
 #include <tractor/geometry/matrix3_ops.h>
 #include <tractor/geometry/ops.h>
@@ -111,7 +110,8 @@ template <class Base> struct GeometryImpl : Base {
     return pose_translate(parent, translation);
   }
 
-  static Matrix3 inverse(const Matrix3 &mat) { return tractor::inverse(mat); }
+  // static Matrix3 inverse(const Matrix3 &mat) { return tractor::inverse(mat);
+  // }
 
   static Twist translationTwist(const Vector3 &translation) {
     return translation_twist(translation);
@@ -240,16 +240,36 @@ template <class Base> struct GeometryImpl : Base {
     return tractor::squaredNorm(a);
   }
 
-  template <class T, int Flags>
-  static Vector3 import(const Eigen::Matrix<T, 3, 1, Flags> &p) {
+  // template <class T, int Flags>
+  // static Vector3 import(const Eigen::Matrix<T, 3, 1, Flags> &p) {
+  //   return Vector3(
+  //       tractor::Vector3<Value>(Value(p.x()), Value(p.y()), Value(p.z())));
+  // }
+
+  template <class T> static Vector3 importVector3(const T &p) {
     return Vector3(
         tractor::Vector3<Value>(Value(p.x()), Value(p.y()), Value(p.z())));
   }
 
-  template <class T, int Flags>
-  static Matrix3 import(const Eigen::Matrix<T, 3, 3, Flags> &p) {
+  template <class T> static Orientation importQuaternion(const T &q) {
+    return Orientation(tractor::Quaternion<Value>(Value(q.x()), Value(q.y()),
+                                                  Value(q.z()), Value(q.w())));
+  }
+
+  // template <class T, int Flags>
+  // static Matrix3 import(const Eigen::Matrix<T, 3, 3, Flags> &p) {
+  //   typename tractor::Matrix3<Value> ret;
+  //   // Eigen::Map<Eigen::Matrix<T, 3, 3, Flags>>(&ret(0, 0)) = p;
+  //   for (size_t row = 0; row < 3; row++) {
+  //     for (size_t col = 0; col < 3; col++) {
+  //       ret(row, col) = Value(p(row, col));
+  //     }
+  //   }
+  //   return Matrix3(ret);
+  // }
+
+  template <class T> static Matrix3 importMatrix3(const T &p) {
     typename tractor::Matrix3<Value> ret;
-    // Eigen::Map<Eigen::Matrix<T, 3, 3, Flags>>(&ret(0, 0)) = p;
     for (size_t row = 0; row < 3; row++) {
       for (size_t col = 0; col < 3; col++) {
         ret(row, col) = Value(p(row, col));
@@ -258,9 +278,20 @@ template <class Base> struct GeometryImpl : Base {
     return Matrix3(ret);
   }
 
-  template <class T, int Flags>
-  static Twist import(const Eigen::Matrix<T, 3, 1, Flags> &p,
-                      const Eigen::Matrix<T, 3, 1, Flags> &r) {
+  // template <class T, int Flags>
+  // static Twist import(const Eigen::Matrix<T, 3, 1, Flags> &p,
+  //                     const Eigen::Matrix<T, 3, 1, Flags> &r) {
+  //   tractor::Twist<Value> ret;
+  //   ret.translation().x() = Value(p.x());
+  //   ret.translation().y() = Value(p.y());
+  //   ret.translation().z() = Value(p.z());
+  //   ret.rotation().x() = Value(r.x());
+  //   ret.rotation().y() = Value(r.y());
+  //   ret.rotation().z() = Value(r.z());
+  //   return Twist(ret);
+  // }
+
+  template <class T, class R> static Twist importTwist(const T &p, const R &r) {
     tractor::Twist<Value> ret;
     ret.translation().x() = Value(p.x());
     ret.translation().y() = Value(p.y());
@@ -271,18 +302,18 @@ template <class Base> struct GeometryImpl : Base {
     return Twist(ret);
   }
 
-  template <class T, int Mode, int Flags>
-  static Pose import(const Eigen::Transform<T, 3, Mode, Flags> &pose) {
-    auto q = Eigen::Quaterniond(Eigen::AngleAxisd(pose.linear()));
-    // return Pose(tractor::Pose<Value>(
-    //     tractor::Vector3<Value>(Value(pose.translation().x()),
-    //                             Value(pose.translation().y()),
-    //                             Value(pose.translation().z())),
-    //     tractor::Quaternion<Value>(Value(q.x()), Value(q.y()), Value(q.z()),
-    //                                Value(q.w()))));
-    return pack(Value(pose.translation().x()), Value(pose.translation().y()),
-                Value(pose.translation().z()), Value(q.x()), Value(q.y()),
-                Value(q.z()), Value(q.w()));
+  // template <class T, int Mode, int Flags>
+  // static Pose import(const Eigen::Transform<T, 3, Mode, Flags> &pose) {
+  //   auto q = Eigen::Quaterniond(Eigen::AngleAxisd(pose.linear()));
+  //   return pack(Value(pose.translation().x()), Value(pose.translation().y()),
+  //               Value(pose.translation().z()), Value(q.x()), Value(q.y()),
+  //               Value(q.z()), Value(q.w()));
+  // }
+
+  template <class T> static Value importValue(const T &v) { return Value(v); }
+
+  template <class T> static Scalar importScalar(const T &value) {
+    return Scalar(Value(value));
   }
 
   template <class T>

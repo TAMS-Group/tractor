@@ -88,6 +88,12 @@ class Tests:
         pose = tg.Pose(pos, q)
         t.goal(t.residual(pose))
 
+    def pose_residual_2(self, tg):
+        twist = tg.Twist()
+        t.variable(twist)
+        pose = tg.Pose.identity + twist
+        t.goal(t.residual(pose))
+
     def quat_residual(self, tg):
 
         angle = tt.Scalar()

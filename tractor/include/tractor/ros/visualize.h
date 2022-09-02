@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include <tractor/core/eigen.h>
 #include <tractor/core/error.h>
 #include <tractor/robot/robotmodel.h>
 #include <tractor/robot/robotstate.h>

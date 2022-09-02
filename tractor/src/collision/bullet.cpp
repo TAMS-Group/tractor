@@ -5,7 +5,7 @@
 #include <tractor/collision/base.h>
 #include <tractor/core/log.h>
 #include <tractor/core/profiler.h>
-#include <tractor/geometry/convert.h>
+#include <tractor/geometry/eigen.h>
 #include <tractor/geometry/plane.h>
 
 #include <BulletCollision/CollisionShapes/btConvexHullShape.h>

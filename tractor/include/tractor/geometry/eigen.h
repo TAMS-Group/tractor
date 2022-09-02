@@ -3,6 +3,7 @@
 #pragma once
 
 #include <tractor/core/eigen.h>
+#include <tractor/geometry/pose.h>
 
 #include "pose.h"
 
@@ -27,6 +28,20 @@ static Eigen::Isometry3d toEigenIsometry3d(const Pose<T> &pose) {
   Eigen::Isometry3d ret = Eigen::Isometry3d(Eigen::AngleAxisd(q));
   ret.translation() = p;
   return ret;
+}
+
+template <class Geometry, class EigenTransform>
+static auto convertEigenToPose(const EigenTransform &pose) {
+  auto q = Eigen::Quaterniond(Eigen::AngleAxisd(pose.linear()));
+  return Geometry::pack(                             //
+      Geometry::importValue(pose.translation().x()), //
+      Geometry::importValue(pose.translation().y()), //
+      Geometry::importValue(pose.translation().z()), //
+      Geometry::importValue(q.x()),                  //
+      Geometry::importValue(q.y()),                  //
+      Geometry::importValue(q.z()),                  //
+      Geometry::importValue(q.w())                   //
+  );
 }
 
 } // namespace tractor

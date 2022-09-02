@@ -8,6 +8,7 @@
 #include <kdl_parser/kdl_parser.hpp>
 #include <moveit/collision_detection/collision_matrix.h>
 #include <moveit/robot_model/robot_model.h>
+#include <tractor/geometry/eigen.h>
 
 namespace kdl_parser {
 KDL::RigidBodyInertia toKdl(urdf::InertialSharedPtr);
@@ -46,9 +47,10 @@ RobotJointInfo::RobotJointInfo(const moveit::core::RobotModel &moveit_robot,
                                const moveit::core::JointModel &moveit_joint)
     : _index(moveit_joint.getJointIndex()), _name(moveit_joint.getName()),
       _first_variable_index(moveit_joint.getFirstVariableIndex()),
-      _origin(moveit_joint.getChildLinkModel()
-                  ->getJointOriginTransform()
-                  .matrix()) {
+      _origin(convertEigenToPose<Geometry>(
+          Eigen::Isometry3d(moveit_joint.getChildLinkModel()
+                                ->getJointOriginTransform()
+                                .matrix()))) {
 
   if (auto *moveit_parent = moveit_joint.getParentLinkModel()) {
     _parent_link_index = moveit_parent->getLinkIndex();
@@ -75,15 +77,16 @@ RobotJointInfo::RobotJointInfo(const moveit::core::RobotModel &moveit_robot,
     _type = JointType::Fixed;
     break;
   case moveit::core::JointModel::REVOLUTE: {
-    _axis = dynamic_cast<const moveit::core::RevoluteJointModel &>(moveit_joint)
-                .getAxis();
+    _axis = Geometry::importVector3(
+        dynamic_cast<const moveit::core::RevoluteJointModel &>(moveit_joint)
+            .getAxis());
     _type = JointType::Revolute;
     break;
   }
   case moveit::core::JointModel::PRISMATIC: {
-    _axis =
+    _axis = Geometry::importVector3(
         dynamic_cast<const moveit::core::PrismaticJointModel &>(moveit_joint)
-            .getAxis();
+            .getAxis());
     _type = JointType::Prismatic;
     break;
   }
@@ -99,16 +102,22 @@ RobotJointInfo::RobotJointInfo(const moveit::core::RobotModel &moveit_robot,
 
   {
     KDL::RigidBodyInertia inertia = KDL::RigidBodyInertia::Zero();
-    _importInertia(inertia, Eigen::Isometry3d::Identity(), moveit_robot,
-                   moveit_joint.getChildLinkModel());
+    if (moveit_joint.getType() != moveit::core::JointModel::FIXED ||
+        &moveit_joint == moveit_robot.getRootJoint()) {
+      _importInertia(inertia, Eigen::Isometry3d::Identity(), moveit_robot,
+                     moveit_joint.getChildLinkModel());
+    }
     auto center = Eigen::Vector3d(inertia.getCOG().x(), inertia.getCOG().y(),
                                   inertia.getCOG().z());
     auto moment = Eigen::Matrix3d(
         Eigen::Map<const Eigen::Matrix3d>(inertia.getRotationalInertia().data));
     _inertia = Inertia<Geometry>(
-        Geometry::import(center), typename Geometry::Scalar(inertia.getMass()),
-        typename Geometry::Scalar(1.0 / inertia.getMass()),
-        Geometry::import(moment), Geometry::import(moment.inverse()));
+        Geometry::importVector3(center),
+        typename Geometry::Scalar(inertia.getMass()),
+        typename Geometry::Scalar(
+            (inertia.getMass() > 0.0) ? (1.0 / inertia.getMass()) : 0.0),
+        Geometry::importMatrix3(moment),
+        Geometry::importMatrix3(moment.inverse().eval()));
   }
 }
 

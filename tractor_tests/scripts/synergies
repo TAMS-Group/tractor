@@ -7,13 +7,14 @@ import rospy
 import sys
 import tams_hand_synergies
 
-tr.logger.verbosity = 10
+#tr.logger.verbosity = 10
 tr.init_ros("test")
 
 if len(sys.argv) >= 2:
     robot_description = sys.argv[1]
     robot_model = tt.RobotModel(robot_description)
     print "link names:", robot_model.link_names
+    print "joint names:", robot_model.joint_names
 
 if len(sys.argv) < 3:
     print ""
@@ -32,8 +33,8 @@ synergy_center = tt.Tensor(hand_synergies.center())
 #synergy_matrix = tt.Tensor(hand_synergies.matrix()[0:4,:])
 synergy_matrix = tt.Tensor(hand_synergies.matrix())
 
-print synergy_center.value
-print synergy_matrix.value
+#print synergy_center.value
+#print synergy_matrix.value
 #exit(0)
 
 solution = tt.Tensor([0]*synergy_matrix.shape[0])
@@ -51,6 +52,7 @@ def synergies(solution):
 
 link_states = robot_model.forward_kinematics(synergies(solution))
 goal_positions = [tr.pose_translation(link_states.link_pose(eef)) for eef in end_effectors]
+print "goal_positions", goal_positions
 
 def f():
     tr.variable(solution)
@@ -91,4 +93,4 @@ while True:
     joint_states = synergies(solution)
     tr.visualize("/display_robot_state", joint_states)
 
-    #time.sleep(0.1)
+    time.sleep(0.1)

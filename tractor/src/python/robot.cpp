@@ -46,14 +46,23 @@ static void pythonizeRobot(py::module main_module, py::module type_module) {
         return typename Geometry::Scalar(_this.upper());
       });
 
+  ptr_class<LinkModel<Geometry>>(type_module, "LinkModel")
+      .def_property_readonly("name", &LinkModel<Geometry>::name)
+      .def_property_readonly("inertia", &LinkModel<Geometry>::inertia)
+      .def_property_readonly("parent_joint", &LinkModel<Geometry>::parentJoint)
+      .def_property_readonly("child_joints", &LinkModel<Geometry>::childJoints)
+      //
+      ;
+
   ptr_class<JointModelBase<Geometry>>(type_module, "JointModel")
-      .def_property_readonly(
-          "origin",
-          [](const JointModelBase<Geometry> &_this) { return _this.origin(); })
-      .def_property_readonly("inertia",
-                             [](const JointModelBase<Geometry> &_this) {
-                               return _this.inertia();
-                             });
+      .def_property_readonly("parent_link",
+                             &JointModelBase<Geometry>::parentLink)
+      .def_property_readonly("child_link", &JointModelBase<Geometry>::childLink)
+      .def_property_readonly("name", &JointModelBase<Geometry>::name)
+      .def_property_readonly("origin", &JointModelBase<Geometry>::origin)
+      //.def_property_readonly("inertia", &JointModelBase<Geometry>::inertia)
+      //
+      ;
   ptr_class<JointStateBase<Geometry>>(type_module, "JointState");
 
   ptr_class<FixedJointModel<Geometry>, JointModelBase<Geometry>>(
@@ -157,7 +166,8 @@ static void pythonizeRobot(py::module main_module, py::module type_module) {
       if (auto *rec = Recorder::instance()) {
         rec->reference(joint_state);
       }
-      joint_state->makeVariables(joint_model, JointVariableOptions<Geometry>());
+      joint_state->makeVariables(*joint_model,
+                                 JointVariableOptions<Geometry>());
     }
   });
 
@@ -255,16 +265,31 @@ static void pythonizeRobot(py::module main_module, py::module type_module) {
                              })
       .def_property_readonly("variable_count",
                              &RobotModel<Geometry>::variableCount)
-      .def(
-          "joint_model",
-          [](RobotModel<Geometry> &_this, size_t i) { return &_this.joint(i); },
-          py::return_value_policy::reference_internal)
-      .def(
-          "joint_model",
-          [](RobotModel<Geometry> &_this, const std::string &name) {
-            return &_this.joint(name);
-          },
-          py::return_value_policy::reference_internal);
+      .def_property_readonly("root_joint", &RobotModel<Geometry>::rootJoint)
+
+      .def("joint", [](const RobotModel<Geometry> &_this,
+                       size_t index) { return _this.joint(index); })
+      .def("joint", [](const RobotModel<Geometry> &_this,
+                       const std::string &name) { return _this.joint(name); })
+
+      .def("link", [](const RobotModel<Geometry> &_this,
+                      size_t index) { return _this.link(index); })
+      .def("link", [](const RobotModel<Geometry> &_this,
+                      const std::string &name) { return _this.link(name); })
+
+      .def_property_readonly("joints", &RobotModel<Geometry>::joints)
+      .def_property_readonly("links", &RobotModel<Geometry>::links)
+
+      // .def("joint", py::overload_cast<size_t>(&RobotModel<Geometry>::joint))
+      // .def("joint",
+      //      py::overload_cast<const std::string
+      //      &>(&RobotModel<Geometry>::joint))
+      // .def("link", py::overload_cast<size_t>(&RobotModel<Geometry>::link))
+      // .def("link",
+      //      py::overload_cast<const std::string
+      //      &>(&RobotModel<Geometry>::link))
+      //
+      ;
 }
 
 TRACTOR_PYTHON_GEOMETRY(pythonizeRobot);

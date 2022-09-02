@@ -14,8 +14,7 @@ Solver::Solver(const std::shared_ptr<Engine> &engine) : _engine(engine) {
 }
 
 void Solver::_log(const char *label, const Program &prog) {
-  TRACTOR_DEBUG("solver program " << label << " "
-                                         << typeid(*this).name());
+  TRACTOR_DEBUG("solver program " << label << " " << typeid(*this).name());
 }
 
 void Solver::compile(const Program &prog) {
@@ -80,7 +79,11 @@ bool Solver::_expired() const {
 void Solver::solve() {
   _start_time = std::chrono::steady_clock::now();
   _first_step = true;
-  while (true) {
+  for (size_t iteration = 0;; iteration++) {
+    if (_max_iterations > 0 && iteration >= _max_iterations) {
+      TRACTOR_DEBUG("solver reached max number of iterations");
+      break;
+    }
     double step = _step();
     _first_step = false;
     if (step < _tolerance) {

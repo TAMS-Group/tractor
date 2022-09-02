@@ -13,6 +13,10 @@ if len(sys.argv) >= 2:
     robot_description = sys.argv[1]
     robot_model = tt.RobotModel(robot_description)
     print "link names:", robot_model.link_names
+    print "joint names:", robot_model.joint_names
+    for j in robot_model.joint_names:
+        if type(robot_model.joint(j)) != tt.FixedJointModel:
+            print j
 
 if len(sys.argv) < 3:
     print ""
@@ -30,7 +34,7 @@ goal_positions = [tr.pose_translation(link_states.link_pose(eef)) for eef in end
 
 def f():
     for i in range(robot_model.joint_count):
-        joint_model = robot_model.joint_model(i)
+        joint_model = robot_model.joint(i)
         joint_state = joint_states.joint_state(i)
         if isinstance(joint_model, tt.ScalarJointModelBase):
             tr.variable(joint_state.position)
@@ -58,7 +62,8 @@ solver.line_search = False
 
 while True:
     for i in range(len(end_effectors)):
-        tr.interact("base_frame", end_effectors[i], goal_positions[i], 0.05)
+        #tr.interact("base_frame", end_effectors[i], goal_positions[i], 0.05)
+        tr.interact("base_frame", end_effectors[i], goal_positions[i], 0.3)
     solver.solve()
     tr.visualize("/display_robot_state", joint_states)
     time.sleep(0.01)

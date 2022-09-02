@@ -417,6 +417,11 @@ template <class T> T quat_residual_gradient(const T &x) {
         y = S(-2) / S(3);
       }
     }
+    if (!std::isfinite(y)) {
+      TRACTOR_FATAL(x);
+      TRACTOR_FATAL(y);
+      throw std::runtime_error("quat residual gradient not finite");
+    }
   }).run(x, y);
   return y;
 
@@ -451,6 +456,11 @@ auto quat_residual_factor(const T &x) ->
       } else {
         y = S(2);
       }
+    }
+    if (!std::isfinite(y)) {
+      TRACTOR_FATAL(x);
+      TRACTOR_FATAL(y);
+      throw std::runtime_error("quat residual gradient not finite");
     }
   }).run(x, y);
   return y;

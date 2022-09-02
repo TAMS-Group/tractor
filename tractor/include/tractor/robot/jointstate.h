@@ -6,7 +6,6 @@
 #include "robotinfo.h"
 
 #include <tractor/core/array.h>
-#include <tractor/core/eigen.h>
 
 #include <cstdint>
 #include <memory>

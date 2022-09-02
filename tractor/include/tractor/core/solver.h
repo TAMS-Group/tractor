@@ -21,6 +21,7 @@ class Solver {
   double _timeout = -1;
   // double _loss = -1;
   bool _compiled = false;
+  size_t _max_iterations = 0;
   void _checkCompiled() const {
     if (!_compiled) {
       throw std::runtime_error("call compile(...) before use");
@@ -61,6 +62,10 @@ public:
   void setTimeout(double v, bool hard) {
     _timeout = v;
     _hard_timeout = hard;
+  }
+  size_t maxIterations() const { return _max_iterations; }
+  void setMaxIterations(size_t max_iterations) {
+    _max_iterations = max_iterations;
   }
   double timeout() const { return _timeout; }
   void clearTimeout() { _timeout = 0; }

@@ -25,6 +25,8 @@ static void pythonizeProgramGlobal(py::module m) {
       .def("gather", &Solver::gather)
       .def("scatter", &Solver::scatter)
       .def("step", &Solver::step)
+      .def_property("max_iterations", &Solver::maxIterations,
+                    &Solver::setMaxIterations)
       .def_property("tolerance", &Solver::tolerance, &Solver::setTolerance)
       .def_property(
           "timeout", [](const Solver &solver) { return solver.timeout(); },

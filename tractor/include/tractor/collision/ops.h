@@ -4,7 +4,6 @@
 
 #include "robot.h"
 
-#include <tractor/geometry/convert.h>
 #include <tractor/geometry/pose.h>
 #include <tractor/geometry/twist.h>
 #include <tractor/geometry/vector3.h>

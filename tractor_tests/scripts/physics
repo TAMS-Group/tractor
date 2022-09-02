@@ -23,7 +23,7 @@ collision_robot = tt.CollisionRobot(robot_model)
 object_start_pose = tt.Pose()
 
 steps = 500
-step = 1.0 / 300
+step = 1.0 / 150
 stiffness = 30
 
 while True:
@@ -37,7 +37,7 @@ while True:
 
     object_body = tt.RigidBody(
         object_start_pose,
-        robot_model.joint_model("object_joint").inertia,
+        robot_model.link("object").inertia,
         tt.Twist(tt.Vector3(0,0,0), tt.Vector3(0,0,1000))
     )
     print "pose", object_body.pose
@@ -90,7 +90,8 @@ while True:
                     if d.value < 0:
                         object_body.apply_force(v, c.normal * d * tt.Scalar(-stiffness))
 
-        object_body.apply_damping(tt.Scalar(1), tt.Scalar(1))
+        #object_body.apply_damping(tt.Scalar(1), tt.Scalar(1))
+        object_body.apply_damping(tt.Scalar(1), tt.Scalar(0))
 
         object_body.apply_acceleration(tt.Vector3(0, 0, -9.81))
 

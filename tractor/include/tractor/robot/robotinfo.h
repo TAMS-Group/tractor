@@ -2,12 +2,14 @@
 
 #pragma once
 
+#include <string>
 #include <unordered_map>
 #include <vector>
 
-#include <tractor/core/eigen.h>
+//#include <tractor/core/eigen.h>
 #include <tractor/dynamics/inertia.h>
-#include <tractor/geometry/eigenquat.h>
+//#include <tractor/geometry/eigenquat.h>
+#include <tractor/geometry/fast.h>
 
 namespace moveit {
 namespace core {
@@ -56,7 +58,7 @@ public:
 };
 
 class RobotJointInfo {
-  typedef GeometryEigenQuat<double> Geometry;
+  typedef GeometryFast<double> Geometry;
   size_t _index = 0;
   std::string _name;
   bool _is_mimic = false;
@@ -64,12 +66,12 @@ class RobotJointInfo {
   double _mimic_factor = 0;
   double _mimic_offset = 0;
   size_t _first_variable_index = 0;
-  Eigen::Transform<double, 3, Eigen::Isometry, Eigen::DontAlign> _origin;
+  typename Geometry::Pose _origin = Geometry::PoseIdentity();
   bool _has_bounds = false;
   double _lower_bound = 0;
   double _upper_bound = 0;
   JointType _type = JointType::Fixed;
-  Eigen::Vector3d _axis = Eigen::Vector3d::Zero();
+  typename Geometry::Vector3 _axis = Geometry::Vector3Zero();
   ssize_t _parent_link_index = -1;
   size_t _child_link_index = -1;
   Inertia<Geometry> _inertia;

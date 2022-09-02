@@ -4,7 +4,7 @@
 
 #include <tractor/core/factory.h>
 #include <tractor/core/var.h>
-#include <tractor/geometry/convert.h>
+#include <tractor/geometry/eigen.h>
 
 #include <eigen_conversions/eigen_msg.h>
 #include <interactive_markers/interactive_marker_server.h>
@@ -194,7 +194,7 @@ bool interact(const std::string &frame, const std::string &name, Pose<T> &pose,
   auto marker = factory.get(name);
   bool changed = marker->poll();
   if (changed) {
-    pose = GeometryFast<T>::import(marker->pose());
+    pose = convertEigenToPose<GeometryFast<T>>(marker->pose());
   }
   return changed;
 }

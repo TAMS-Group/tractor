@@ -6,6 +6,8 @@
 #include <tractor/core/error.h>
 #include <tractor/core/ops.h>
 #include <tractor/core/var.h>
+#include <tractor/geometry/eigen.h>
+#include <tractor/geometry/eigen_ops.h>
 #include <tractor/geometry/fast.h>
 
 namespace tractor {
@@ -245,7 +247,7 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
             r(i, j) = array[i][j];
           }
         }
-        return Geometry::import(r);
+        return Geometry::importMatrix3(r);
       }))
       .def(py::self * Vector3())
       .def(py::self + py::self)
@@ -313,8 +315,7 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
       //       }
       //     })
       .def(-py::self);
-  mod_main.def("inverse",
-               py::overload_cast<const Matrix3 &>(&Geometry::inverse));
+  mod_main.def("inverse", [](const Matrix3 &m) { return inverse(m); });
 
   // -------------------------------------------------------------
   // Vector3

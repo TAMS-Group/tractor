@@ -3,7 +3,7 @@
 #include <tractor/collision/base.h>
 
 #include <tractor/core/log.h>
-#include <tractor/geometry/convert.h>
+#include <tractor/geometry/eigen.h>
 #include <tractor/geometry/plane.h>
 
 #include <geometric_shapes/mesh_operations.h>
