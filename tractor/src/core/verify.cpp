@@ -4,6 +4,7 @@
 
 #include <tractor/core/allocator.h>
 #include <tractor/core/operator.h>
+#include <tractor/core/profiler.h>
 #include <tractor/core/program.h>
 
 #include <map>
@@ -11,8 +12,11 @@
 namespace tractor {
 
 void verify(const Program &program) {
+  TRACTOR_PROFILER("verify program");
+  TRACTOR_DEBUG("verify program start");
   checkMemory(program);
   checkMemory2(program);
+  TRACTOR_DEBUG("verify program finished");
 }
 
 class MemoryChecker2 {
@@ -72,6 +76,7 @@ public:
 };
 
 void checkMemory2(const Program &program) {
+  TRACTOR_PROFILER("memcheck2");
   TRACTOR_DEBUG("memcheck2 begin");
   MemoryChecker2 chk;
   for (auto &port : program.inputs()) {
@@ -102,6 +107,7 @@ void checkMemory2(const Program &program) {
 }
 
 void checkMemory(const Program &program) {
+  TRACTOR_PROFILER("memcheck1");
 
   TRACTOR_DEBUG("checking memory");
 
@@ -137,23 +143,20 @@ void checkMemory(const Program &program) {
             TRACTOR_DEBUG("op " << inst2.op()->name());
             for (size_t iarg = 0; iarg < inst2.op()->argumentCount(); iarg++) {
               TRACTOR_DEBUG("arg " << inst2.arg(iarg) << ":"
-                                          << inst2.op()->arg(iarg).size());
+                                   << inst2.op()->arg(iarg).size());
             }
             if (&inst2 == &inst) {
               break;
             }
           }
           for (auto &port : program.inputs()) {
-            TRACTOR_DEBUG("input " << port.address() << " "
-                                          << port.size());
+            TRACTOR_DEBUG("input " << port.address() << " " << port.size());
           }
           for (auto &port : program.constants()) {
-            TRACTOR_DEBUG("constant " << port.address() << " "
-                                             << port.size());
+            TRACTOR_DEBUG("constant " << port.address() << " " << port.size());
           }
           for (auto &port : program.parameters()) {
-            TRACTOR_DEBUG("parameter " << port.address() << " "
-                                              << port.size());
+            TRACTOR_DEBUG("parameter " << port.address() << " " << port.size());
           }
           throw std::runtime_error(
               "parameter read from uninitialized memory z " +

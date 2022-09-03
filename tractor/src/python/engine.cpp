@@ -26,6 +26,18 @@ static void pythonizeEngine(py::module &m) {
              executable.output(memory, buffer);
              buffer.scatter(executable.outputs());
            })
+      //.def("gather", &Executable::gather)
+      //.def("scatter", &Executable::scatter)
+      .def("gather",
+           [](Executable &executable, std::shared_ptr<Memory> &memory) {
+             Buffer buffer;
+             buffer.gather(executable.inputs());
+             executable.input(buffer, memory);
+           })
+      .def("parameterize",
+           [](Executable &executable, std::shared_ptr<Memory> &memory) {
+             executable.parameterize(memory);
+           })
       .def("execute",
            [](Executable &executable, std::shared_ptr<Memory> &memory) {
              executable.execute(memory);

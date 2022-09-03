@@ -5,6 +5,7 @@
 #include <tractor/core/allocator.h>
 #include <tractor/core/operator.h>
 #include <tractor/core/ops.h>
+#include <tractor/core/profiler.h>
 #include <tractor/core/program.h>
 
 #include <unordered_set>
@@ -12,6 +13,8 @@
 namespace tractor {
 
 void simplify(Program &program) {
+  TRACTOR_PROFILER("simplify program");
+  TRACTOR_DEBUG("simplify program start");
   precomputeConstants(program);
   removeDuplicateConstants(program);
   compressZeroConstants(program);
@@ -19,6 +22,7 @@ void simplify(Program &program) {
   removeUnusedInstructions(program);
   removeUnusedConstants(program);
   defragmentMemory(program);
+  TRACTOR_DEBUG("simplify program finished");
 }
 
 static bool allZero(const void *data, size_t size) {
@@ -32,6 +36,8 @@ static bool allZero(const void *data, size_t size) {
 }
 
 void compressZeroConstants(Program &program) {
+
+  TRACTOR_PROFILER("compress zero constants");
 
   std::vector<Program::Constant> new_constants;
   std::vector<Program::Instruction> new_instructions;
@@ -56,6 +62,8 @@ void compressZeroConstants(Program &program) {
 }
 
 void removeDuplicateConstants(Program &program) {
+
+  TRACTOR_PROFILER("compress duplicate constants");
 
   std::unordered_map<std::string, uintptr_t> const_map;
 
@@ -93,7 +101,9 @@ void removeDuplicateConstants(Program &program) {
 
 void removeUnusedConstants(Program &program) {
 
-  TRACTOR_DEBUG("removing unused constants");
+  TRACTOR_PROFILER("remove unused constants");
+
+  TRACTOR_DEBUG("remove unused constants");
 
   std::unordered_set<uintptr_t> used;
 
@@ -119,6 +129,8 @@ void removeUnusedConstants(Program &program) {
 }
 
 void removeUnusedInstructions(Program &program) {
+
+  TRACTOR_PROFILER("remove unused instructions");
 
   TRACTOR_DEBUG("removing unused instructions");
 
@@ -166,18 +178,19 @@ void removeUnusedInstructions(Program &program) {
 
   TRACTOR_DEBUG(instructions.size() << " ops");
   TRACTOR_DEBUG(used_count << " used ("
-                                  << used_count * 100 / instructions.size()
-                                  << "%)");
+                           << used_count * 100 / instructions.size() << "%)");
   TRACTOR_DEBUG((instructions.size() - used_count)
-                       << " unused ("
-                       << (instructions.size() - used_count) * 100 /
-                              instructions.size()
-                       << "%)");
+                << " unused ("
+                << (instructions.size() - used_count) * 100 /
+                       instructions.size()
+                << "%)");
 }
 
 void precomputeConstants(Program &program) {
 
-  TRACTOR_DEBUG("precomputing constants");
+  TRACTOR_PROFILER("precompute constants");
+
+  TRACTOR_DEBUG("precompute constants");
 
   AlignedStdVector<uint8_t> constness(program.memorySize(), 0);
   for (auto &port : program.constants()) {
@@ -257,16 +270,16 @@ void precomputeConstants(Program &program) {
 
   TRACTOR_DEBUG(op_count << " ops");
   TRACTOR_DEBUG(const_move_count << " const move ("
-                                        << const_move_count * 100 / op_count
-                                        << "%)");
+                                 << const_move_count * 100 / op_count << "%)");
   TRACTOR_DEBUG(const_op_count << " const ops ("
-                                      << const_op_count * 100 / op_count
-                                      << "%)");
+                               << const_op_count * 100 / op_count << "%)");
 }
 
 void skipMoves(Program &program) {
 
-  TRACTOR_DEBUG("skipping redundant moves");
+  TRACTOR_PROFILER("skip redundant moves");
+
+  TRACTOR_DEBUG("skip redundant moves");
 
   std::unordered_map<size_t, size_t> move_dst_to_src;
   std::vector<Program::Instruction> new_instructions;
@@ -311,11 +324,12 @@ void skipMoves(Program &program) {
   }
   */
   program.setInstructions(new_instructions.begin(), new_instructions.end());
-  TRACTOR_DEBUG(rewrite_count << " moves / " << arg_count
-                                     << " args skipped");
+  TRACTOR_DEBUG(rewrite_count << " moves / " << arg_count << " args skipped");
 }
 
 void defragmentMemory(Program &program) {
+
+  TRACTOR_PROFILER("defragment memory");
 
   Allocator allocator;
   std::unordered_map<uintptr_t, uintptr_t> mapping;
@@ -352,7 +366,7 @@ void defragmentMemory(Program &program) {
   }
 
   TRACTOR_DEBUG("defragmentation reducing memory size from "
-                       << program.memorySize() << " to " << allocator.top());
+                << program.memorySize() << " to " << allocator.top());
 
   allocator.apply(program);
 }

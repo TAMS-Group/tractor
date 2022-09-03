@@ -93,6 +93,7 @@ add_library(${LIBNAME}
     src/core/recorder.cpp
     src/core/simplify.cpp
     src/core/solver.cpp
+    src/core/sparsity.cpp
     src/core/tensor.cpp
     src/core/type.cpp
     src/core/var.cpp
@@ -158,6 +159,7 @@ add_library(${LIBNAME}
     src/solvers/ip.cpp
     src/solvers/pgd.cpp
     src/solvers/ps.cpp
+    src/solvers/spsq.cpp
     src/solvers/sq.cpp
     src/tensor/ops.cpp
     src/tensor/matmul.cpp

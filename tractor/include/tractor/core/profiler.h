@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include "log.h"
+
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -48,9 +50,14 @@ public:
   inline ProfilerScope(ProfilerTrack &track)
       : _track(track), _start(std::chrono::steady_clock::now()) {}
   inline ~ProfilerScope() {
-    _track.add(std::chrono::duration_cast<std::chrono::nanoseconds, int64_t>(
-                   std::chrono::steady_clock::now() - _start)
-                   .count());
+    uint64_t dt = std::chrono::duration_cast<std::chrono::nanoseconds, int64_t>(
+                      std::chrono::steady_clock::now() - _start)
+                      .count();
+    if (dt > (1000000000 / 5)) {
+      TRACTOR_DEBUG("profiler " << dt * (1.0 / 1000000000) << "s "
+                                << _track.name() << " " << _track.source());
+    }
+    _track.add(dt);
   }
   ProfilerScope(const ProfilerScope &) = delete;
   ProfilerScope &operator=(const ProfilerScope &) = delete;

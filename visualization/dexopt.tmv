@@ -27,7 +27,7 @@ Display:
       MaxSteps: 10
       Name: RobotTrajectoryDisplay2
       PlayTrajectory: true
-      ShowAllStates: true
+      ShowAllStates: false
       Speed: 1,000000
       Topic: /move_group/display_planned_path
       TrajectoryTime: 0,000000
@@ -346,7 +346,7 @@ Display:
   Name: Document
   Rendering:
     BlackLevel: 0,000000
-    Exposure: 1,540000
+    Exposure: 0,565000
     MultiSampling: 16
     SampleShading: 1
     ShadowCubeResolution: 512
@@ -365,9 +365,9 @@ Window:
   FieldOfView: 30,000000
   Name: Window
   ViewPosition:
-    X: 0,177491
-    Y: -0,436335
-    Z: 0,193068
+    X: 0,563812
+    Y: -0,247597
+    Z: 0,275568
   ViewTarget:
     X: 0,003976
     Y: 0,046950

@@ -3,13 +3,19 @@
 #include <tractor/python/common.h>
 
 #include <tractor/core/solver.h>
+#include <tractor/core/sparsity.h>
 #include <tractor/neural/network.h>
 #include <tractor/solvers/gd.h>
+#include <tractor/solvers/spsq.h>
 #include <tractor/solvers/sq.h>
 
 namespace tractor {
 
 static void pythonizeProgramGlobal(py::module m) {
+
+  m.def("sparsity_matrix", [](const Program &program, size_t stride) {
+    return SparsityMatrix(program, stride).toEigenSparseMatrix<float>();
+  });
 
   py::class_<Solver>(m, "Solver")
       .def("compile", [](Solver &solver,
@@ -37,6 +43,26 @@ TRACTOR_PYTHON_GLOBAL(pythonizeProgramGlobal);
 
 template <class Scalar>
 static void pythonizeSolvers(py::module main_module, py::module type_module) {
+
+  py::class_<SparseMatrixBuilder<Scalar>>(type_module, "SparseMatrixBuilder")
+      .def(py::init<const Program &>())
+      .def("build", &SparseMatrixBuilder<Scalar>::build)
+      .def_property_readonly("complexity",
+                             &SparseMatrixBuilder<Scalar>::complexity);
+
+  py::class_<SparseLeastSquaresSolver<Scalar>, Solver>(
+      type_module, "SparseLeastSquaresSolver")
+      .def(py::init<std::shared_ptr<Engine>>())
+      .def_readwrite("regularization",
+                     &SparseLeastSquaresSolver<Scalar>::_regularization)
+      .def_readwrite("step_scaling",
+                     &SparseLeastSquaresSolver<Scalar>::_step_scaling)
+      .def_readwrite("linear_tolerance",
+                     &SparseLeastSquaresSolver<Scalar>::_linear_tolerance)
+      .def_readwrite("max_linear_iterations",
+                     &SparseLeastSquaresSolver<Scalar>::_max_linear_iterations)
+
+      ;
 
   py::class_<LeastSquaresSolver<Scalar>, Solver>(type_module,
                                                  "LeastSquaresSolver")

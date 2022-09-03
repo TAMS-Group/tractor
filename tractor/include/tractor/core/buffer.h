@@ -76,8 +76,8 @@ public:
   template <class PContainer> void scatter(const PContainer &container) const {
     for (const auto &port : container) {
       if (port.binding()) {
-        TRACTOR_DEBUG("scatter " << _data.size() << " " << port.offset()
-                                        << " " << (void *)port.binding());
+        // TRACTOR_DEBUG("scatter " << _data.size() << " " << port.offset()
+        //                                 << " " << (void *)port.binding());
         std::memcpy((void *)port.binding(), _data.data() + port.offset(),
                     port.size());
       }

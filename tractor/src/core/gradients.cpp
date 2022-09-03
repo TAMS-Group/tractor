@@ -4,6 +4,7 @@
 
 #include <tractor/core/allocator.h>
 #include <tractor/core/ops.h>
+#include <tractor/core/profiler.h>
 
 #include <algorithm>
 #include <map>
@@ -31,6 +32,7 @@ struct SumInfo {
 
 static void buildSumTree(Allocator &alloc, SumInfo &sum_info,
                          std::vector<Program::Instruction> &instructions) {
+  TRACTOR_PROFILER("build sum tree");
   auto &type_info = sum_info.type_info;
   if (!sum_info.finalized) {
     if (sum_info.arguments.size() > 1) {
@@ -65,6 +67,8 @@ static void buildSumTree(Allocator &alloc, SumInfo &sum_info,
 
 void buildGradients(const Program &src, Program &prep, Program *_fprop,
                     Program *_bprop, Program *_hessian, Program *accumulate) {
+
+  TRACTOR_PROFILER("build gradients");
 
   Program fprop_dummy(src.context()), bprop_dummy(src.context());
   if (_hessian || accumulate) {
@@ -171,13 +175,13 @@ void buildGradients(const Program &src, Program &prep, Program *_fprop,
       std::vector<uint64_t> temp_args;
       for (auto &inst : bprop.instructions()) {
         auto *op = inst.op();
-        TRACTOR_DEBUG("bprop op " << op->name());
+        // TRACTOR_DEBUG("bprop op " << op->name());
         temp_args.clear();
         for (size_t i = 0; i < inst.argumentCount(); i++) {
           auto type_info = op->arg(i).typeInfo();
-          TRACTOR_DEBUG("bprop arg "
-                        << i << " " << type_info.name() << " "
-                        << (op->arg(i).isInput() ? "input" : "output"));
+          // TRACTOR_DEBUG("bprop arg "
+          //               << i << " " << type_info.name() << " "
+          //               << (op->arg(i).isInput() ? "input" : "output"));
           auto &sum_info = sum_tree[inst.arg(i)];
           if (!sum_info.initialized) {
             sum_info.type_info = type_info;
