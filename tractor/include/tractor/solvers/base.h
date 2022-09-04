@@ -24,8 +24,7 @@
   }
 
 #if 1
-#define TRACTOR_LOG_VAR(x)                                                     \
-  TRACTOR_DEBUG(TRACTOR_STRINGIFY_2(x) << ": " << x);
+#define TRACTOR_LOG_VAR(x) TRACTOR_DEBUG(TRACTOR_STRINGIFY_2(x) << ": " << x);
 #else
 #define TRACTOR_LOG_VAR(x)
 #endif
@@ -88,8 +87,8 @@ protected:
   }
 
   template <class Pos, class Grad> void accumulate(Pos &pos, const Grad &grad) {
-    _accu_in.fromVectorDense(pos);
-    _accu_grad.fromVectorDense(grad);
+    _accu_in.fromVector(pos);
+    _accu_grad.fromVector(grad);
     _accu_in.append(_accu_grad);
     _x_accu->input(_accu_in, _memory);
     _x_accu->execute(_memory);

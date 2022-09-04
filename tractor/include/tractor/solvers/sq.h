@@ -39,7 +39,7 @@ protected:
   }
 
   virtual void _input(const Buffer &buffer) override {
-    buffer.toVector(_p_prog.inputs(), _nonlinear_solution);
+    buffer.toVector(_nonlinear_solution);
     _previous_nonlinear_solution = _nonlinear_solution;
     if (_adaptive_regularization) {
       _regularization = 1.0;
@@ -47,7 +47,7 @@ protected:
   }
 
   virtual void _output(Buffer &buffer) override {
-    buffer.fromVector(_p_prog.inputs(), _nonlinear_solution);
+    buffer.fromVector(_nonlinear_solution);
   }
 
   virtual void _parameterize(const Buffer &buffer) override {

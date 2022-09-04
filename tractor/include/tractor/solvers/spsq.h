@@ -27,15 +27,16 @@ public:
 
   virtual void _compile(const Program &prog) override {
     _compileGradients<Scalar>(prog);
-    _matrix_builder = std::make_shared<SparseMatrixBuilder<Scalar>>(_p_fprop);
+    _matrix_builder = std::make_shared<SparseMatrixBuilder<Scalar>>(
+        _engine, _p_fprop, _x_fprop);
   }
 
   virtual void _input(const Buffer &buffer) override {
-    buffer.toVector(_p_prog.inputs(), _nonlinear_solution);
+    buffer.toVector(_nonlinear_solution);
   }
 
   virtual void _output(Buffer &buffer) override {
-    buffer.fromVector(_p_prog.inputs(), _nonlinear_solution);
+    buffer.fromVector(_nonlinear_solution);
   }
 
   virtual void _parameterize(const Buffer &buffer) override {
@@ -60,7 +61,7 @@ public:
     {
       TRACTOR_DEBUG("build jacobian");
       TRACTOR_PROFILER("build jacobian");
-      jacobian = _matrix_builder->build(_x_fprop, _memory);
+      jacobian = _matrix_builder->build(_memory);
     }
 
     {

@@ -10,11 +10,12 @@ namespace tractor {
 
 struct Memory {
   virtual ~Memory() {}
+  virtual void copyTo(const std::shared_ptr<Memory> &other) const = 0;
 };
 
 class Executable {
 private:
-  Buffer _temp;
+  // Buffer _temp;
   size_t _input_size = 0, _output_size = 0, _param_size = 0;
   bool _compiled = false;
   void _checkCompiled() const {
@@ -53,41 +54,45 @@ public:
   size_t inputBufferSize() const;
   size_t outputBufferSize() const;
   template <class Vector>
-  void inputVector(Vector &&inputv, const std::shared_ptr<Memory> &memory) {
+  void inputVector(Vector &&inputv,
+                   const std::shared_ptr<Memory> &memory) const {
     _checkCompiled();
-    _temp.fromVector(inputs(), inputv);
-    input(_temp, memory);
+    Buffer temp;
+    temp.fromVector(inputv);
+    input(temp, memory);
   }
   template <class Vector>
   void outputVector(const std::shared_ptr<const Memory> &memory,
-                    Vector &&outputv) {
+                    Vector &&outputv) const {
     _checkCompiled();
-    output(memory, _temp);
-    _temp.toVector(outputs(), outputv);
+    Buffer temp;
+    output(memory, temp);
+    temp.toVector(outputv);
   }
   template <class Input, class Output>
   void run(Input &&input, const std::shared_ptr<Memory> &memory,
-           Output &&output) {
+           Output &&output) const {
     inputVector(input, memory);
     execute(memory);
     outputVector(memory, output);
   }
   void parameterize(const Buffer &data,
                     const std::shared_ptr<Memory> &memory) const;
-  void parameterize(const std::shared_ptr<Memory> &memory);
+  void parameterize(const std::shared_ptr<Memory> &memory) const;
   template <class Vector>
   void parameterVector(const Vector &paramv,
-                       const std::shared_ptr<Memory> &memory) {
+                       const std::shared_ptr<Memory> &memory) const {
     _checkCompiled();
-    _temp.fromVector(parameters(), paramv);
-    parameterize(_temp, memory);
+    Buffer temp;
+    temp.fromVector(paramv);
+    parameterize(temp, memory);
   }
 };
 
 struct Engine {
-  virtual std::shared_ptr<Memory> createMemory() = 0;
-  virtual std::shared_ptr<Executable> createExecutable() = 0;
-  std::shared_ptr<Executable> compile(const Program &program);
+  virtual std::shared_ptr<Memory> createMemory() const = 0;
+  virtual std::shared_ptr<Executable> createExecutable() const = 0;
+  std::shared_ptr<Executable> compile(const Program &program) const;
 };
 
 } // namespace tractor

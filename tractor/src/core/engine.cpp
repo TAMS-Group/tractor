@@ -58,11 +58,12 @@ void Executable::parameterize(const Buffer &data,
   _parameterize(data, memory);
 }
 
-void Executable::parameterize(const std::shared_ptr<Memory> &memory) {
+void Executable::parameterize(const std::shared_ptr<Memory> &memory) const {
   _checkCompiled();
   TRACTOR_PROFILER("parameterize");
-  _temp.gather(parameters());
-  _parameterize(_temp, memory);
+  Buffer temp;
+  temp.gather(parameters());
+  _parameterize(temp, memory);
 }
 
 void Executable::compile(const Program &program) {
@@ -97,7 +98,7 @@ void Executable::compile(const Program &program) {
   _compiled = true;
 }
 
-std::shared_ptr<Executable> Engine::compile(const Program &program) {
+std::shared_ptr<Executable> Engine::compile(const Program &program) const {
   auto x = createExecutable();
   x->compile(program);
   return x;

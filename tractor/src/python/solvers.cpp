@@ -44,11 +44,11 @@ TRACTOR_PYTHON_GLOBAL(pythonizeProgramGlobal);
 template <class Scalar>
 static void pythonizeSolvers(py::module main_module, py::module type_module) {
 
-  py::class_<SparseMatrixBuilder<Scalar>>(type_module, "SparseMatrixBuilder")
-      .def(py::init<const Program &>())
-      .def("build", &SparseMatrixBuilder<Scalar>::build)
-      .def_property_readonly("complexity",
-                             &SparseMatrixBuilder<Scalar>::complexity);
+  // py::class_<SparseMatrixBuilder<Scalar>>(type_module, "SparseMatrixBuilder")
+  //     .def(py::init<const Program &>())
+  //     .def("build", &SparseMatrixBuilder<Scalar>::build)
+  //     .def_property_readonly("complexity",
+  //                            &SparseMatrixBuilder<Scalar>::complexity);
 
   py::class_<SparseLeastSquaresSolver<Scalar>, Solver>(
       type_module, "SparseLeastSquaresSolver")

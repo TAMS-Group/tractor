@@ -29,13 +29,11 @@ protected:
   }
 
   virtual void _input(const Buffer &buffer) override {
-    buffer.toVector(_p_prog.inputs(), _pl);
+    buffer.toVector(_pl);
     _velocity.setZero(_x_bprop->outputBufferSize() / sizeof(Scalar));
   }
 
-  virtual void _output(Buffer &buffer) override {
-    buffer.fromVector(_p_prog.inputs(), _pl);
-  }
+  virtual void _output(Buffer &buffer) override { buffer.fromVector(_pl); }
 
   virtual void _parameterize(const Buffer &buffer) override {
     _x_prog->parameterize(buffer, _memory);

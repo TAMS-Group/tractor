@@ -24,6 +24,12 @@ protected:
       _data.clear();
       _data.resize(s, 0);
     }
+    virtual void copyTo(const std::shared_ptr<Memory> &other) const override {
+      auto &x = dynamic_cast<MemoryImpl &>(*other);
+      // x._data = _data;
+      x._data.resize(size());
+      std::memcpy(x.data(), data(), size());
+    }
   };
 
 protected:
@@ -43,7 +49,7 @@ protected:
   };
 
 public:
-  virtual std::shared_ptr<Memory> createMemory() override {
+  virtual std::shared_ptr<Memory> createMemory() const override {
     return std::make_shared<MemoryImpl>();
   }
 };

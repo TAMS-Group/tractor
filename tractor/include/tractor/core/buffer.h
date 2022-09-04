@@ -84,83 +84,112 @@ public:
     }
   }
 
-  template <class PContainer, class Vector>
-  void toVector(const PContainer &ports, Vector &&vector) const {
-    typedef typename std::decay<decltype(vector[0])>::type Scalar;
-    {
-      size_t element_count = 0;
-      for (auto &port : ports) {
-        if (port.size() % sizeof(Scalar) != 0) {
-          throw std::runtime_error("element types incompatible");
-        }
-        element_count += port.size() / sizeof(Scalar);
-      }
-      vector.resize(element_count);
-    }
-    {
-      size_t i_vector = 0;
-      for (auto &port : ports) {
-        if (port.size() % sizeof(Scalar) != 0) {
-          throw std::runtime_error("element types incompatible");
-        }
-        const Scalar *port_data =
-            (const Scalar *)(void *)(_data.data() + port.offset());
-        for (size_t i_element = 0; i_element < port.size() / sizeof(Scalar);
-             i_element++) {
-          vector[i_vector] = port_data[i_element];
-          i_vector++;
-        }
-      }
-    }
-  }
+  // template <class PContainer, class Vector>
+  // void toVector(const PContainer &ports, Vector &&vector) const {
+  //   typedef typename std::decay<decltype(vector[0])>::type Scalar;
+  //   {
+  //     size_t element_count = 0;
+  //     for (auto &port : ports) {
+  //       if (port.size() % sizeof(Scalar) != 0) {
+  //         throw std::runtime_error("element types incompatible");
+  //       }
+  //       element_count += port.size() / sizeof(Scalar);
+  //     }
+  //     vector.resize(element_count);
+  //   }
+  //   {
+  //     size_t i_vector = 0;
+  //     for (auto &port : ports) {
+  //       if (port.size() % sizeof(Scalar) != 0) {
+  //         throw std::runtime_error("element types incompatible");
+  //       }
+  //       const Scalar *port_data =
+  //           (const Scalar *)(void *)(_data.data() + port.offset());
+  //       for (size_t i_element = 0; i_element < port.size() / sizeof(Scalar);
+  //            i_element++) {
+  //         vector[i_vector] = port_data[i_element];
+  //         i_vector++;
+  //       }
+  //     }
+  //   }
+  // }
 
-  template <class PContainer, class Vector>
-  void fromVector(const PContainer &ports, Vector &&vector) {
-    typedef typename std::decay<decltype(vector[0])>::type Scalar;
-    {
-      size_t size = 0;
-      for (const auto &port : ports) {
-        size = std::max(size, port.offset() + port.size());
-      }
-      _data.resize(std::max(_data.size(), size));
-    }
-    {
-      size_t size = 0;
-      for (const auto &port : ports) {
-        if (port.size() % sizeof(Scalar) != 0) {
-          throw std::runtime_error("element types incompatible");
-        }
-        size += port.size() / sizeof(Scalar);
-      }
-      if (vector.size() != size) {
-        std::cerr << "incompatible vector size " << vector.size() << " " << size
-                  << std::endl;
-        throw std::runtime_error("incompatible vector size");
-      }
-    }
-    {
-      size_t i_vector = 0;
-      for (auto &port : ports) {
-        if (port.size() % sizeof(Scalar) != 0) {
-          throw std::runtime_error("element types incompatible");
-        }
-        Scalar *port_data = (Scalar *)(void *)(_data.data() + port.offset());
-        for (size_t i_element = 0; i_element < port.size() / sizeof(Scalar);
-             i_element++) {
-          port_data[i_element] = vector[i_vector];
-          i_vector++;
-        }
-      }
-    }
-  }
+  // template <class PContainer, class Vector>
+  // void toVector(const PContainer &ports, Vector &&vector) const {
+  //   typedef typename std::decay<decltype(vector[0])>::type Scalar;
+  //   {
+  //     size_t byte_count = 0;
+  //     for (auto &port : ports) {
+  //       byte_count += port.size();
+  //     }
+  //     vector.resize(byte_count / sizeof(Scalar));
+  //   }
+  //   {
+  //     auto *vec_data = ((uint8_t *)(void *)vector.data());
+  //     size_t vec_addr = 0;
+  //     for (auto &port : ports) {
+  //       const auto *port_data = _data.data() + port.offset();
+  //       std::memcpy(vec_data + vec_addr, port_data, port.size());
+  //       vec_addr += port.size();
+  //     }
+  //   }
+  // }
+  //
+  // template <class PContainer, class Vector>
+  // void fromVector(const PContainer &ports, Vector &&vector) {
+  //   typedef typename std::decay<decltype(vector[0])>::type Scalar;
+  //   {
+  //     size_t size = 0;
+  //     for (const auto &port : ports) {
+  //       size = std::max(size, port.offset() + port.size());
+  //     }
+  //     _data.resize(std::max(_data.size(), size));
+  //   }
+  //   {
+  //     size_t size = 0;
+  //     for (const auto &port : ports) {
+  //       if (port.size() % sizeof(Scalar) != 0) {
+  //         throw std::runtime_error("element types incompatible");
+  //       }
+  //       size += port.size() / sizeof(Scalar);
+  //     }
+  //     if (vector.size() != size) {
+  //       std::cerr << "incompatible vector size " << vector.size() << " " <<
+  //       size
+  //                 << std::endl;
+  //       throw std::runtime_error("incompatible vector size");
+  //     }
+  //   }
+  //   {
+  //     size_t i_vector = 0;
+  //     for (auto &port : ports) {
+  //       if (port.size() % sizeof(Scalar) != 0) {
+  //         throw std::runtime_error("element types incompatible");
+  //       }
+  //       Scalar *port_data = (Scalar *)(void *)(_data.data() + port.offset());
+  //       for (size_t i_element = 0; i_element < port.size() / sizeof(Scalar);
+  //            i_element++) {
+  //         port_data[i_element] = vector[i_vector];
+  //         i_vector++;
+  //       }
+  //     }
+  //   }
+  // }
 
-  template <class Vector> void fromVectorDense(Vector &vector) {
+  template <class Vector> void fromVector(const Vector &vector) {
     typedef typename std::decay<decltype(vector[0])>::type Scalar;
     _data.resize(vector.size() * sizeof(vector[0]));
-    Scalar *data = (Scalar *)_data.data();
-    for (size_t i = 0; i < vector.size(); i++) {
-      data[i] = vector[i];
-    }
+    // Scalar *data = (Scalar *)_data.data();
+    // for (size_t i = 0; i < vector.size(); i++) {
+    //   data[i] = vector[i];
+    // }
+    std::memcpy(_data.data(), vector.eval().data(), _data.size());
+  }
+
+  template <class Vector> void toVector(Vector &vector) const {
+    typedef typename std::decay<decltype(vector[0])>::type Scalar;
+    vector.resize(_data.size() / sizeof(vector[0]));
+    std::memcpy(vector.data(), _data.data(), _data.size());
   }
 };
 

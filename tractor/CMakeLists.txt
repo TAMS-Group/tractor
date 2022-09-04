@@ -4,8 +4,8 @@ project(tractor)
 # options...
 
 # uncomment for better runtime performance but longer build times
-#set(OPT_FLAGS -O3)
-set(OPT_FLAGS -O2)
+set(OPT_FLAGS -O3)
+#set(OPT_FLAGS -O2)
 
 # uncomment for faster build times but lower runtime performance
 #set(OPT_FLAGS -O0)

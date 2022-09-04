@@ -24,7 +24,7 @@ private:
   };
 
 public:
-  virtual std::shared_ptr<Executable> createExecutable() override {
+  virtual std::shared_ptr<Executable> createExecutable() const override {
     return std::make_shared<ExecutableImpl>();
   }
 };

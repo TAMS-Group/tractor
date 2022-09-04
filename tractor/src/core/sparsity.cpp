@@ -93,6 +93,8 @@ template <class Mask>
 static void buildSparsityMatrix(const Program &program, size_t stride,
                                 SparsityMatrix &sparsity_matrix) {
 
+  TRACTOR_DEBUG("finding sparsity pattern");
+
   size_t input_bytes = findPortSize(program.inputs());
   size_t output_bytes = findPortSize(program.outputs());
 
@@ -135,6 +137,8 @@ SparsityMatrix::SparsityMatrix(const Program &program, size_t stride) {
 
 SparsityBase::SparsityBase(const Program &program, size_t stride)
     : _sparsity_matrix(program, stride) {
+
+  TRACTOR_DEBUG("analyzing sparsity pattern");
 
   std::unordered_set<size_t> col_set;
   for (size_t col = 0; col < _sparsity_matrix.cols(); col++) {

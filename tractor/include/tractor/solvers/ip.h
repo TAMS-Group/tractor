@@ -390,12 +390,12 @@ protected:
   }
 
   virtual void _input(const Buffer &buffer) override {
-    buffer.toVector(_p_prog.inputs(), _nonlinear_solution);
+    buffer.toVector(_nonlinear_solution);
     _current_barrier_weight_start = _initial_barrier_weight;
   }
 
   virtual void _output(Buffer &buffer) override {
-    buffer.fromVector(_p_prog.inputs(), _nonlinear_solution);
+    buffer.fromVector(_nonlinear_solution);
   }
 
   virtual void _parameterize(const Buffer &buffer) override {
@@ -647,14 +647,13 @@ protected:
             for (size_t i = 0; i < _p_prog.inputs().size(); i++) {
               auto &nonlinear_input = *it_nonlinear;
               auto &linear_input = *it_linear;
-              TRACTOR_DEBUG("nl " << i << " " << nonlinear_input.name()
-                                         << " ");
+              TRACTOR_DEBUG("nl " << i << " " << nonlinear_input.name() << " ");
               for (size_t j = 0; j < nonlinear_input.size() / sizeof(Scalar);
                    j++) {
-                TRACTOR_DEBUG(
-                    " " << _nonlinear_solution[nonlinear_input.offset() /
-                                                   sizeof(Scalar) +
-                                               j]);
+                TRACTOR_DEBUG(" "
+                              << _nonlinear_solution[nonlinear_input.offset() /
+                                                         sizeof(Scalar) +
+                                                     j]);
               }
               ++it_nonlinear;
               ++it_linear;

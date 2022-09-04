@@ -8,8 +8,11 @@
 #include <tractor/core/eigen.h>
 #include <tractor/core/engine.h>
 #include <tractor/core/error.h>
+#include <tractor/core/profiler.h>
 
 #include <Eigen/Sparse>
+
+#include <omp.h>
 
 namespace tractor {
 
@@ -125,49 +128,140 @@ public:
 };
 
 template <class T> class SparseMatrixBuilder : public SparsityBase {
+  std::shared_ptr<const Engine> _engine;
+  std::shared_ptr<const Executable> _executable;
+  struct ThreadData {
+    Eigen::Matrix<T, Eigen::Dynamic, 1> input_vector, output_vector;
+    std::shared_ptr<Memory> memory;
+    Buffer input_buffer, output_buffer;
+  };
+  std::vector<ThreadData> _thread_data;
 
 public:
-  SparseMatrixBuilder(const Program &program)
-      : SparsityBase(program, sizeof(T)) {}
+  SparseMatrixBuilder(const std::shared_ptr<const Engine> &engine,
+                      const Program &program,
+                      const std::shared_ptr<const Executable> &executable)
+      : SparsityBase(program, sizeof(T)), _engine(engine),
+        _executable(executable) {
+    for (size_t i = 0; i < omp_get_max_threads(); i++) {
+      ThreadData tda;
+      tda.memory = _engine->createMemory();
+      _thread_data.push_back(tda);
+    }
+  }
 
   size_t complexity() const { return _input_groups.size(); }
 
-  Eigen::SparseMatrix<T> build(const std::shared_ptr<Executable> &executable,
-                               const std::shared_ptr<Memory> &memory) {
+  Eigen::SparseMatrix<T> build(const std::shared_ptr<Memory> &memory) {
 
     std::vector<Eigen::Triplet<T>> triplets;
 
-    for (auto &input_group : _input_groups) {
+    size_t input_group_count = _input_groups.size();
 
-      Eigen::Matrix<T, Eigen::Dynamic, 1> input_vector =
-          Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(
-              executable->inputBufferSize() / sizeof(T));
+#pragma omp parallel
+    {
+      // TRACTOR_DEBUG(_memories.size() << " " << omp_get_thread_num());
+      auto &tda = _thread_data.at(omp_get_thread_num());
+      {
+        TRACTOR_PROFILER("spmb copy memory");
+        memory->copyTo(tda.memory);
+      }
+    }
 
-      for (size_t i : input_group.inputIndices()) {
-        input_vector(i) = T(1);
+#pragma omp parallel for
+    for (size_t input_group_index = 0; input_group_index < input_group_count;
+         input_group_index++) {
+
+      auto &input_group = _input_groups.at(input_group_index);
+
+      auto &tda = _thread_data.at(omp_get_thread_num());
+
+      {
+        TRACTOR_PROFILER("spmb input vector");
+        tda.input_vector = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(
+            _executable->inputBufferSize() / sizeof(T));
+        for (size_t i : input_group.inputIndices()) {
+          tda.input_vector(i) = T(1);
+        }
       }
 
-      executable->inputVector(input_vector, memory);
+      {
+        TRACTOR_PROFILER("spmb set input vector");
+        //_executable->inputVector(tda.input_vector, tda.memory);
+        tda.input_buffer.fromVector(tda.input_vector);
+        _executable->input(tda.input_buffer, tda.memory);
+      }
 
-      executable->execute(memory);
+      {
+        TRACTOR_PROFILER("spmb run matrix program");
+        _executable->execute(tda.memory);
+      }
 
-      Eigen::Matrix<T, Eigen::Dynamic, 1> output_vector;
-      executable->outputVector(memory, output_vector);
+      {
+        TRACTOR_PROFILER("spmb get output vector");
+        //_executable->outputVector(tda.memory, tda.output_vector);
+        _executable->output(tda.memory, tda.output_buffer);
+        tda.output_buffer.toVector(tda.output_vector);
+      }
 
-      for (auto &output_group : input_group.outputGroups()) {
-        size_t col = output_group.inputIndex();
-        for (size_t row : output_group.outputIndices()) {
-          triplets.emplace_back(row, col, output_vector(row));
+#pragma omp critical
+      {
+        TRACTOR_PROFILER("spmb collect coefficients");
+        for (auto &output_group : input_group.outputGroups()) {
+          size_t col = output_group.inputIndex();
+          for (size_t row : output_group.outputIndices()) {
+            triplets.emplace_back(row, col, tda.output_vector(row));
+          }
         }
       }
     }
 
     Eigen::SparseMatrix<T> ret(_sparsity_matrix.rows(),
                                _sparsity_matrix.cols());
-    ret.setFromTriplets(triplets.begin(), triplets.end());
-    ret.makeCompressed();
+    {
+      TRACTOR_PROFILER("spmb assemble matrix");
+      ret.setFromTriplets(triplets.begin(), triplets.end());
+      ret.makeCompressed();
+    }
     return ret;
   }
+
+  // Eigen::SparseMatrix<T> build(const std::shared_ptr<Executable> &executable,
+  //                              const std::shared_ptr<Memory> &memory) {
+  //
+  //   std::vector<Eigen::Triplet<T>> triplets;
+  //
+  //   for (auto &input_group : _input_groups) {
+  //
+  //     Eigen::Matrix<T, Eigen::Dynamic, 1> input_vector =
+  //         Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(
+  //             executable->inputBufferSize() / sizeof(T));
+  //
+  //     for (size_t i : input_group.inputIndices()) {
+  //       input_vector(i) = T(1);
+  //     }
+  //
+  //     executable->inputVector(input_vector, memory);
+  //
+  //     executable->execute(memory);
+  //
+  //     Eigen::Matrix<T, Eigen::Dynamic, 1> output_vector;
+  //     executable->outputVector(memory, output_vector);
+  //
+  //     for (auto &output_group : input_group.outputGroups()) {
+  //       size_t col = output_group.inputIndex();
+  //       for (size_t row : output_group.outputIndices()) {
+  //         triplets.emplace_back(row, col, output_vector(row));
+  //       }
+  //     }
+  //   }
+  //
+  //   Eigen::SparseMatrix<T> ret(_sparsity_matrix.rows(),
+  //                              _sparsity_matrix.cols());
+  //   ret.setFromTriplets(triplets.begin(), triplets.end());
+  //   ret.makeCompressed();
+  //   return ret;
+  // }
 };
 
 } // namespace tractor

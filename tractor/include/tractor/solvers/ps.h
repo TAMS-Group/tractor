@@ -192,11 +192,11 @@ protected:
   }
 
   virtual void _input(const Buffer &buffer) override {
-    buffer.toVector(_p_prog.inputs(), _nonlinear_solution);
+    buffer.toVector(_nonlinear_solution);
   }
 
   virtual void _output(Buffer &buffer) override {
-    buffer.fromVector(_p_prog.inputs(), _nonlinear_solution);
+    buffer.fromVector(_nonlinear_solution);
   }
 
   virtual void _parameterize(const Buffer &buffer) override {
@@ -368,11 +368,10 @@ protected:
         _x_project->run(_step_solution.head(_primal_variable_count), _memory,
                         _v_project);
         for (size_t i = 0; i < _primal_variable_count; i++) {
-          TRACTOR_DEBUG(
-              i << " " << _p_fprop.input(i).name() << " "
-                << (_step_solution[i] - _v_project[i]) << "         "
-                << (_nonlinear_solution[i] + _step_solution[i]) << " "
-                << (_nonlinear_solution[i] + _v_project[i]));
+          TRACTOR_DEBUG(i << " " << _p_fprop.input(i).name() << " "
+                          << (_step_solution[i] - _v_project[i]) << "         "
+                          << (_nonlinear_solution[i] + _step_solution[i]) << " "
+                          << (_nonlinear_solution[i] + _v_project[i]));
         }
       }
 

@@ -53,11 +53,11 @@ protected:
   }
 
   virtual void _input(const Buffer &buffer) override {
-    buffer.toVector(_p_prog.inputs(), _nonlinear_solution);
+    buffer.toVector(_nonlinear_solution);
   }
 
   virtual void _output(Buffer &buffer) override {
-    buffer.fromVector(_p_prog.inputs(), _nonlinear_solution);
+    buffer.fromVector(_nonlinear_solution);
   }
 
   virtual void _parameterize(const Buffer &buffer) override {
