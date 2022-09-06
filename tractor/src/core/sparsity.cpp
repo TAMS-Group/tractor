@@ -101,10 +101,11 @@ static void buildSparsityMatrix(const Program &program, size_t stride,
   sparsity_matrix.init((output_bytes + stride - 1) / stride,
                        (input_bytes + stride - 1) / stride);
 
-  size_t col_batch_size = sizeof(Mask) * 8;
-  size_t col_batches =
+  const size_t col_batch_size = sizeof(Mask) * 8;
+  const size_t col_batches =
       (sparsity_matrix.cols() + col_batch_size - 1) / col_batch_size;
 
+#pragma omp parallel for
   for (size_t col_batch = 0; col_batch < col_batches; col_batch++) {
 
     size_t col_begin = col_batch * col_batch_size;
@@ -119,12 +120,15 @@ static void buildSparsityMatrix(const Program &program, size_t stride,
     SparsityVector output_sparsity =
         propagateSparsity<Mask>(program, input_sparsity);
 
-    for (size_t col_index = col_begin; col_index < col_end; col_index++) {
-      for (size_t row_index = 0; row_index < sparsity_matrix.rows();
-           row_index++) {
-        if (output_sparsity.element(row_index) &
-            makeMask<Mask>(col_index - col_begin)) {
-          sparsity_matrix.insert(row_index, col_index);
+#pragma omp critical
+    {
+      for (size_t col_index = col_begin; col_index < col_end; col_index++) {
+        for (size_t row_index = 0; row_index < sparsity_matrix.rows();
+             row_index++) {
+          if (output_sparsity.element(row_index) &
+              makeMask<Mask>(col_index - col_begin)) {
+            sparsity_matrix.insert(row_index, col_index);
+          }
         }
       }
     }
@@ -171,6 +175,8 @@ SparsityBase::SparsityBase(const Program &program, size_t stride)
 
     _input_groups.push_back(input_group);
   }
+
+  TRACTOR_DEBUG("sparsity pattern analyzed");
 }
 
 } // namespace tractor

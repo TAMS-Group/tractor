@@ -44,11 +44,49 @@ TRACTOR_PYTHON_GLOBAL(pythonizeProgramGlobal);
 template <class Scalar>
 static void pythonizeSolvers(py::module main_module, py::module type_module) {
 
-  // py::class_<SparseMatrixBuilder<Scalar>>(type_module, "SparseMatrixBuilder")
-  //     .def(py::init<const Program &>())
-  //     .def("build", &SparseMatrixBuilder<Scalar>::build)
-  //     .def_property_readonly("complexity",
-  //                            &SparseMatrixBuilder<Scalar>::complexity);
+  py::class_<SparseMatrixBuilder<Scalar>,
+             std::shared_ptr<SparseMatrixBuilder<Scalar>>>(
+      type_module, "SparseMatrixBuilder")
+      .def(py::init<const std::shared_ptr<Engine> &, const Program &,
+                    const std::shared_ptr<Executable> &>())
+      .def("build", &SparseMatrixBuilder<Scalar>::build)
+      .def_property_readonly("complexity",
+                             &SparseMatrixBuilder<Scalar>::complexity)
+      .def_property_readonly(
+          "sparsity_matrix",
+          [](const SparseMatrixBuilder<Scalar> &_this) {
+            return _this.sparsityMatrix().toEigenSparseMatrix(1.0f);
+          })
+
+      ;
+
+  py::class_<SparseLinearSolver<Scalar>,
+             std::shared_ptr<SparseLinearSolver<Scalar>>>(type_module,
+                                                          "SparseLinearSolver")
+
+      ;
+
+  py::class_<SparseLinearCG<Scalar>, std::shared_ptr<SparseLinearCG<Scalar>>,
+             SparseLinearSolver<Scalar>>(type_module, "SparseLinearCG")
+      .def(py::init())
+      .def_readwrite("max_iterations", &SparseLinearCG<Scalar>::max_iterations)
+      .def_readwrite("tolerance", &SparseLinearCG<Scalar>::tolerance)
+
+      ;
+
+  py::class_<SparseLinearLU<Scalar>, std::shared_ptr<SparseLinearLU<Scalar>>,
+             SparseLinearSolver<Scalar>>(type_module, "SparseLinearLU")
+      .def(py::init())
+
+      ;
+
+  py::class_<SparseLinearGS<Scalar>, std::shared_ptr<SparseLinearGS<Scalar>>,
+             SparseLinearSolver<Scalar>>(type_module, "SparseLinearGS")
+      .def(py::init())
+      .def_readwrite("max_iterations", &SparseLinearGS<Scalar>::max_iterations)
+      .def_readwrite("sor", &SparseLinearGS<Scalar>::sor)
+
+      ;
 
   py::class_<SparseLeastSquaresSolver<Scalar>, Solver>(
       type_module, "SparseLeastSquaresSolver")
@@ -57,10 +95,12 @@ static void pythonizeSolvers(py::module main_module, py::module type_module) {
                      &SparseLeastSquaresSolver<Scalar>::_regularization)
       .def_readwrite("step_scaling",
                      &SparseLeastSquaresSolver<Scalar>::_step_scaling)
-      .def_readwrite("linear_tolerance",
-                     &SparseLeastSquaresSolver<Scalar>::_linear_tolerance)
-      .def_readwrite("max_linear_iterations",
-                     &SparseLeastSquaresSolver<Scalar>::_max_linear_iterations)
+      .def_readwrite("test_gradients",
+                     &SparseLeastSquaresSolver<Scalar>::_test_gradients)
+      .def_readwrite("matrix_builder",
+                     &SparseLeastSquaresSolver<Scalar>::_matrix_builder)
+      .def_readwrite("linear_solver",
+                     &SparseLeastSquaresSolver<Scalar>::_linear_solver)
 
       ;
 
