@@ -74,10 +74,12 @@ static Eigen::Vector3d toEigenVector3d(const btVector3 &v) {
 struct BulletCollisionWrapper {
   btTransform pose = btTransform::getIdentity();
   const btConvexShape *shape = nullptr;
-  BulletCollisionWrapper(const btTransform &pose, const btConvexShape *shape)
-      : pose(pose), shape(shape) {}
+  btVector3 center = btVector3(0, 0, 0);
+  BulletCollisionWrapper(const btTransform &pose, const btConvexShape *shape,
+                         const btVector3 &center)
+      : pose(pose), shape(shape), center(center) {}
   inline btScalar getMargin() const { return shape->getMargin(); }
-  inline btVector3 getObjectCenterInWorld() const { return pose.getOrigin(); }
+  inline btVector3 getObjectCenterInWorld() const { return pose * center; }
   inline const btTransform &getWorldTransform() const { return pose; }
   inline btVector3 getLocalSupportWithMargin(const btVector3 &dir) const {
     return shape->localGetSupportingVertex(dir);
@@ -87,14 +89,20 @@ struct BulletCollisionWrapper {
   }
 };
 
-static void bulletCollide(const char *name_a, const btTransform &pose_a,
-                          const btConvexShape *shape_a, const char *name_b,
-                          const btTransform &pose_b,
-                          const btConvexShape *shape_b,
-                          CollisionResponse &response) {
+static void bulletCollide(        //
+    const char *name_a,           //
+    const btTransform &pose_a,    //
+    const btConvexShape *shape_a, //
+    const btVector3 &center_a,    //
+    const char *name_b,           //
+    const btTransform &pose_b,    //
+    const btConvexShape *shape_b, //
+    const btVector3 &center_b,    //
+    CollisionResponse &response   //
+) {
   TRACTOR_PROFILER("bullet gjk");
-  BulletCollisionWrapper wa = BulletCollisionWrapper(pose_a, shape_a);
-  BulletCollisionWrapper wb = BulletCollisionWrapper(pose_b, shape_b);
+  BulletCollisionWrapper wa = BulletCollisionWrapper(pose_a, shape_a, center_a);
+  BulletCollisionWrapper wb = BulletCollisionWrapper(pose_b, shape_b, center_b);
   btVector3 guess = btVector3(1, 2, 3).normalized();
   btGjkEpaSolver3::sResults results;
   bool ok = btGjkEpaSolver3_Distance(wa, wb, guess, results);
@@ -112,12 +120,76 @@ static void bulletCollide(const char *name_a, const btTransform &pose_a,
   }
 }
 
-struct BulletConvexMesh : public ConvexCollisionMesh {
+struct ContinuousBulletCollisionWrapper {
+  const char *name = nullptr;
+  btTransform pose_0 = btTransform::getIdentity();
+  btTransform pose_1 = btTransform::getIdentity();
+  btMatrix3x3 rot_inv_0 = btMatrix3x3::getIdentity();
+  btMatrix3x3 rot_inv_1 = btMatrix3x3::getIdentity();
+  const btConvexShape *shape = nullptr;
+  btVector3 center = btVector3(0, 0, 0);
+  ContinuousBulletCollisionWrapper( //
+      const char *name,
+      const btTransform &pose_0,  //
+      const btTransform &pose_1,  //
+      const btConvexShape *shape, //
+      const btVector3 &center     //
+      )
+      : name(name), pose_0(pose_0), pose_1(pose_1), shape(shape),
+        center(center) {
+    rot_inv_0 = pose_0.getBasis().inverse();
+    rot_inv_1 = pose_1.getBasis().inverse();
+  }
+  inline btScalar getMargin() const { return shape->getMargin(); }
+  inline btVector3 getObjectCenterInWorld() const {
+    return (pose_0 * center + pose_1 * center) * btScalar(0.5);
+  }
+  inline const btTransform &getWorldTransform() const {
+    return btTransform::getIdentity();
+  }
+  inline btVector3 getLocalSupportWithMargin(const btVector3 &dir) const {
+    btVector3 sup_0 = pose_0 * shape->localGetSupportingVertex(rot_inv_0 * dir);
+    btVector3 sup_1 = pose_1 * shape->localGetSupportingVertex(rot_inv_1 * dir);
+    btScalar dot_0 = dir.dot(sup_0);
+    btScalar dot_1 = dir.dot(sup_1);
+    return (dot_0 > dot_1) ? sup_0 : sup_1;
+  }
+  inline btVector3 getLocalSupportWithoutMargin(const btVector3 &dir) const {
+    btVector3 sup_0 =
+        pose_0 * shape->localGetSupportingVertexWithoutMargin(rot_inv_0 * dir);
+    btVector3 sup_1 =
+        pose_1 * shape->localGetSupportingVertexWithoutMargin(rot_inv_1 * dir);
+    btScalar dot_0 = dir.dot(sup_0);
+    btScalar dot_1 = dir.dot(sup_1);
+    return (dot_0 > dot_1) ? sup_0 : sup_1;
+  }
+};
 
+static void bulletCollideContinuous(const ContinuousBulletCollisionWrapper &wa,
+                                    const ContinuousBulletCollisionWrapper &wb,
+                                    btVector3 &normal //
+) {
+  TRACTOR_PROFILER("bullet gjk continuous");
+  btVector3 guess = btVector3(1, 2, 3).normalized();
+  btGjkEpaSolver3::sResults results;
+  bool ok = btGjkEpaSolver3_Distance(wa, wb, guess, results);
+  if (!ok) {
+    ok = btGjkEpaSolver3_Penetration(wa, wb, guess, results);
+  }
+  if (ok) {
+    normal = results.normal;
+  } else {
+    TRACTOR_WARN("collision detection failed " << wa.name << " " << wb.name);
+    normal = btVector3(0, 0, 0);
+  }
+}
+
+struct BulletConvexMesh : public ConvexCollisionMesh {
   const btScalar margin = 0.005;
   std::vector<Plane<double>> bounding_planes;
   const CollisionEngine *collision_engine = nullptr;
   std::shared_ptr<btConvexShape> bullet_shape = nullptr;
+  btVector3 center = btVector3(0, 0, 0);
 
   virtual const CollisionEngine *engine() const override {
     return collision_engine;
@@ -135,17 +207,23 @@ struct BulletConvexMesh : public ConvexCollisionMesh {
 
       initConvexMesh(name, mesh);
 
-      auto sh = std::make_shared<btConvexHullShape>();
-
       btConvexHullComputer hull_computer;
       hull_computer.compute(mesh->vertices, sizeof(double) * 3,
                             mesh->vertex_count, btScalar(margin), btScalar(0));
+
+      auto sh = std::make_shared<btConvexHullShape>();
       for (size_t i = 0; i < hull_computer.vertices.size(); i++) {
         auto &v = hull_computer.vertices[i];
         sh->addPoint(btVector3(v.x(), v.y(), v.z()));
       }
-
       sh->setMargin(margin);
+
+      center = btVector3(0, 0, 0);
+      for (size_t i = 0; i < hull_computer.vertices.size(); i++) {
+        auto &v = hull_computer.vertices[i];
+        center += v;
+      }
+      center /= hull_computer.vertices.size();
 
       bounding_planes.clear();
       for (size_t face_index = 0; face_index < hull_computer.faces.size();
@@ -176,10 +254,21 @@ struct BulletConvexMesh : public ConvexCollisionMesh {
     btSphereShape point_shape(margin);
     // btSphereShape point_shape(0.01);
     CollisionResponse response;
-    bulletCollide(
-        name().c_str(), btTransform::getIdentity(), bullet_shape.get(), "point",
-        btTransform(btMatrix3x3::getIdentity(), toBulletVector3(in_point)),
-        &point_shape, response);
+    bulletCollide(                              //
+                                                //
+        name().c_str(),                         //
+        btTransform::getIdentity(),             //
+        bullet_shape.get(),                     //
+        center,                                 //
+                                                //
+        "point",                                //
+        btTransform(btMatrix3x3::getIdentity(), //
+                    toBulletVector3(in_point)), //
+        &point_shape,                           //
+        btVector3(0, 0, 0),                     //
+                                                //
+        response                                //
+    );
     closest_point = response.point_a;
     surface_normal = -response.normal;
 
@@ -232,11 +321,63 @@ void BulletCollisionEngine::collide(const CollisionRequest &request,
                                     CollisionResponse &response) const {
   TRACTOR_PROFILER("bullet collide");
   std::lock_guard<std::mutex>(bulletMutex());
-  bulletCollide(
-      request.shape_a->name().c_str(), toBulletTransform(request.pose_a),
-      ((BulletConvexMesh *)request.shape_a)->bullet_shape.get(),
-      request.shape_b->name().c_str(), toBulletTransform(request.pose_b),
-      ((BulletConvexMesh *)request.shape_b)->bullet_shape.get(), response);
+  auto *shape_a = (BulletConvexMesh *)request.shape_a;
+  auto *shape_b = (BulletConvexMesh *)request.shape_b;
+  bulletCollide(                         //
+                                         //
+      shape_a->name().c_str(),           //
+      toBulletTransform(request.pose_a), //
+      shape_a->bullet_shape.get(),       //
+      shape_a->center,                   //
+                                         //
+      shape_b->name().c_str(),           //
+      toBulletTransform(request.pose_b), //
+      shape_b->bullet_shape.get(),       //
+      shape_b->center,                   //
+                                         //
+      response                           //
+  );
+}
+
+void BulletCollisionEngine::collide(const ContinuousCollisionRequest &request,
+                                    ContinuousCollisionResponse &res) const {
+  TRACTOR_PROFILER("bullet collide continuous");
+  std::lock_guard<std::mutex>(bulletMutex());
+
+  auto *shape_a = (BulletConvexMesh *)request.shape_a;
+  auto *shape_b = (BulletConvexMesh *)request.shape_b;
+
+  ContinuousBulletCollisionWrapper wa(     //
+      shape_a->name().c_str(),             //
+      toBulletTransform(request.pose_a_0), //
+      toBulletTransform(request.pose_a_1), //
+      shape_a->bullet_shape.get(),         //
+      shape_a->center                      //
+  );
+
+  ContinuousBulletCollisionWrapper wb(     //
+      shape_b->name().c_str(),             //
+      toBulletTransform(request.pose_b_0), //
+      toBulletTransform(request.pose_b_1), //
+      shape_b->bullet_shape.get(),         //
+      shape_b->center                      //
+  );
+
+  btVector3 dir = btVector3(0, 0, 0);
+  bulletCollideContinuous(wa, wb, dir);
+  res.normal = toVec3d(dir);
+
+  static auto pt = [](const btTransform &pose, const btMatrix3x3 &rot_inv,
+                      const btConvexShape *shape, const btVector3 &dir) {
+    return toVec3d(pose *
+                   shape->localGetSupportingVertexWithoutMargin(rot_inv * dir));
+  };
+
+  res.point_a_0 = pt(wa.pose_0, wa.rot_inv_0, wa.shape, -dir);
+  res.point_a_1 = pt(wa.pose_1, wa.rot_inv_1, wa.shape, -dir);
+
+  res.point_b_0 = pt(wb.pose_0, wb.rot_inv_0, wb.shape, dir);
+  res.point_b_1 = pt(wb.pose_1, wb.rot_inv_1, wb.shape, dir);
 }
 
 } // namespace tractor

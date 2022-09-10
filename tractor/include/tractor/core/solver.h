@@ -28,10 +28,10 @@ class Solver {
     }
   }
   std::chrono::steady_clock::time_point _start_time;
-  bool _first_step = false;
   bool _hard_timeout = false;
 
 protected:
+  bool _first_step = false;
   std::shared_ptr<Engine> _engine;
   virtual void _compile(const Program &prog) = 0;
   virtual void _parameterize(const Buffer &buffer) = 0;

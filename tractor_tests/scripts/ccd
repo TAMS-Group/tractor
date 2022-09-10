@@ -1,0 +1,60 @@
+#!/usr/bin/env python
+
+import time
+import tractor as tr
+import tractor.types_double as tt
+import rospy
+import sys
+import sklearn
+import sklearn.cluster
+
+tr.logger.verbosity = 10
+tr.init_ros("test")
+
+if len(sys.argv) < 2:
+    print ""
+    print "usage: collide <robot description>"
+    exit(-1)
+
+robot_description = sys.argv[1]
+robot_model = tt.RobotModel(robot_description)
+
+collision_robot = tt.CollisionRobot(robot_model)
+
+goal_pose_0 = tt.Pose()
+goal_pose_1 = tt.Pose()
+
+samples = collision_robot.link("object").shapes[0].sample(500)
+samples = sklearn.cluster.KMeans(n_clusters=50).fit(samples).cluster_centers_
+
+while True:
+
+    tr.interact("world", "object_pose_0", goal_pose_0, 0.1)
+    tr.interact("world", "object_pose_1", goal_pose_1, 0.1)
+
+    joint_states = tt.JointStates(robot_model)
+    joint_states.joint_state("object_joint").pose = goal_pose_0
+
+    link_states = robot_model.forward_kinematics(joint_states)
+
+    points = [ ]
+    for object_shape in collision_robot.link("object").shapes:
+        for world_shape in collision_robot.link("world").shapes:
+            collision = tr.collide(
+                goal_pose_0,
+                goal_pose_1,
+                object_shape,
+                link_states.link_pose("world"),
+                link_states.link_pose("world"),
+                world_shape
+                )
+            points.append(collision.point_a_0.value)
+            points.append(collision.point_a_1.value)
+            points.append(collision.point_b_0.value)
+            points.append(collision.point_b_1.value)
+    tr.visualize_points("collisions", 0.02, (1,1,0,1), points)
+    tr.visualize_lines("collision_lines", 0.005, (1,1,0,1), points)
+
+    tr.visualize("/display_robot_state", joint_states)
+
+    time.sleep(0.02)

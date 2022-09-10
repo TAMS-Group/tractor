@@ -22,7 +22,14 @@ static void pythonizeRobot(py::module main_module, py::module type_module) {
   main_module.def("visualize",
                   [](const std::string &topic,
                      const std::vector<JointState<Geometry>> &trajectory) {
-                    visualize(topic, trajectory);
+                    visualize(topic, trajectory, typename Geometry::Value(0.1));
+                  });
+
+  main_module.def("visualize",
+                  [](const std::string &topic,
+                     const std::vector<JointState<Geometry>> &trajectory,
+                     const typename Geometry::Value &time_step) {
+                    visualize(topic, trajectory, time_step);
                   });
 
   static Factory::Key<std::string>::Value<moveit::core::RobotModelConstPtr>

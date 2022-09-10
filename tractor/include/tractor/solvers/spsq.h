@@ -16,11 +16,22 @@ template <class Scalar> struct SparseLinearSolver {
                      Vector &solution) = 0;
 };
 
-template <class Scalar> struct SparseLinearCG : SparseLinearSolver<Scalar> {
-  size_t max_iterations = 0;
-  Scalar tolerance = 0;
+template <class Scalar>
+struct IterativeSparseLinearSolver : SparseLinearSolver<Scalar> {
   typedef typename SparseLinearSolver<Scalar>::Matrix Matrix;
   typedef typename SparseLinearSolver<Scalar>::Vector Vector;
+  size_t max_iterations = 0;
+  Scalar tolerance = 0;
+  virtual void solve(const Matrix &matrix, const Vector &residuals,
+                     Vector &solution) = 0;
+};
+
+template <class Scalar>
+struct SparseLinearCG : IterativeSparseLinearSolver<Scalar> {
+  typedef typename SparseLinearSolver<Scalar>::Matrix Matrix;
+  typedef typename SparseLinearSolver<Scalar>::Vector Vector;
+  using IterativeSparseLinearSolver<Scalar>::max_iterations;
+  using IterativeSparseLinearSolver<Scalar>::tolerance;
   virtual void solve(const Matrix &matrix, const Vector &residuals,
                      Vector &solution) override {
     Eigen::ConjugateGradient<Eigen::SparseMatrix<Scalar>,
@@ -45,12 +56,41 @@ template <class Scalar> struct SparseLinearCG : SparseLinearSolver<Scalar> {
   }
 };
 
+template <class Scalar>
+struct SparseLinearBiCGSTAB : IterativeSparseLinearSolver<Scalar> {
+  typedef typename SparseLinearSolver<Scalar>::Matrix Matrix;
+  typedef typename SparseLinearSolver<Scalar>::Vector Vector;
+  using IterativeSparseLinearSolver<Scalar>::max_iterations;
+  using IterativeSparseLinearSolver<Scalar>::tolerance;
+  virtual void solve(const Matrix &matrix, const Vector &residuals,
+                     Vector &solution) override {
+    Eigen::BiCGSTAB<Eigen::SparseMatrix<Scalar>> solver;
+    if (max_iterations >= 1) {
+      solver.setMaxIterations(max_iterations);
+    }
+    if (tolerance >= 0) {
+      solver.setTolerance(Scalar(tolerance));
+    }
+    {
+      TRACTOR_DEBUG("linear compute");
+      TRACTOR_PROFILER("linear compute");
+      solver.compute(matrix);
+    }
+    {
+      TRACTOR_DEBUG("linear solve");
+      TRACTOR_PROFILER("linear solve");
+      solution = solver.solve(residuals);
+    }
+  }
+};
+
 template <class Scalar> struct SparseLinearLU : SparseLinearSolver<Scalar> {
   typedef typename SparseLinearSolver<Scalar>::Matrix Matrix;
   typedef typename SparseLinearSolver<Scalar>::Vector Vector;
   virtual void solve(const Matrix &matrix, const Vector &residuals,
                      Vector &solution) override {
-    Eigen::SparseLU<Eigen::SparseMatrix<Scalar>, Eigen::NaturalOrdering<int>>
+    // Eigen::SparseLU<Eigen::SparseMatrix<Scalar>, Eigen::NaturalOrdering<int>>
+    Eigen::SparseLU<Eigen::SparseMatrix<Scalar>, Eigen::COLAMDOrdering<int>>
         solver;
     {
       TRACTOR_DEBUG("linear analyze");
@@ -70,34 +110,73 @@ template <class Scalar> struct SparseLinearLU : SparseLinearSolver<Scalar> {
   }
 };
 
-template <class Scalar> struct SparseLinearGS : SparseLinearSolver<Scalar> {
-  size_t max_iterations = 0;
+template <class Scalar> struct SparseLinearQR : SparseLinearSolver<Scalar> {
+  typedef typename SparseLinearSolver<Scalar>::Matrix Matrix;
+  typedef typename SparseLinearSolver<Scalar>::Vector Vector;
+  virtual void solve(const Matrix &matrix, const Vector &residuals,
+                     Vector &solution) override {
+    // Eigen::SparseQR<Eigen::SparseMatrix<Scalar>, Eigen::NaturalOrdering<int>>
+    Eigen::SparseQR<Eigen::SparseMatrix<Scalar>, Eigen::COLAMDOrdering<int>>
+        solver;
+    {
+      TRACTOR_DEBUG("linear analyze");
+      TRACTOR_PROFILER("linear analyze");
+      solver.analyzePattern(matrix);
+    }
+    {
+      TRACTOR_DEBUG("linear factorize");
+      TRACTOR_PROFILER("linear factorize");
+      solver.factorize(matrix);
+    }
+    {
+      TRACTOR_DEBUG("linear solve");
+      TRACTOR_PROFILER("linear solve");
+      solution = solver.solve(residuals);
+    }
+  }
+};
+
+template <class Scalar>
+struct SparseLinearGS : IterativeSparseLinearSolver<Scalar> {
   Scalar sor = Scalar(1.3);
   typedef typename SparseLinearSolver<Scalar>::Matrix Matrix;
   typedef typename SparseLinearSolver<Scalar>::Vector Vector;
+  using IterativeSparseLinearSolver<Scalar>::max_iterations;
+  using IterativeSparseLinearSolver<Scalar>::tolerance;
   virtual void solve(const Matrix &matrix, const Vector &residuals,
                      Vector &solution) override {
     {
       TRACTOR_DEBUG("get diagonal");
       Vector diagonal = matrix.diagonal();
+      Vector inv_diagonal = 1.0 / diagonal.array();
       TRACTOR_DEBUG("solve gauss seidel");
       TRACTOR_PROFILER("solve gauss seidel");
-      for (size_t iteration = 0; iteration < max_iterations; iteration++) {
+      for (size_t iteration = 0;; iteration++) {
+        if (iteration >= max_iterations) {
+          TRACTOR_DEBUG("GS max iterations reached " << iteration);
+          break;
+        }
+        TRACTOR_PROFILER("gauss-seidel sweep");
+        bool changed = false;
         auto project = [&](size_t i) {
           Scalar rhs = residuals[i];
-          if (rhs != Scalar(0)) {
-            Scalar current_value = solution[i];
-            Scalar new_value = (rhs - (matrix.col(i).dot(solution) -
-                                       diagonal[i] * current_value)) /
-                               diagonal[i];
-            solution[i] = (new_value - current_value) * sor + current_value;
-          }
+          Scalar current_value = solution[i];
+          Scalar new_value = (rhs - (matrix.col(i).dot(solution) -
+                                     diagonal[i] * current_value)) *
+                             inv_diagonal[i];
+          Scalar delta = new_value - current_value;
+          changed |= (delta > tolerance);
+          solution[i] = delta * sor + current_value;
         };
         for (ssize_t i = 0; i < matrix.cols(); i++) {
           project(i);
         }
         for (ssize_t i = matrix.cols() - 1; i >= 0; i--) {
           project(i);
+        }
+        if (!changed) {
+          TRACTOR_DEBUG("GS tolerance reached at iteration " << iteration);
+          break;
         }
       }
     }

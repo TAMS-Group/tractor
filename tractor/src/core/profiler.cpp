@@ -93,9 +93,9 @@ ProfilerThread::ProfilerThread(double interval,
           _condition.wait_until(lock, timeout);
         }
       }
-      TRACTOR_DEBUG("profiler swap");
+      // TRACTOR_DEBUG("profiler swap");
       auto data = profiler->swap();
-      TRACTOR_DEBUG("start printing profiler information");
+      // TRACTOR_DEBUG("start printing profiler information");
       std::sort(
           data.begin(), data.end(),
           [](const std::pair<std::shared_ptr<ProfilerTrack>, ProfilerData> &a,
@@ -104,6 +104,8 @@ ProfilerThread::ProfilerThread(double interval,
           });
       std::stringstream stream;
       stream << "profiler\n";
+      stream << "       N  T/N[us]    T[s] - name - source\n";
+      // stream << "       2    42545  0.085 - memcheck1 - void";
       for (auto &row : data) {
         if (row.second.count > 0) {
           auto source = row.first->source();
@@ -116,7 +118,8 @@ ProfilerThread::ProfilerThread(double interval,
           double t = row.second.time * (1.0 / 1000000000.0);
           int i = row.second.count;
           char buf[getTerminalWidth()];
-          snprintf(buf, sizeof(buf), "%8i - %.3f - %s - %s", i, t,
+          snprintf(buf, sizeof(buf), "%8i %8i %7.3f - %s - %s", i,
+                   (int)std::round(1000000 * t / i), t,
                    row.first->name().c_str(), source.c_str());
           stream << buf << "\n";
         }
@@ -127,7 +130,7 @@ ProfilerThread::ProfilerThread(double interval,
               std::chrono::duration_cast<std::chrono::steady_clock::duration>(
                   std::chrono::duration<double>(interval)),
           std::chrono::steady_clock::now());
-      TRACTOR_DEBUG("finished printing profiler information");
+      // TRACTOR_DEBUG("finished printing profiler information");
     }
   });
 }

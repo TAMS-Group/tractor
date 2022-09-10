@@ -95,12 +95,35 @@ static void pythonizeCollisionTwist(py::module main_module,
       .def_readonly("normal", &CollisionResult<Geometry>::normal)
       .def_readonly("distance", &CollisionResult<Geometry>::distance);
 
+  py::class_<ContinuousCollisionResult<Geometry>>(type_module,
+                                                  "ContinuousCollisionResult")
+      .def_readonly("point_a_0",
+                    &ContinuousCollisionResult<Geometry>::point_a_0)
+      .def_readonly("point_a_1",
+                    &ContinuousCollisionResult<Geometry>::point_a_1)
+      .def_readonly("point_b_0",
+                    &ContinuousCollisionResult<Geometry>::point_b_0)
+      .def_readonly("point_b_1",
+                    &ContinuousCollisionResult<Geometry>::point_b_1)
+      .def_readonly("normal", &ContinuousCollisionResult<Geometry>::normal);
+
   main_module.def("collide",
                   [](const typename Geometry::Pose &pose_a,
                      const std::shared_ptr<CollisionShape> &shape_a,
                      const typename Geometry::Pose &pose_b,
                      const std::shared_ptr<CollisionShape> &shape_b) {
                     return collide<Geometry>(pose_a, shape_a, pose_b, shape_b);
+                  });
+
+  main_module.def("collide",
+                  [](const typename Geometry::Pose &pose_a_0,
+                     const typename Geometry::Pose &pose_a_1,
+                     const std::shared_ptr<CollisionShape> &shape_a,
+                     const typename Geometry::Pose &pose_b_0,
+                     const typename Geometry::Pose &pose_b_1,
+                     const std::shared_ptr<CollisionShape> &shape_b) {
+                    return collide<Geometry>(pose_a_0, pose_a_1, shape_a,
+                                             pose_b_0, pose_b_1, shape_b);
                   });
 
   main_module.def("collide", [](const typename Geometry::Pose &pose_a,

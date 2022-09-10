@@ -16,6 +16,9 @@ public:
 
   virtual void collide(const CollisionRequest &request,
                        CollisionResponse &response) const override;
+
+  virtual void collide(const ContinuousCollisionRequest &request,
+                       ContinuousCollisionResponse &response) const override;
 };
 
 } // namespace tractor

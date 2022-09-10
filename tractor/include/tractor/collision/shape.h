@@ -9,13 +9,6 @@ namespace tractor {
 
 class CollisionEngine;
 
-struct CollisionResponse {
-  Vec3d point_a = Vec3d::Zero();
-  Vec3d point_b = Vec3d::Zero();
-  Vec3d normal = Vec3d::Zero();
-  double distance = 0.0;
-};
-
 struct CollisionShape {
   CollisionShape(const CollisionShape &) = delete;
   CollisionShape &operator=(const CollisionShape &) = delete;

@@ -105,6 +105,10 @@ public:
 
   auto &inertia() const { return _local_inertia; }
 
+  Vector3 center() const {
+    return _position + _orientation * _local_inertia.center();
+  }
+
   auto localVelocity() const {
     auto orientation_inverse = Geometry::inverse(_orientation);
     return Geometry::pack(orientation_inverse * _global_linear_velocity,
@@ -148,7 +152,7 @@ public:
     _has_force = true;
     _has_torque = true;
     _sum_force += force;
-    _sum_torque += cross(point - _position, force);
+    _sum_torque += cross(point - center(), force);
   }
 
   void applyWrench(const typename Geometry::Pose &pose,

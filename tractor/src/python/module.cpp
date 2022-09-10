@@ -63,7 +63,8 @@ static void pythonizeGeometryScalar(py::module main_module,
                  .def(py::self += py::self)
                  .def(py::self -= py::self)
                  .def(py::self *= py::self)
-                 .def(py::self /= py::self);
+                 .def(py::self /= py::self)
+                 .def(-py::self);
   PythonScalarInit<Scalar>::init(cls);
 }
 TRACTOR_PYTHON_TYPED_BATCH(pythonizeGeometryScalar);

@@ -126,20 +126,223 @@ collide(const typename Geometry::Pose &pose_a,
   return ret;
 }
 
-// template <class Geometry>
-// std::vector<CollisionResult<Geometry>>
-// collide(const typename Geometry::Pose &pose_a,
-//         const std::shared_ptr<const CollisionLink> &link_a,
-//         const typename Geometry::Pose &pose_b,
-//         const std::shared_ptr<const CollisionLink> &link_b) {
-//   std::vector<CollisionResult<Geometry>> ret;
-//   for (auto &shape_a : link_a->shapes()) {
-//     for (auto &shape_b : link_b->shapes()) {
-//       ret.push_back(collide<Geometry>(pose_a, shape_a, pose_b, shape_b));
-//     }
-//   }
-//   return ret;
-// }
+// -------------------------------------------------------------
+
+template <class T>
+void continuous_collision_axes( //
+    const Pose<T> &pose_a_0,    //
+    const Pose<T> &pose_a_1,    //
+    const Pose<T> &pose_b_0,    //
+    const Pose<T> &pose_b_1,    //
+    const uint64_t &shape_a,    //
+    const uint64_t &shape_b,    //
+    Vector3<T> &axis,           //
+    Vector3<T> &local_a_0,      //
+    Vector3<T> &local_a_1,      //
+    Vector3<T> &local_b_0,      //
+    Vector3<T> &local_b_1       //
+) {
+
+  ContinuousCollisionRequest req;
+  req.pose_a_0 = Pose3d(pose_a_0);
+  req.pose_a_1 = Pose3d(pose_a_1);
+  req.shape_a = (const CollisionShape *)shape_a;
+  req.pose_b_0 = Pose3d(pose_b_0);
+  req.pose_b_1 = Pose3d(pose_b_1);
+  req.shape_b = (const CollisionShape *)shape_b;
+
+  ContinuousCollisionResponse res;
+  ((const CollisionShape *)shape_a)->engine()->collide(req, res);
+
+  axis = Vector3<T>(res.normal);
+  local_a_0 = pose_a_0.inverse() * Vector3<T>(res.point_a_0);
+  local_a_1 = pose_a_1.inverse() * Vector3<T>(res.point_a_1);
+  local_b_0 = pose_b_0.inverse() * Vector3<T>(res.point_b_0);
+  local_b_1 = pose_b_1.inverse() * Vector3<T>(res.point_b_1);
+}
+
+template <class T, size_t S>
+void continuous_collision_axes(        //
+    const Pose<Batch<T, S>> &pose_a_0, //
+    const Pose<Batch<T, S>> &pose_a_1, //
+    const Pose<Batch<T, S>> &pose_b_0, //
+    const Pose<Batch<T, S>> &pose_b_1, //
+    const uint64_t &shape_a,           //
+    const uint64_t &shape_b,           //
+    Vector3<Batch<T, S>> &axis,        //
+    Vector3<Batch<T, S>> &local_a_0,   //
+    Vector3<Batch<T, S>> &local_a_1,   //
+    Vector3<Batch<T, S>> &local_b_0,   //
+    Vector3<Batch<T, S>> &local_b_1    //
+) {
+  auto insertBatch = [](const Vector3<T> &v, size_t i,
+                        Vector3<Batch<T, S>> &b) {
+    b.x()[i] = v.x();
+    b.y()[i] = v.y();
+    b.z()[i] = v.z();
+  };
+  for (size_t i = 0; i < S; i++) {
+    Vector3<T> _axis_i;
+    Vector3<T> _local_a_0;
+    Vector3<T> _local_a_1;
+    Vector3<T> _local_b_0;
+    Vector3<T> _local_b_1;
+    continuous_collision_axes(   //
+        indexBatch(pose_a_0, i), //
+        indexBatch(pose_a_1, i), //
+        indexBatch(pose_b_0, i), //
+        indexBatch(pose_b_1, i), //
+        shape_a,                 //
+        shape_b,                 //
+        _axis_i,                 //
+        _local_a_0,              //
+        _local_a_1,              //
+        _local_b_0,              //
+        _local_b_1               //
+    );
+    insertBatch(_axis_i, i, axis);
+    insertBatch(_local_a_0, i, local_a_0);
+    insertBatch(_local_a_1, i, local_a_1);
+    insertBatch(_local_b_0, i, local_b_0);
+    insertBatch(_local_b_1, i, local_b_1);
+  }
+}
+
+TRACTOR_OP(continuous_collision_axes,
+           (                            //
+               const Pose<T> &pose_a_0, //
+               const Pose<T> &pose_a_1, //
+               const Pose<T> &pose_b_0, //
+               const Pose<T> &pose_b_1, //
+               const uint64_t &shape_a, //
+               const uint64_t &shape_b, //
+               Vector3<T> &axis,        //
+               Vector3<T> &local_a_0,   //
+               Vector3<T> &local_a_1,   //
+               Vector3<T> &local_b_0,   //
+               Vector3<T> &local_b_1    //
+               ),
+           {
+             continuous_collision_axes( //
+                 pose_a_0,              //
+                 pose_a_1,              //
+                 pose_b_0,              //
+                 pose_b_1,              //
+                 shape_a,               //
+                 shape_b,               //
+                 axis,                  //
+                 local_a_0,             //
+                 local_a_1,             //
+                 local_b_0,             //
+                 local_b_1              //
+             );
+           })
+TRACTOR_D(prepare, continuous_collision_axes,
+          (                                //
+              const Pose<T> &pose_a_0,     //
+              const Pose<T> &pose_a_1,     //
+              const Pose<T> &pose_b_0,     //
+              const Pose<T> &pose_b_1,     //
+              const uint64_t &shape_a,     //
+              const uint64_t &shape_b,     //
+              const Vector3<T> &axis,      //
+              const Vector3<T> &local_a_0, //
+              const Vector3<T> &local_a_1, //
+              const Vector3<T> &local_b_0, //
+              const Vector3<T> &local_b_1  //
+              ),
+          {})
+TRACTOR_D(forward, continuous_collision_axes,
+          (                            //
+              const Pose<T> &pose_a_0, //
+              const Pose<T> &pose_a_1, //
+              const Pose<T> &pose_b_0, //
+              const Pose<T> &pose_b_1, //
+              const uint64_t &shape_a, //
+              const uint64_t &shape_b, //
+              Vector3<T> &axis,        //
+              Vector3<T> &local_a_0,   //
+              Vector3<T> &local_a_1,   //
+              Vector3<T> &local_b_0,   //
+              Vector3<T> &local_b_1    //
+              ),
+          {
+            axis.setZero();
+            local_a_0.setZero();
+            local_a_1.setZero();
+            local_b_0.setZero();
+            local_b_1.setZero();
+          })
+TRACTOR_D(reverse, continuous_collision_axes,
+          (                                //
+              Pose<T> & pose_a_0,          //
+              Pose<T> &pose_a_1,           //
+              Pose<T> &pose_b_0,           //
+              Pose<T> &pose_b_1,           //
+              uint64_t &shape_a,           //
+              uint64_t &shape_b,           //
+              const Vector3<T> &axis,      //
+              const Vector3<T> &local_a_0, //
+              const Vector3<T> &local_a_1, //
+              const Vector3<T> &local_b_0, //
+              const Vector3<T> &local_b_1  //
+              ),
+          {
+            pose_a_0.setZero();
+            pose_a_1.setZero();
+            pose_b_0.setZero();
+            pose_b_1.setZero();
+            shape_a = 0;
+            shape_b = 0;
+          })
+
+template <class Geometry> struct ContinuousCollisionResult {
+  typename Geometry::Vector3 point_a_0;
+  typename Geometry::Vector3 point_a_1;
+  typename Geometry::Vector3 point_b_0;
+  typename Geometry::Vector3 point_b_1;
+  typename Geometry::Vector3 normal;
+};
+
+template <class Geometry>
+ContinuousCollisionResult<Geometry> collide(              //
+    const typename Geometry::Pose &pose_a_0,              //
+    const typename Geometry::Pose &pose_a_1,              //
+    const std::shared_ptr<const CollisionShape> &shape_a, //
+    const typename Geometry::Pose &pose_b_0,              //
+    const typename Geometry::Pose &pose_b_1,              //
+    const std::shared_ptr<const CollisionShape> &shape_b  //
+) {
+  if (auto *rec = Recorder::instance()) {
+    rec->reference(shape_a);
+    rec->reference(shape_b);
+  }
+  typename Geometry::Vector3 axis;
+  typename Geometry::Vector3 local_a_0;
+  typename Geometry::Vector3 local_a_1;
+  typename Geometry::Vector3 local_b_0;
+  typename Geometry::Vector3 local_b_1;
+  continuous_collision_axes(   //
+      pose_a_0,                //
+      pose_a_1,                //
+      pose_b_0,                //
+      pose_b_1,                //
+      (uint64_t)shape_a.get(), //
+      (uint64_t)shape_b.get(), //
+      axis,                    //
+      local_a_0,               //
+      local_a_1,               //
+      local_b_0,               //
+      local_b_1                //
+  );
+  ContinuousCollisionResult<Geometry> ret;
+  ret.point_a_0 = pose_a_0 * local_a_0;
+  ret.point_a_1 = pose_a_1 * local_a_1;
+  ret.point_b_0 = pose_b_0 * local_b_0;
+  ret.point_b_1 = pose_b_1 * local_b_1;
+  ret.normal = axis;
+  return ret;
+}
 
 // -------------------------------------------------------------
 

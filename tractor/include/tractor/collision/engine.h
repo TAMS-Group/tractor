@@ -22,6 +22,31 @@ struct CollisionRequest {
   const CollisionShape *shape_b = nullptr;
 };
 
+struct CollisionResponse {
+  Vec3d point_a = Vec3d::Zero();
+  Vec3d point_b = Vec3d::Zero();
+  Vec3d normal = Vec3d::Zero();
+  double distance = 0.0;
+};
+
+struct ContinuousCollisionRequest {
+  Pose3d pose_a_0 = Pose3d::Identity();
+  Pose3d pose_a_1 = Pose3d::Identity();
+  const CollisionShape *shape_a = nullptr;
+  Pose3d pose_b_0 = Pose3d::Identity();
+  Pose3d pose_b_1 = Pose3d::Identity();
+  const CollisionShape *shape_b = nullptr;
+};
+
+struct ContinuousCollisionResponse {
+  Vec3d point_a_0 = Vec3d::Zero();
+  Vec3d point_a_1 = Vec3d::Zero();
+  Vec3d point_b_0 = Vec3d::Zero();
+  Vec3d point_b_1 = Vec3d::Zero();
+  Vec3d normal = Vec3d::Zero();
+  double distance = 0.0;
+};
+
 class CollisionEngine {
 public:
   virtual std::shared_ptr<ConvexCollisionMesh>
@@ -29,6 +54,9 @@ public:
 
   virtual void collide(const CollisionRequest &request,
                        CollisionResponse &response) const = 0;
+
+  virtual void collide(const ContinuousCollisionRequest &request,
+                       ContinuousCollisionResponse &response) const = 0;
 
   virtual ~CollisionEngine() {}
 };

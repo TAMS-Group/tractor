@@ -33,7 +33,8 @@ void visualizeLines(const std::string &name, double scale,
 
 template <class Geometry>
 void visualize(const std::string &topic,
-               const std::vector<JointState<Geometry>> &trajectory) {
+               const std::vector<JointState<Geometry>> &trajectory,
+               const typename Geometry::Value &time_step) {
 
   if (trajectory.empty()) {
     TRACTOR_DEBUG("trajectory is empty, nothing to visualize");
@@ -53,7 +54,7 @@ void visualize(const std::string &topic,
     state.serializePositions(positions);
     joint_trajectory.points.emplace_back();
     joint_trajectory.points.back().time_from_start =
-        ros::Duration(state_index * 0.1);
+        ros::Duration(state_index * time_step);
     for (auto &p : positions) {
       joint_trajectory.points.back().positions.push_back(p.value());
     }

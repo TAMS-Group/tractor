@@ -36,7 +36,9 @@ static void pythonizeProgramGlobal(py::module m) {
       .def_property("tolerance", &Solver::tolerance, &Solver::setTolerance)
       .def_property(
           "timeout", [](const Solver &solver) { return solver.timeout(); },
-          [](Solver &solver, const double &v) { solver.setTimeout(v, false); });
+          [](Solver &solver, const double &v) { solver.setTimeout(v, false); })
+
+      ;
 }
 
 TRACTOR_PYTHON_GLOBAL(pythonizeProgramGlobal);
@@ -62,31 +64,37 @@ static void pythonizeSolvers(py::module main_module, py::module type_module) {
 
   py::class_<SparseLinearSolver<Scalar>,
              std::shared_ptr<SparseLinearSolver<Scalar>>>(type_module,
-                                                          "SparseLinearSolver")
+                                                          "SparseLinearSolver");
 
-      ;
+  py::class_<IterativeSparseLinearSolver<Scalar>,
+             std::shared_ptr<IterativeSparseLinearSolver<Scalar>>,
+             SparseLinearSolver<Scalar>>(type_module,
+                                         "IterativeSparseLinearSolver")
+      .def_readwrite("max_iterations", &SparseLinearCG<Scalar>::max_iterations)
+      .def_readwrite("tolerance", &SparseLinearCG<Scalar>::tolerance);
 
   py::class_<SparseLinearCG<Scalar>, std::shared_ptr<SparseLinearCG<Scalar>>,
-             SparseLinearSolver<Scalar>>(type_module, "SparseLinearCG")
-      .def(py::init())
-      .def_readwrite("max_iterations", &SparseLinearCG<Scalar>::max_iterations)
-      .def_readwrite("tolerance", &SparseLinearCG<Scalar>::tolerance)
+             IterativeSparseLinearSolver<Scalar>>(type_module, "SparseLinearCG")
+      .def(py::init());
 
-      ;
+  py::class_<SparseLinearBiCGSTAB<Scalar>,
+             std::shared_ptr<SparseLinearBiCGSTAB<Scalar>>,
+             IterativeSparseLinearSolver<Scalar>>(type_module,
+                                                  "SparseLinearBiCGSTAB")
+      .def(py::init());
 
   py::class_<SparseLinearLU<Scalar>, std::shared_ptr<SparseLinearLU<Scalar>>,
              SparseLinearSolver<Scalar>>(type_module, "SparseLinearLU")
-      .def(py::init())
+      .def(py::init());
 
-      ;
+  py::class_<SparseLinearQR<Scalar>, std::shared_ptr<SparseLinearQR<Scalar>>,
+             SparseLinearSolver<Scalar>>(type_module, "SparseLinearQR")
+      .def(py::init());
 
   py::class_<SparseLinearGS<Scalar>, std::shared_ptr<SparseLinearGS<Scalar>>,
-             SparseLinearSolver<Scalar>>(type_module, "SparseLinearGS")
+             IterativeSparseLinearSolver<Scalar>>(type_module, "SparseLinearGS")
       .def(py::init())
-      .def_readwrite("max_iterations", &SparseLinearGS<Scalar>::max_iterations)
-      .def_readwrite("sor", &SparseLinearGS<Scalar>::sor)
-
-      ;
+      .def_readwrite("sor", &SparseLinearGS<Scalar>::sor);
 
   py::class_<SparseLeastSquaresSolver<Scalar>, Solver>(
       type_module, "SparseLeastSquaresSolver")
@@ -128,6 +136,10 @@ static void pythonizeSolvers(py::module main_module, py::module type_module) {
       .def_readwrite("momentum", &GradientDescentSolver<Scalar>::_momentum)
 
       ;
+
+  py::class_<AdamSolver<Scalar>, GradientDescentSolver<Scalar>>(type_module,
+                                                                "AdamSolver")
+      .def(py::init<std::shared_ptr<Engine>>());
 }
 
 TRACTOR_PYTHON_TYPED(pythonizeSolvers);

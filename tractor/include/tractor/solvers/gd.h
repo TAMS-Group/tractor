@@ -10,14 +10,14 @@ namespace tractor {
 
 // Steepest gradient-descent with box constraints
 template <class Scalar> class GradientDescentSolver : public SolverBase {
+protected:
   typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Vector;
 
 public:
-  static constexpr Scalar _default_learning_rate = Scalar(0.01);
-  Scalar _learning_rate = _default_learning_rate;
+  Scalar _learning_rate = Scalar(0.01);
   Scalar _momentum = Scalar(0);
 
-private:
+protected:
   Vector _pl, _gl, _velocity, _residuals, _v_fprop;
   Vector _line_search_left, _line_search_right;
   Vector _errors;
@@ -131,15 +131,62 @@ protected:
   }
 
 public:
-  GradientDescentSolver(const std::shared_ptr<Engine> &engine,
-                        Scalar learning_rate = _default_learning_rate,
-                        Scalar momentum = 0)
-      : SolverBase(engine), _learning_rate(learning_rate), _momentum(momentum) {
-  }
+  GradientDescentSolver(const std::shared_ptr<Engine> &engine)
+      : SolverBase(engine) {}
 
   const Scalar &learningRate() const { return _learning_rate; }
   void setLearningRate(const Scalar &learning_rate) {
     _learning_rate = learning_rate;
+  }
+};
+
+template <class Scalar>
+class AdamSolver : public GradientDescentSolver<Scalar> {
+  typedef typename GradientDescentSolver<Scalar>::Vector Vector;
+
+public:
+  Scalar b1 = Scalar(0.9);
+  Scalar b2 = Scalar(0.999);
+  Scalar e = 1e-8;
+  Vector m;
+  Vector v;
+  bool initrd = false;
+  Scalar t = 0;
+  virtual double _step() override {
+    Scalar a = this->_learning_rate;
+    {
+      TRACTOR_PROFILER("nonlinear");
+      this->_x_prog->run(this->_pl, this->_memory, this->_residuals);
+    }
+    this->_loss = this->_residuals.squaredNorm();
+    {
+      TRACTOR_PROFILER("prepare");
+      this->_x_prep->execute(this->_memory);
+    }
+    {
+      TRACTOR_PROFILER("bprop");
+      this->_x_bprop->run(this->_residuals, this->_memory, this->_gl);
+    }
+    auto &g = this->_gl;
+    if (!initrd || this->_first_step) {
+      TRACTOR_DEBUG("reset adam");
+      initrd = true;
+      m = g * Scalar(0);
+      v = g * Scalar(0);
+      t = Scalar(0);
+    }
+    t = t + 1;
+    m.array() = b1 * m.array() + (Scalar(1) - b1) * g.array();
+    v.array() = b2 * v.array() + (Scalar(1) - b2) * (g.array() * g.array());
+    Vector mh = m / pow(b1, t);
+    Vector vh = v / pow(b2, t);
+    Vector step = (-a * mh.array() / (vh.cwiseSqrt().array() + e)).matrix();
+    this->accumulate(this->_pl, step);
+    return step.squaredNorm();
+  }
+  AdamSolver(const std::shared_ptr<Engine> &engine)
+      : GradientDescentSolver<Scalar>(engine) {
+    this->_learning_rate = Scalar(0.001);
   }
 };
 
