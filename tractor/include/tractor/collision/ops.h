@@ -253,18 +253,18 @@ TRACTOR_D(prepare, continuous_collision_axes,
               ),
           {})
 TRACTOR_D(forward, continuous_collision_axes,
-          (                            //
-              const Pose<T> &pose_a_0, //
-              const Pose<T> &pose_a_1, //
-              const Pose<T> &pose_b_0, //
-              const Pose<T> &pose_b_1, //
-              const uint64_t &shape_a, //
-              const uint64_t &shape_b, //
-              Vector3<T> &axis,        //
-              Vector3<T> &local_a_0,   //
-              Vector3<T> &local_a_1,   //
-              Vector3<T> &local_b_0,   //
-              Vector3<T> &local_b_1    //
+          (                             //
+              const Twist<T> &pose_a_0, //
+              const Twist<T> &pose_a_1, //
+              const Twist<T> &pose_b_0, //
+              const Twist<T> &pose_b_1, //
+              const uint64_t &shape_a,  //
+              const uint64_t &shape_b,  //
+              Vector3<T> &axis,         //
+              Vector3<T> &local_a_0,    //
+              Vector3<T> &local_a_1,    //
+              Vector3<T> &local_b_0,    //
+              Vector3<T> &local_b_1     //
               ),
           {
             axis.setZero();
@@ -275,10 +275,10 @@ TRACTOR_D(forward, continuous_collision_axes,
           })
 TRACTOR_D(reverse, continuous_collision_axes,
           (                                //
-              Pose<T> & pose_a_0,          //
-              Pose<T> &pose_a_1,           //
-              Pose<T> &pose_b_0,           //
-              Pose<T> &pose_b_1,           //
+              Twist<T> & pose_a_0,         //
+              Twist<T> &pose_a_1,          //
+              Twist<T> &pose_b_0,          //
+              Twist<T> &pose_b_1,          //
               uint64_t &shape_a,           //
               uint64_t &shape_b,           //
               const Vector3<T> &axis,      //

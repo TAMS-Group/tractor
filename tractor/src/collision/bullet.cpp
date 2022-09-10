@@ -380,4 +380,72 @@ void BulletCollisionEngine::collide(const ContinuousCollisionRequest &request,
   res.point_b_1 = pt(wb.pose_1, wb.rot_inv_1, wb.shape, dir);
 }
 
+// void BulletCollisionEngine::collide(
+//     const ContinuousCollisionManifoldRequest &request, Vec3d &global_normal,
+//     Vec3d *local_points_a, Vec3d *local_points_b) const {
+//   TRACTOR_PROFILER("continuous bullet collision manifold");
+//   std::lock_guard<std::mutex>(bulletMutex());
+//
+//   auto *shape_a = (BulletConvexMesh *)request.shape_a;
+//   auto *shape_b = (BulletConvexMesh *)request.shape_b;
+//
+//   ContinuousBulletCollisionWrapper wa(     //
+//       shape_a->name().c_str(),             //
+//       toBulletTransform(request.pose_a_0), //
+//       toBulletTransform(request.pose_a_1), //
+//       shape_a->bullet_shape.get(),         //
+//       shape_a->center                      //
+//   );
+//
+//   ContinuousBulletCollisionWrapper wb(     //
+//       shape_b->name().c_str(),             //
+//       toBulletTransform(request.pose_b_0), //
+//       toBulletTransform(request.pose_b_1), //
+//       shape_b->bullet_shape.get(),         //
+//       shape_b->center                      //
+//   );
+//
+//   btVector3 dir = btVector3(0, 0, 0);
+//   bulletCollideContinuous(wa, wb, dir);
+//   global_normal = toVec3d(dir);
+//
+//   static auto sort = [](Vec3d *data, size_t count, const Vec3d &normal) {
+//     std::sort(data, data + count, [&normal](const Vec3d &a, const Vec3d &n) {
+//       return a.dot(normal) > b.dot(normal);
+//     });
+//   };
+//
+//   static auto select = [](Vec3d *data, size_t capacity,
+//                           const std::vector<Vec3d> &vertices,
+//                           const Vec3d &normal) {
+//     TRACTOR_ASSERT(!vertices.empty());
+//     if (capacity == 0) {
+//       return;
+//     }
+//     size_t count = 0;
+//     for (auto &v : vertices) {
+//       if (count < capacity) {
+//         data[count] = v;
+//         count++;
+//         sort(data, count, normal);
+//       } else {
+//         if (v.dot(normal) > data[count - 1].dot(normal)) {
+//           data[count - 1] = v;
+//           sort(data, count, normal);
+//         }
+//       }
+//     }
+//     TRACTOR_ASSERT(count != 0);
+//     while (count < capacity) {
+//       data[count] = data[0];
+//       count++;
+//     }
+//   };
+//
+//   select(local_points_a, request.point_count, shape_a->vertices(),
+//          wa.rot_inv);
+//   select(local_points_b, request.point_count, shape_b->vertices(),
+//          -global_normal);
+// }
+
 } // namespace tractor

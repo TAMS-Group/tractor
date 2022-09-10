@@ -38,6 +38,7 @@ while True:
     link_states = robot_model.forward_kinematics(joint_states)
 
     points = [ ]
+    normals = [ ]
     for object_shape in collision_robot.link("object").shapes:
         for world_shape in collision_robot.link("world").shapes:
             collision = tr.collide(
@@ -52,8 +53,17 @@ while True:
             points.append(collision.point_a_1.value)
             points.append(collision.point_b_0.value)
             points.append(collision.point_b_1.value)
+            normals.append(collision.point_a_0.value)
+            normals.append(collision.point_a_0.value - collision.normal.value * 0.1)
+            normals.append(collision.point_a_1.value)
+            normals.append(collision.point_a_1.value - collision.normal.value * 0.1)
+            normals.append(collision.point_b_0.value)
+            normals.append(collision.point_b_0.value + collision.normal.value * 0.1)
+            normals.append(collision.point_b_1.value)
+            normals.append(collision.point_b_1.value + collision.normal.value * 0.1)
     tr.visualize_points("collisions", 0.02, (1,1,0,1), points)
     tr.visualize_lines("collision_lines", 0.005, (1,1,0,1), points)
+    tr.visualize_lines("normals", 0.005, (0,1,1,1), normals)
 
     tr.visualize("/display_robot_state", joint_states)
 

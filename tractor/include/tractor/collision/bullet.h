@@ -19,6 +19,10 @@ public:
 
   virtual void collide(const ContinuousCollisionRequest &request,
                        ContinuousCollisionResponse &response) const override;
+
+  // virtual void collide(const ContinuousCollisionManifoldRequest &request,
+  //                      Vec3d &global_normal, Vec3d *local_points_a,
+  //                      Vec3d *local_points_b) const override;
 };
 
 } // namespace tractor
