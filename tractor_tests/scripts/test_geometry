@@ -53,11 +53,21 @@ class Variant:
     def run_forward(self, input):
         self.x_forward.input(input, self.memory_forward)
         self.x_forward.execute(self.memory_forward)
+
+        # self.x_reverse.execute(self.memory_forward)
+        # self.x_forward.execute(self.memory_forward)
+
         return np.frombuffer(self.x_forward.output(self.memory_forward), dtype=np.double)
 
     def run_reverse(self, input):
         self.x_reverse.input(input, self.memory_reverse)
         self.x_reverse.execute(self.memory_reverse)
+
+        # self.x_forward.execute(self.memory_reverse)
+        # self.x_reverse.execute(self.memory_reverse)
+        # self.x_forward.execute(self.memory_reverse)
+        # self.x_reverse.execute(self.memory_reverse)
+
         return np.frombuffer(self.x_reverse.output(self.memory_reverse), dtype=np.double)
 
     def run(self, compute_input, forward_input, reverse_input):

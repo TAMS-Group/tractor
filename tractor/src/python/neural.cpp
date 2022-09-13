@@ -46,6 +46,15 @@ static void pythonizeNeural(py::module main_module, py::module type_module) {
               const std::vector<Tensor<Scalar>> &inputs) {
              return network.predict(inputs);
            })
+      .def("__call__",
+           [](NeuralNetwork<Scalar> &network, const Tensor<Scalar> &input) {
+             return network.predict(input);
+           })
+      .def("__call__",
+           [](NeuralNetwork<Scalar> &network,
+              const std::vector<Tensor<Scalar>> &inputs) {
+             return network.predict(inputs);
+           })
       .def(py::init<>())
       .def(py::init<const std::vector<std::shared_ptr<Layer<Scalar>>> &,
                     const std::vector<std::shared_ptr<Layer<Scalar>>> &>());
@@ -55,6 +64,7 @@ static void pythonizeNeural(py::module main_module, py::module type_module) {
              NeuralNetwork<Scalar> //
              >(type_module, "SequentialNeuralNetwork")
       .def(py::init<>())
+      .def(py::init<const std::vector<std::shared_ptr<Layer<Scalar>>> &>())
       .def("add", &SequentialNeuralNetwork<Scalar>::add)
 
       ;

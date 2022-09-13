@@ -138,6 +138,12 @@ class SequentialNeuralNetwork : public NeuralNetwork<Scalar> {
 
 public:
   SequentialNeuralNetwork() {}
+  SequentialNeuralNetwork(
+      const std::vector<std::shared_ptr<Layer<Scalar>>> &layers) {
+    for (auto &layer : layers) {
+      add(layer);
+    }
+  }
   void add(const std::shared_ptr<Layer<Scalar>> &layer) {
     if (!_input) {
       _input = _output = std::make_shared<InputLayer<Scalar>>();

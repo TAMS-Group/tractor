@@ -5,6 +5,7 @@ import math
 import numpy as np
 import importlib
 import tractor as t
+import tractor as tr
 import tractor
 import inspect
 import tractor.types_double as tt
@@ -28,6 +29,19 @@ def var_vec3_nz(tg):
     return v
 
 class Tests:
+
+    def tensor(self, tg):
+        ta = tt.Tensor(np.zeros([10,3]))
+        tb = tt.Tensor(np.zeros([3,5]))
+        tr.variable(ta)
+        tr.variable(tb)
+        tc = tr.matmul(ta, tb)
+        td = tt.Tensor(np.zeros([10,5]))
+        tr.variable(td)
+        tc += td
+        tr.goal(tc)
+        for v in tr.unpack(tc):
+            tr.goal(v)
 
     def sinc(self, tg):
         v = tt.Scalar()
