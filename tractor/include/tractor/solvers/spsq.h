@@ -378,6 +378,9 @@ public:
         _linear_solution.array() * Scalar(-_step_scaling);
 
     accumulate(_nonlinear_solution, _linear_solution);
+
+
+    return 0;
   }
 
   SparseLeastSquaresSolver(const std::shared_ptr<Engine> &engine)
