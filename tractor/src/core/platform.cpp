@@ -1,7 +1,6 @@
 // (c) 2020-2022 Philipp Ruppel
-
 #include <tractor/core/platform.h>
-
+#include <algorithm>
 #include <cmath>
 #include <sys/ioctl.h>
 

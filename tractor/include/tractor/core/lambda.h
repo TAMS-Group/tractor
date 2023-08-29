@@ -5,7 +5,7 @@
 #include <tractor/core/list.h>
 #include <tractor/core/log.h>
 #include <tractor/core/operator.h>
-
+#include <unordered_map>
 namespace tractor {
 
 template <class Functor> struct PointerOp : Operator {

@@ -13,7 +13,8 @@
 #include <tuple>
 
 namespace pybind11 {
-class module;
+class module_;
+using module = module_;
 }
 
 #ifdef TRACTOR_IMPLEMENT_OPS
