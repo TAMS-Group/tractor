@@ -12,7 +12,6 @@
 namespace tractor {
 
 static void pythonizeProgramGlobal(py::module m) {
-
   m.def("sparsity_matrix", [](const Program &program, size_t stride) {
     return SparsityMatrix(program, stride).toEigenSparseMatrix<float>();
   });
@@ -45,7 +44,6 @@ TRACTOR_PYTHON_GLOBAL(pythonizeProgramGlobal);
 
 template <class Scalar>
 static void pythonizeSolvers(py::module main_module, py::module type_module) {
-
   py::class_<SparseMatrixBuilder<Scalar>,
              std::shared_ptr<SparseMatrixBuilder<Scalar>>>(
       type_module, "SparseMatrixBuilder")
@@ -54,6 +52,8 @@ static void pythonizeSolvers(py::module main_module, py::module type_module) {
       .def("build", &SparseMatrixBuilder<Scalar>::build)
       .def_property_readonly("complexity",
                              &SparseMatrixBuilder<Scalar>::complexity)
+      .def_readwrite("multi_threading",
+                     &SparseMatrixBuilder<Scalar>::_multi_threading)
       .def_property_readonly(
           "sparsity_matrix",
           [](const SparseMatrixBuilder<Scalar> &_this) {
@@ -144,4 +144,4 @@ static void pythonizeSolvers(py::module main_module, py::module type_module) {
 
 TRACTOR_PYTHON_TYPED(pythonizeSolvers);
 
-} // namespace tractor
+}  // namespace tractor
