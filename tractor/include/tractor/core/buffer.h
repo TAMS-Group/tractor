@@ -16,7 +16,7 @@ namespace tractor {
 class Buffer {
   std::vector<uint8_t> _data;
 
-public:
+ public:
   template <class Begin, class End>
   void assign(const Begin &begin, const End &end) {
     _data.assign(begin, end);
@@ -42,7 +42,8 @@ public:
   }
   void zero() { std::memset(_data.data(), 0, _data.size()); }
 
-  template <class T, class PType> inline T &at(const PType &port) {
+  template <class T, class PType>
+  inline T &at(const PType &port) {
     if (port.type() != typeid(typename std::decay<T>::type)) {
       throw std::runtime_error("type mismatch");
     }
@@ -52,19 +53,22 @@ public:
     return *(T *)(void *)(_data.data() + port.offset());
   }
 
-  template <class T, class PType> inline const T &at(const PType &port) const {
+  template <class T, class PType>
+  inline const T &at(const PType &port) const {
     if (port.type() != typeid(typename std::decay<T>::type)) {
       throw std::runtime_error("type mismatch");
     }
     return *(const T *)(const void *)(_data.data() + port.offset());
   }
 
-  template <class PContainer> void gather(const PContainer &container) {
+  template <class PContainer>
+  void gather(const PContainer &container) {
     size_t size = 0;
     for (const auto &port : container) {
       size = std::max(size, port.offset() + port.size());
     }
-    _data.resize(std::max(_data.size(), size));
+    // _data.resize(std::max(_data.size(), size));
+    _data.resize(size);
     for (const auto &port : container) {
       if (port.binding()) {
         std::memcpy(_data.data() + port.offset(), (const void *)port.binding(),
@@ -73,7 +77,8 @@ public:
     }
   }
 
-  template <class PContainer> void scatter(const PContainer &container) const {
+  template <class PContainer>
+  void scatter(const PContainer &container) const {
     for (const auto &port : container) {
       if (port.binding()) {
         // TRACTOR_DEBUG("scatter " << _data.size() << " " << port.offset()
@@ -176,7 +181,8 @@ public:
   //   }
   // }
 
-  template <class Vector> void fromVector(const Vector &vector) {
+  template <class Vector>
+  void fromVector(const Vector &vector) {
     typedef typename std::decay<decltype(vector[0])>::type Scalar;
     _data.resize(vector.size() * sizeof(vector[0]));
     // Scalar *data = (Scalar *)_data.data();
@@ -186,11 +192,12 @@ public:
     std::memcpy(_data.data(), vector.eval().data(), _data.size());
   }
 
-  template <class Vector> void toVector(Vector &vector) const {
+  template <class Vector>
+  void toVector(Vector &vector) const {
     typedef typename std::decay<decltype(vector[0])>::type Scalar;
     vector.resize(_data.size() / sizeof(vector[0]));
     std::memcpy(vector.data(), _data.data(), _data.size());
   }
 };
 
-} // namespace tractor
+}  // namespace tractor

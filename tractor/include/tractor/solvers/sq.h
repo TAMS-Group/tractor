@@ -25,7 +25,7 @@ class LeastSquaresSolver : public SolverBase {
   Vector _gradient_temp;
   Vector _test;
 
-public:
+ public:
   bool _adaptive_regularization = 0;
   bool _line_search = false;
   Scalar _regularization = 0.0;
@@ -33,7 +33,7 @@ public:
   Scalar _step_scaling = 1.0;
   Scalar _linear_tolerance = -1;
 
-protected:
+ protected:
   virtual void _compile(const Program &prog) override {
     _compileGradients<Scalar>(prog);
   }
@@ -58,7 +58,6 @@ protected:
   virtual double loss() const override { return _loss; }
 
   virtual double _step() override {
-
     if (!_nonlinear_solution.allFinite()) {
       throw std::runtime_error("previous solution not finite");
     }
@@ -168,6 +167,12 @@ protected:
     accumulate(_nonlinear_solution, _linear_solution);
     TRACTOR_CHECK_ALL_FINITE(_nonlinear_solution);
 
+    if (_previous_nonlinear_solution.size() != _nonlinear_solution.size()) {
+      TRACTOR_FATAL("internal error SQ171 "
+                    << _previous_nonlinear_solution.size() << " "
+                    << _nonlinear_solution.size());
+      throw std::runtime_error("internal error");
+    }
     double step =
         (_previous_nonlinear_solution - _nonlinear_solution).squaredNorm();
     _previous_nonlinear_solution = _nonlinear_solution;
@@ -185,7 +190,7 @@ protected:
     // return 1;
   }
 
-public:
+ public:
   LeastSquaresSolver(const std::shared_ptr<Engine> &engine)
       : SolverBase(engine) {
     _hgrad_p = std::make_shared<RegularizedMatrixReplacement<Scalar>>();
@@ -195,4 +200,4 @@ public:
   }
 };
 
-} // namespace tractor
+}  // namespace tractor
