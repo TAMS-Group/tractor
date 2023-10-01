@@ -18,7 +18,8 @@ namespace tractor {
 //   return a;
 // }
 
-template <class Type, size_t ArraySize> struct PythonArrayHelper {
+template <class Type, size_t ArraySize>
+struct PythonArrayHelper {
   typedef std::array<Type, ArraySize> ImportType;
   typedef std::array<Type, ArraySize> InternalType;
   typedef py::array_t<Type> ExportType;
@@ -59,7 +60,6 @@ struct PythonArrayHelper<Batch<ElementType, BatchSize>, ArraySize> {
 
 template <class Geometry>
 static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
-
   // -------------------------------------------------------------
   typedef typename Geometry::Value Value;
   typedef typename Geometry::Scalar Scalar;
@@ -129,6 +129,31 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
           [](const Vector3 &translation, const Orientation &orientation) {
             return Geometry::pack(translation, orientation);
           }))
+      .def_property(
+          "value",
+          [](const Pose &pose) {
+            return std::make_pair(std::array<Value, 3>({
+                                      value(value(pose).position().x()),
+                                      value(value(pose).position().y()),
+                                      value(value(pose).position().z()),
+                                  }),
+                                  std::array<Value, 4>({
+                                      value(value(pose).orientation().x()),
+                                      value(value(pose).orientation().y()),
+                                      value(value(pose).orientation().z()),
+                                      value(value(pose).orientation().w()),
+                                  }));
+          },
+          [](Pose &pose, const std::pair<std::array<Value, 3>,
+                                         std::array<Value, 4>> &data) {
+            value(value(pose).position().x()) = data.first[0];
+            value(value(pose).position().y()) = data.first[1];
+            value(value(pose).position().z()) = data.first[2];
+            value(value(pose).orientation().x()) = data.second[0];
+            value(value(pose).orientation().y()) = data.second[1];
+            value(value(pose).orientation().z()) = data.second[2];
+            value(value(pose).orientation().w()) = data.second[3];
+          })
       .def(py::self * py::self)
       .def(py::self * Vector3())
       .def(py::self + Twist());
@@ -401,4 +426,4 @@ TRACTOR_PYTHON_GEOMETRY_BATCH(pythonizeGeometry);
 //   return 0;
 // }();
 
-} // namespace tractor
+}  // namespace tractor
