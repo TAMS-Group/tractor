@@ -13,10 +13,14 @@ namespace tractor {
 
 template <class Geometry>
 static void pythonizeRobot(py::module main_module, py::module type_module) {
-
   main_module.def("visualize", [](const std::string &topic,
                                   const JointState<Geometry> &joint_state) {
     visualize(topic, joint_state);
+  });
+
+  main_module.def("publish", [](const std::string &topic,
+                                const JointState<Geometry> &joint_state) {
+    publish(topic, joint_state);
   });
 
   main_module.def("visualize",
@@ -201,6 +205,17 @@ static void pythonizeRobot(py::module main_module, py::module type_module) {
             std::make_shared<PyRobotModel<Geometry>>(
                 robot_model_factory.get("/robot_description")));
       }))
+      .def(py::init([](const std::string &urdf, const std::string &srdf) {
+        // TiXmlDocument uxml, sxml;
+        // uxml.Parse(urdf.c_str());
+        // sxml.Parse(srdf.c_str());
+        // rdf_loader::RDFLoader loader(&uxml, &sxml);
+        rdf_loader::RDFLoader loader(urdf, srdf);
+        return std::static_pointer_cast<RobotModel<Geometry>>(
+            std::make_shared<PyRobotModel<Geometry>>(
+                std::make_shared<moveit::core::RobotModel>(loader.getURDF(),
+                                                           loader.getSRDF())));
+      }))
       .def("forward_kinematics",
            [](const RobotModel<Geometry> &robot_model,
               const JointState<Geometry> &joint_state,
@@ -301,4 +316,4 @@ static void pythonizeRobot(py::module main_module, py::module type_module) {
 
 TRACTOR_PYTHON_GEOMETRY(pythonizeRobot);
 
-} // namespace tractor
+}  // namespace tractor

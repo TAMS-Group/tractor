@@ -16,4 +16,4 @@ const std::shared_ptr<PythonRegistry> &PythonRegistry::instance() {
   return instance;
 }
 
-} // namespace tractor
+}  // namespace tractor
