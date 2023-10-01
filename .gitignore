@@ -1,2 +1,5 @@
 *.pyc
 */*.pyc
+!.gitignore
+!.clang-format
+**/*.pyc
