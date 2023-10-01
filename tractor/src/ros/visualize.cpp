@@ -11,7 +11,6 @@ namespace tractor {
 static const char *g_visualization_topic = "/tractor/visualization";
 
 void clearVisualization() {
-
   visualization_msgs::Marker marker;
   marker.action = visualization_msgs::Marker::DELETEALL;
 
@@ -24,7 +23,6 @@ void clearVisualization() {
 void visualizePoints(const std::string &name, double scale,
                      const std::vector<Eigen::Vector4d> &colors,
                      const std::vector<Eigen::Vector3d> &points) {
-
   TRACTOR_ASSERT(colors.size() == points.size());
 
   visualization_msgs::Marker marker;
@@ -62,7 +60,6 @@ void visualizePoints(const std::string &name, double scale,
 void visualizePoints(const std::string &name, double scale,
                      const Eigen::Vector4d &color,
                      const std::vector<Eigen::Vector3d> &points) {
-
   visualization_msgs::Marker marker;
 
   marker = visualization_msgs::Marker();
@@ -90,7 +87,6 @@ void visualizePoints(const std::string &name, double scale,
 void visualizeLines(const std::string &name, double scale,
                     const std::vector<Eigen::Vector4d> &colors,
                     const std::vector<Eigen::Vector3d> &points) {
-
   TRACTOR_ASSERT(colors.size() == points.size());
 
   visualization_msgs::Marker marker;
@@ -128,7 +124,6 @@ void visualizeLines(const std::string &name, double scale,
 void visualizeLines(const std::string &name, double scale,
                     const Eigen::Vector4d &color,
                     const std::vector<Eigen::Vector3d> &points) {
-
   visualization_msgs::Marker marker;
 
   marker = visualization_msgs::Marker();
@@ -153,4 +148,33 @@ void visualizeLines(const std::string &name, double scale,
   publish(g_visualization_topic, marker_array);
 }
 
-} // namespace tractor
+// const std::vector<Eigen::Vector3i> &triangles
+void visualizeMesh(const std::string &name, const Eigen::Vector4d &color,
+                   const std::vector<Eigen::Vector3d> &vertices) {
+  visualization_msgs::Marker marker;
+
+  marker = visualization_msgs::Marker();
+  marker.ns = name;
+  marker.color.r = color.x();
+  marker.color.g = color.y();
+  marker.color.b = color.z();
+  marker.color.a = color.w();
+  marker.scale.x = 1;
+  marker.scale.y = 1;
+  marker.scale.z = 1;
+  marker.type = visualization_msgs::Marker::TRIANGLE_LIST;
+
+  for (auto &p : vertices) {
+    marker.points.emplace_back();
+    marker.points.back().x = p.x();
+    marker.points.back().y = p.y();
+    marker.points.back().z = p.z();
+  }
+
+  visualization_msgs::MarkerArray marker_array;
+  marker_array.markers.push_back(marker);
+
+  publish(g_visualization_topic, marker_array);
+}
+
+}  // namespace tractor

@@ -13,7 +13,6 @@ namespace tractor {
 
 template <class Scalar>
 static void pythonizeROSTyped(py::module main_module, py::module type_module) {
-
   main_module.def("interact",
                   [](const std::string &frame, const std::string &name,
                      Var<Vector3<Scalar>> &point, double size) {
@@ -30,7 +29,6 @@ static void pythonizeROSTyped(py::module main_module, py::module type_module) {
 TRACTOR_PYTHON_TYPED(pythonizeROSTyped);
 
 static void pythonizeROS(py::module m) {
-
   m.def("visualize_points",
         py::overload_cast<const std::string &, double, const Eigen::Vector4d &,
                           const std::vector<Eigen::Vector3d> &>(
@@ -53,9 +51,13 @@ static void pythonizeROS(py::module m) {
                         const std::vector<Eigen::Vector4d> &,
                         const std::vector<Eigen::Vector3d> &>(&visualizeLines));
 
+  m.def("visualize_mesh", &visualizeMesh);
+
   m.def("clear_visualization", &clearVisualization);
 
-  m.def("init_ros", [](const std::string &name) {
+  m.def("ros_ok", []() { return ros::ok(); });
+
+  auto init_ros = [](const std::string &name, bool sigint_handler = false) {
     TRACTOR_DEBUG("init_ros " << name);
     auto args =
         py::module::import("sys").attr("argv").cast<std::vector<std::string>>();
@@ -65,12 +67,17 @@ static void pythonizeROS(py::module m) {
       argv.push_back((char *)a.c_str());
     }
     int argc = args.size();
-    ros::init(argc, argv.data(), name,
-              ros::init_options::NoSigintHandler | ros::init_options::NoRosout);
+    int flags = ros::init_options::NoRosout;
+    if (!sigint_handler) {
+      flags |= ros::init_options::NoSigintHandler;
+    }
+    ros::init(argc, argv.data(), name, flags);
     static ros::NodeHandle node_handle("~");
     static ros::AsyncSpinner spinner(4);
     clearVisualization();
-  });
+  };
+  m.def("init_ros", init_ros);
+  m.def("init_ros", [init_ros](const std::string &name) { init_ros(name); });
 
   m.def("publish", [](const std::string &topic, const py::object &message) {
     auto bytes_io = py::module::import("io").attr("BytesIO")();
@@ -80,13 +87,23 @@ static void pythonizeROS(py::module m) {
     std::string type = message.attr("_type").cast<std::string>();
     std::string hash = message.attr("_md5sum").cast<std::string>();
     std::string definition = message.attr("_full_text").cast<std::string>();
-    TRACTOR_DEBUG("publish " << topic << " " << type << " " << hash << " "
-                             << definition << " " << serialized_data);
+    // TRACTOR_DEBUG("publish " << topic << " " << type << " " << hash << " "
+    //                          << definition << " " << serialized_data);
     publish(topic, Message(MessageType::instance(type, hash, definition),
                            serialized_data.data(), serialized_data.size()));
+  });
+
+  m.def("advertise", [](const std::string &topic, const py::object &type) {
+    std::string name = type.attr("_type").cast<std::string>();
+    std::string hash = type.attr("_md5sum").cast<std::string>();
+    std::string definition = type.attr("_full_text").cast<std::string>();
+    // TRACTOR_DEBUG("advertise " << topic << " type:" << name << " hash:" <<
+    // hash
+    //                            << " def:" << definition);
+    advertise(topic, hash, name, definition);
   });
 }
 
 TRACTOR_PYTHON_GLOBAL(pythonizeROS);
 
-} // namespace tractor
+}  // namespace tractor

@@ -27,6 +27,9 @@ void visualizePoints(const std::string &name, double scale,
                      const std::vector<Eigen::Vector4d> &colors,
                      const std::vector<Eigen::Vector3d> &points);
 
+void visualizeMesh(const std::string &name, const Eigen::Vector4d &color,
+                   const std::vector<Eigen::Vector3d> &vertices);
+
 void visualizeLines(const std::string &name, double scale,
                     const std::vector<Eigen::Vector4d> &colors,
                     const std::vector<Eigen::Vector3d> &points);
@@ -35,7 +38,6 @@ template <class Geometry>
 void visualize(const std::string &topic,
                const std::vector<JointState<Geometry>> &trajectory,
                const typename Geometry::Value &time_step) {
-
   if (trajectory.empty()) {
     TRACTOR_DEBUG("trajectory is empty, nothing to visualize");
     return;
@@ -69,7 +71,6 @@ void visualize(const std::string &topic,
 
 template <class Geometry>
 void visualize(const std::string &topic, const JointState<Geometry> &state) {
-
   moveit_msgs::DisplayRobotState display;
   display.state.joint_state.name = state.model()->info()->variables().names();
 
@@ -85,4 +86,4 @@ void visualize(const std::string &topic, const JointState<Geometry> &state) {
   publish(topic, display);
 }
 
-} // namespace tractor
+}  // namespace tractor

@@ -4,20 +4,26 @@
 
 namespace tractor {
 
-void publish(const std::string &topic, const Message &message) {
-
+const ros::Publisher &advertise(const std::string &topic,
+                                const std::string &hash,
+                                const std::string &name,
+                                const std::string &definition) {
   static ros::NodeHandle node_handle("~");
-
   static Factory::Key<std::string>::Value<ros::Publisher> factory(
-      [&](const std::string &topic) {
-        ros::AdvertiseOptions advertise_options(
-            topic, 10, message.type()->hash(), message.type()->name(),
-            message.type()->definition());
+      [hash, name, definition](const std::string &topic) {
+        ros::AdvertiseOptions advertise_options(topic, 10, hash, name,
+                                                definition);
         ros::Publisher publisher = node_handle.advertise(advertise_options);
+        ros::spinOnce();
         return publisher;
       });
-
-  factory.get(topic).publish(message);
+  return factory.get(topic);
 }
 
-} // namespace tractor
+void publish(const std::string &topic, const Message &message) {
+  advertise(topic, message.type()->hash(), message.type()->name(),
+            message.type()->definition())
+      .publish(message);
+}
+
+}  // namespace tractor

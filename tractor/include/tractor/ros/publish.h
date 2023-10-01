@@ -12,16 +12,17 @@
 
 namespace tractor {
 
+const ros::Publisher &advertise(const std::string &topic,
+                                const std::string &hash,
+                                const std::string &name,
+                                const std::string &definition);
+
 template <class Message>
 void publish(const std::string &topic, const Message &message) {
-  static ros::NodeHandle node_handle("~");
-
-  static Factory::Key<std::string>::Value<ros::Publisher> factory(
-      [&](const std::string &topic) {
-        return node_handle.advertise<Message>(topic, 100);
-      });
-
-  factory.get(topic).publish(message);
+  advertise(topic, ros::message_traits::md5sum(message),
+            ros::message_traits::datatype(message),
+            ros::message_traits::definition(message))
+      .publish(message);
 }
 
 void publish(const std::string &topic, const Message &message);
