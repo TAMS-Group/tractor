@@ -14,14 +14,16 @@
 
 namespace tractor {
 
-template <class Geometry> class RobotModel;
+template <class Geometry>
+class RobotModel;
 
-template <class Geometry> class JointState {
+template <class Geometry>
+class JointState {
   std::shared_ptr<const RobotModel<Geometry>> _model;
   std::shared_ptr<const RobotInfo> _robot_info;
   AlignedStdVector<JointVariant<JointStateBase<Geometry>>> _joint_states;
 
-public:
+ public:
   void init(const std::shared_ptr<const RobotModel<Geometry>> &robot_model) {
     _model = robot_model;
     _robot_info = robot_model->info();
@@ -86,7 +88,8 @@ public:
     }
   }
 
-  template <class RobotState> void toMoveIt(RobotState &moveit_state) const {
+  template <class RobotState>
+  void toMoveIt(RobotState &moveit_state) const {
     AlignedStdVector<typename Geometry::Scalar> pp;
     serializePositions(pp);
     for (size_t i = 0; i < pp.size(); i++) {
@@ -94,7 +97,8 @@ public:
     }
   }
 
-  template <class RobotState> void fromMoveIt(RobotState &moveit_state) {
+  template <class RobotState>
+  void fromMoveIt(RobotState &moveit_state) {
     AlignedStdVector<typename Geometry::Scalar> pp(_robot_info->variableCount(),
                                                    typename Geometry::Scalar());
     for (size_t i = 0; i < pp.size(); i++) {
@@ -104,6 +108,22 @@ public:
     }
     deserializePositions(pp);
   }
+
+  void updateMimicJoints() {
+    for (size_t ijoint = 0; ijoint < _robot_info->joints().size(); ijoint++) {
+      auto &joint_info = _robot_info->joints().info(ijoint);
+      if (joint_info.isMimicJoint()) {
+        auto &dst_joint_state = dynamic_cast<ScalarJointStateBase<Geometry> &>(
+            *_joint_states[ijoint]);
+        auto &src_joint_state = dynamic_cast<ScalarJointStateBase<Geometry> &>(
+            *_joint_states[joint_info.mimicIndex()]);
+        dst_joint_state.position() =
+            src_joint_state.position() *
+                typename Geometry::Scalar(joint_info.mimicFactor()) +
+            typename Geometry::Scalar(joint_info.mimicOffset());
+      }
+    }
+  }
 };
 
-} // namespace tractor
+}  // namespace tractor

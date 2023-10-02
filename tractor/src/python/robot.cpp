@@ -167,7 +167,8 @@ static void pythonizeRobot(py::module main_module, py::module type_module) {
           [](JointState<Geometry> &_this, const std::string &name) {
             return &_this.joint(name);
           },
-          py::return_value_policy::reference_internal);
+          py::return_value_policy::reference_internal)
+      .def("update_mimic_joints", &JointState<Geometry>::updateMimicJoints);
 
   main_module.def("variable", [](JointState<Geometry> &joint_states) {
     for (size_t i = 0; i < joint_states.model()->info()->joints().count();
@@ -301,6 +302,15 @@ static void pythonizeRobot(py::module main_module, py::module type_module) {
 
       .def_property_readonly("joints", &RobotModel<Geometry>::joints)
       .def_property_readonly("links", &RobotModel<Geometry>::links)
+
+      .def("is_mimic_joint",
+           [](const RobotModel<Geometry> &_this, size_t index) {
+             return _this.info()->joints().info(index).isMimicJoint();
+           })
+      .def("is_mimic_joint",
+           [](const RobotModel<Geometry> &_this, const std::string &name) {
+             return _this.info()->joints().info(name).isMimicJoint();
+           })
 
       // .def("joint", py::overload_cast<size_t>(&RobotModel<Geometry>::joint))
       // .def("joint",
