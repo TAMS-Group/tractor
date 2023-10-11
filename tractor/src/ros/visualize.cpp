@@ -177,4 +177,43 @@ void visualizeMesh(const std::string &name, const Eigen::Vector4d &color,
   publish(g_visualization_topic, marker_array);
 }
 
+void visualizeMesh(const std::string &name,
+                   const std::vector<Eigen::Vector4d> &colors,
+                   const std::vector<Eigen::Vector3d> &points) {
+  TRACTOR_ASSERT(colors.size() == points.size());
+
+  visualization_msgs::Marker marker;
+
+  marker = visualization_msgs::Marker();
+  marker.ns = name;
+  marker.color.r = 0;
+  marker.color.g = 0;
+  marker.color.b = 0;
+  marker.color.a = 0;
+  marker.scale.x = 1;
+  marker.scale.y = 1;
+  marker.scale.z = 1;
+  marker.type = visualization_msgs::Marker::TRIANGLE_LIST;
+
+  for (auto &c : colors) {
+    marker.colors.emplace_back();
+    marker.colors.back().r = c.x();
+    marker.colors.back().g = c.y();
+    marker.colors.back().b = c.z();
+    marker.colors.back().a = c.w();
+  }
+
+  for (auto &p : points) {
+    marker.points.emplace_back();
+    marker.points.back().x = p.x();
+    marker.points.back().y = p.y();
+    marker.points.back().z = p.z();
+  }
+
+  visualization_msgs::MarkerArray marker_array;
+  marker_array.markers.push_back(marker);
+
+  publish(g_visualization_topic, marker_array);
+}
+
 }  // namespace tractor

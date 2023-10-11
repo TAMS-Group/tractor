@@ -30,6 +30,10 @@ void visualizePoints(const std::string &name, double scale,
 void visualizeMesh(const std::string &name, const Eigen::Vector4d &color,
                    const std::vector<Eigen::Vector3d> &vertices);
 
+void visualizeMesh(const std::string &name,
+                   const std::vector<Eigen::Vector4d> &colors,
+                   const std::vector<Eigen::Vector3d> &points);
+
 void visualizeLines(const std::string &name, double scale,
                     const std::vector<Eigen::Vector4d> &colors,
                     const std::vector<Eigen::Vector3d> &points);

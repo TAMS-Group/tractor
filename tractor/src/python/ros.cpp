@@ -51,7 +51,16 @@ static void pythonizeROS(py::module m) {
                         const std::vector<Eigen::Vector4d> &,
                         const std::vector<Eigen::Vector3d> &>(&visualizeLines));
 
-  m.def("visualize_mesh", &visualizeMesh);
+  m.def(
+      "visualize_mesh",
+      py::overload_cast<const std::string &, const Eigen::Vector4d &,
+                        const std::vector<Eigen::Vector3d> &>(&visualizeMesh));
+
+  m.def(
+      "visualize_mesh",
+      py::overload_cast<const std::string &,
+                        const std::vector<Eigen::Vector4d> &,
+                        const std::vector<Eigen::Vector3d> &>(&visualizeMesh));
 
   m.def("clear_visualization", &clearVisualization);
 
