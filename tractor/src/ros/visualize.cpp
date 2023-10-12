@@ -29,10 +29,10 @@ void visualizePoints(const std::string &name, double scale,
 
   marker = visualization_msgs::Marker();
   marker.ns = name;
-  marker.color.r = 1;
-  marker.color.g = 1;
-  marker.color.b = 1;
-  marker.color.a = 1;
+  marker.color.r = 0;
+  marker.color.g = 0;
+  marker.color.b = 0;
+  marker.color.a = 0;
   marker.scale.x = scale;
   marker.type = visualization_msgs::Marker::POINTS;
 
@@ -195,19 +195,23 @@ void visualizeMesh(const std::string &name,
   marker.scale.z = 1;
   marker.type = visualization_msgs::Marker::TRIANGLE_LIST;
 
-  for (auto &c : colors) {
-    marker.colors.emplace_back();
-    marker.colors.back().r = c.x();
-    marker.colors.back().g = c.y();
-    marker.colors.back().b = c.z();
-    marker.colors.back().a = c.w();
+  marker.colors.resize(colors.size());
+  for (size_t i = 0; i < colors.size(); i++) {
+    auto &c = colors[i];
+    auto &m = marker.colors[i];
+    m.r = c.x();
+    m.g = c.y();
+    m.b = c.z();
+    m.a = c.w();
   }
 
-  for (auto &p : points) {
-    marker.points.emplace_back();
-    marker.points.back().x = p.x();
-    marker.points.back().y = p.y();
-    marker.points.back().z = p.z();
+  marker.points.resize(points.size());
+  for (size_t i = 0; i < points.size(); i++) {
+    auto &p = points[i];
+    auto &m = marker.points[i];
+    m.x = p.x();
+    m.y = p.y();
+    m.z = p.z();
   }
 
   visualization_msgs::MarkerArray marker_array;

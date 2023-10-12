@@ -51,16 +51,49 @@ static void pythonizeROS(py::module m) {
                         const std::vector<Eigen::Vector4d> &,
                         const std::vector<Eigen::Vector3d> &>(&visualizeLines));
 
-  m.def(
-      "visualize_mesh",
-      py::overload_cast<const std::string &, const Eigen::Vector4d &,
-                        const std::vector<Eigen::Vector3d> &>(&visualizeMesh));
+  // m.def(
+  //     "visualize_mesh",
+  //     py::overload_cast<const std::string &, const Eigen::Vector4d &,
+  //                       const std::vector<Eigen::Vector3d>
+  //                       &>(&visualizeMesh));
 
-  m.def(
-      "visualize_mesh",
-      py::overload_cast<const std::string &,
-                        const std::vector<Eigen::Vector4d> &,
-                        const std::vector<Eigen::Vector3d> &>(&visualizeMesh));
+  // m.def(
+  //     "visualize_mesh",
+  //     py::overload_cast<const std::string &,
+  //                       const std::vector<Eigen::Vector4d> &,
+  //                       const std::vector<Eigen::Vector3d>
+  //                       &>(&visualizeMesh));
+
+  m.def("visualize_mesh",
+        [](const std::string &name, const py::array_t<float> &colors,
+           const py::array_t<float> &vertices) {
+          TRACTOR_ASSERT(colors.ndim() == 2);
+          TRACTOR_ASSERT(vertices.ndim() == 2);
+          TRACTOR_ASSERT(colors.shape(0) == vertices.shape(0));
+          TRACTOR_ASSERT(colors.shape(1) == 4);
+          TRACTOR_ASSERT(vertices.shape(1) == 3);
+
+          size_t count = vertices.shape(0);
+
+          auto vertex_data = vertices.unchecked<2>();
+          auto color_data = colors.unchecked<2>();
+
+          std::vector<Eigen::Vector3d> vertex_vector(count);
+          std::vector<Eigen::Vector4d> color_vector(count);
+
+          for (size_t i = 0; i < count; i++) {
+            vertex_vector[i].x() = vertex_data(i, 0);
+            vertex_vector[i].y() = vertex_data(i, 1);
+            vertex_vector[i].z() = vertex_data(i, 2);
+
+            color_vector[i].x() = color_data(i, 0);
+            color_vector[i].y() = color_data(i, 1);
+            color_vector[i].z() = color_data(i, 2);
+            color_vector[i].w() = color_data(i, 3);
+          }
+
+          visualizeMesh(name, color_vector, vertex_vector);
+        });
 
   m.def("clear_visualization", &clearVisualization);
 
