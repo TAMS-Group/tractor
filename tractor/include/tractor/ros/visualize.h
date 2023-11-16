@@ -38,6 +38,10 @@ void visualizeLines(const std::string &name, double scale,
                     const std::vector<Eigen::Vector4d> &colors,
                     const std::vector<Eigen::Vector3d> &points);
 
+void visualizeText(const std::string &name, double scale,
+                   const Eigen::Vector4d &color,
+                   const Eigen::Vector3d &position, const std::string &text);
+
 template <class Geometry>
 void visualize(const std::string &topic,
                const std::vector<JointState<Geometry>> &trajectory,

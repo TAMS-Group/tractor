@@ -20,6 +20,33 @@ void clearVisualization() {
   publish(g_visualization_topic, marker_array);
 }
 
+void visualizeText(const std::string &name, double scale,
+                   const Eigen::Vector4d &color,
+                   const Eigen::Vector3d &position, const std::string &text) {
+  visualization_msgs::Marker marker;
+
+  marker = visualization_msgs::Marker();
+  marker.ns = name;
+  marker.color.r = color.x();
+  marker.color.g = color.y();
+  marker.color.b = color.z();
+  marker.color.a = color.w();
+  marker.scale.x = scale;
+  marker.scale.y = scale;
+  marker.scale.z = scale;
+  marker.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+  marker.pose.orientation.w = 1;
+  marker.pose.position.x = position.x();
+  marker.pose.position.y = position.y();
+  marker.pose.position.z = position.z();
+  marker.text = text;
+
+  visualization_msgs::MarkerArray marker_array;
+  marker_array.markers.push_back(marker);
+
+  publish(g_visualization_topic, marker_array);
+}
+
 void visualizePoints(const std::string &name, double scale,
                      const std::vector<Eigen::Vector4d> &colors,
                      const std::vector<Eigen::Vector3d> &points) {

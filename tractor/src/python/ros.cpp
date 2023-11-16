@@ -51,6 +51,8 @@ static void pythonizeROS(py::module m) {
                         const std::vector<Eigen::Vector4d> &,
                         const std::vector<Eigen::Vector3d> &>(&visualizeLines));
 
+  m.def("visualize_text", &visualizeText);
+
   // m.def(
   //     "visualize_mesh",
   //     py::overload_cast<const std::string &, const Eigen::Vector4d &,
@@ -120,6 +122,8 @@ static void pythonizeROS(py::module m) {
   };
   m.def("init_ros", init_ros);
   m.def("init_ros", [init_ros](const std::string &name) { init_ros(name); });
+
+  m.def("ros_wait_for_shutdown", []() { ros::waitForShutdown(); });
 
   m.def("publish", [](const std::string &topic, const py::object &message) {
     auto bytes_io = py::module::import("io").attr("BytesIO")();
