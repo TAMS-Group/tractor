@@ -11,7 +11,7 @@ const ros::Publisher &advertise(const std::string &topic,
   static ros::NodeHandle node_handle("~");
   static Factory::Key<std::string>::Value<ros::Publisher> factory(
       [hash, name, definition](const std::string &topic) {
-        ros::AdvertiseOptions advertise_options(topic, 10, hash, name,
+        ros::AdvertiseOptions advertise_options(topic, 100, hash, name,
                                                 definition);
         ros::Publisher publisher = node_handle.advertise(advertise_options);
         ros::spinOnce();
