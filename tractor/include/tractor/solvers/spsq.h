@@ -9,7 +9,8 @@
 
 namespace tractor {
 
-template <class Scalar> struct SparseLinearSolver {
+template <class Scalar>
+struct SparseLinearSolver {
   typedef Eigen::SparseMatrix<Scalar> Matrix;
   typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Vector;
   virtual void solve(const Matrix &matrix, const Vector &residuals,
@@ -84,7 +85,8 @@ struct SparseLinearBiCGSTAB : IterativeSparseLinearSolver<Scalar> {
   }
 };
 
-template <class Scalar> struct SparseLinearLU : SparseLinearSolver<Scalar> {
+template <class Scalar>
+struct SparseLinearLU : SparseLinearSolver<Scalar> {
   typedef typename SparseLinearSolver<Scalar>::Matrix Matrix;
   typedef typename SparseLinearSolver<Scalar>::Vector Vector;
   virtual void solve(const Matrix &matrix, const Vector &residuals,
@@ -110,7 +112,8 @@ template <class Scalar> struct SparseLinearLU : SparseLinearSolver<Scalar> {
   }
 };
 
-template <class Scalar> struct SparseLinearQR : SparseLinearSolver<Scalar> {
+template <class Scalar>
+struct SparseLinearQR : SparseLinearSolver<Scalar> {
   typedef typename SparseLinearSolver<Scalar>::Matrix Matrix;
   typedef typename SparseLinearSolver<Scalar>::Vector Vector;
   virtual void solve(const Matrix &matrix, const Vector &residuals,
@@ -183,8 +186,8 @@ struct SparseLinearGS : IterativeSparseLinearSolver<Scalar> {
   }
 };
 
-template <class Scalar> class SparseLeastSquaresSolver : public SolverBase {
-
+template <class Scalar>
+class SparseLeastSquaresSolver : public SolverBase {
   typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Vector;
   Vector _nonlinear_solution;
   Vector _nonlinear_residuals;
@@ -194,7 +197,7 @@ template <class Scalar> class SparseLeastSquaresSolver : public SolverBase {
   Vector _test_vector_b;
   Vector _diagonal;
 
-public:
+ public:
   Scalar _regularization = 0.0;
   int _max_linear_iterations = -1;
   Scalar _step_scaling = 1.0;
@@ -231,14 +234,18 @@ public:
     _x_prog->parameterize(buffer, _memory);
   }
 
-  virtual double _step() override {
+  double _loss = -1;
+  virtual double loss() const override { return _loss; }
 
+  virtual double _step() override {
     TRACTOR_ASSERT(_nonlinear_solution.allFinite());
 
     {
       TRACTOR_PROFILER("nonlinear");
       _x_prog->run(_nonlinear_solution, _memory, _nonlinear_residuals);
     }
+
+    _loss = _nonlinear_residuals.squaredNorm();
 
     {
       TRACTOR_PROFILER("linearize");
@@ -377,14 +384,15 @@ public:
     _linear_solution.array() =
         _linear_solution.array() * Scalar(-_step_scaling);
 
+    Scalar step = _linear_solution.squaredNorm();
+
     accumulate(_nonlinear_solution, _linear_solution);
 
-
-    return 0;
+    return step;
   }
 
   SparseLeastSquaresSolver(const std::shared_ptr<Engine> &engine)
       : SolverBase(engine) {}
 };
 
-} // namespace tractor
+}  // namespace tractor

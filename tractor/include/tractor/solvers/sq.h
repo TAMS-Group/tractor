@@ -164,6 +164,9 @@ class LeastSquaresSolver : public SolverBase {
     }
 
     _linear_solution *= _step_scaling;
+
+    double step = _linear_solution.squaredNorm();
+
     accumulate(_nonlinear_solution, _linear_solution);
     TRACTOR_CHECK_ALL_FINITE(_nonlinear_solution);
 
@@ -173,10 +176,12 @@ class LeastSquaresSolver : public SolverBase {
                     << _nonlinear_solution.size());
       throw std::runtime_error("internal error");
     }
-    double step =
-        (_previous_nonlinear_solution - _nonlinear_solution).squaredNorm();
-    _previous_nonlinear_solution = _nonlinear_solution;
-    TRACTOR_DEBUG("sq step " << step);
+
+    // double step =
+    //     (_previous_nonlinear_solution - _nonlinear_solution).squaredNorm();
+    // _previous_nonlinear_solution = _nonlinear_solution;
+    // TRACTOR_DEBUG("sq step " << step);
+
     // {
     //   std::stringstream line;
     //   line << "sq step " << step << " " << _step_scaling;

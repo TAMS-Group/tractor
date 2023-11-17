@@ -64,10 +64,10 @@ void Solver::scatter() {
   _buffer.scatter(_inputs);
 }
 
-void Solver::step() {
+double Solver::step() {
   _start_time = std::chrono::steady_clock::now();
   _first_step = true;
-  _step();
+  return _step();
 }
 
 bool Solver::_expired() const {
@@ -96,4 +96,4 @@ void Solver::solve() {
   }
 }
 
-} // namespace tractor
+}  // namespace tractor

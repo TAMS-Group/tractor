@@ -30,6 +30,7 @@ static void pythonizeProgramGlobal(py::module m) {
       .def("gather", &Solver::gather)
       .def("scatter", &Solver::scatter)
       .def("step", &Solver::step)
+      .def_property_readonly("loss", &Solver::loss)
       .def_property("max_iterations", &Solver::maxIterations,
                     &Solver::setMaxIterations)
       .def_property("tolerance", &Solver::tolerance, &Solver::setTolerance)

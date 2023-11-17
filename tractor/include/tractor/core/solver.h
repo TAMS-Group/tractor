@@ -30,7 +30,7 @@ class Solver {
   std::chrono::steady_clock::time_point _start_time;
   bool _hard_timeout = false;
 
-protected:
+ protected:
   bool _first_step = false;
   std::shared_ptr<Engine> _engine;
   virtual void _compile(const Program &prog) = 0;
@@ -43,7 +43,7 @@ protected:
   // bool _stop() const { return (_current_loss < _stop_tolerance); }
   bool _expired() const;
 
-public:
+ public:
   Solver(const std::shared_ptr<Engine> &engine);
   Solver(const Solver &other) = delete;
   Solver &operator=(const Solver &other) = delete;
@@ -54,7 +54,7 @@ public:
   void output(Buffer &buffer);
   void gather();
   void scatter();
-  void step();
+  double step();
   void solve();
   double tolerance() const { return _tolerance; }
   // double loss() const { return _loss; }
@@ -72,4 +72,4 @@ public:
   virtual double loss() const { return -1; }
 };
 
-} // namespace tractor
+}  // namespace tractor
