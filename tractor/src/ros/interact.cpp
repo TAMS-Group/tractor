@@ -22,7 +22,7 @@ class InteractivePoseMarker {
   std::string _name;
   Eigen::Affine3d _start_pose = Eigen::Affine3d::Identity();
 
-public:
+ public:
   InteractivePoseMarker(const InteractivePoseMarker &) = delete;
   InteractivePoseMarker &operator=(const InteractivePoseMarker &) = delete;
 
@@ -31,6 +31,7 @@ public:
       const std::string &root, const Eigen::Affine3d &pose,
       const std::string &name, double scale = 0.2)
       : _name(name) {
+    TRACTOR_DEBUG("creating interactive pose marker " << name);
 
     _data->_pose = pose;
     _start_pose = pose;
@@ -101,15 +102,16 @@ class InteractivePositionMarker {
   std::string _name;
   Eigen::Vector3d _initial_position = Eigen::Vector3d::Zero();
 
-public:
+ public:
   InteractivePositionMarker(const InteractivePositionMarker &) = delete;
-  InteractivePositionMarker &
-  operator=(const InteractivePositionMarker &) = delete;
+  InteractivePositionMarker &operator=(const InteractivePositionMarker &) =
+      delete;
   InteractivePositionMarker(
       interactive_markers::InteractiveMarkerServer &interactive_marker_server,
       const std::string &root, const Eigen::Vector3d &position,
       const std::string &name, double scale)
       : _name(name) {
+    TRACTOR_DEBUG("creating interactive position marker " << name);
 
     _data->_position = position;
     _initial_position = position;
@@ -175,9 +177,11 @@ public:
 
 const std::shared_ptr<interactive_markers::InteractiveMarkerServer> &
 markerServerInstance() {
-  static auto instance =
-      std::make_shared<interactive_markers::InteractiveMarkerServer>(
-          "/interactive_markers", "", true);
+  static auto instance = []() {
+    TRACTOR_DEBUG("creating interactive marker server");
+    return std::make_shared<interactive_markers::InteractiveMarkerServer>(
+        "/interactive_markers", "", true);
+  }();
   return instance;
 }
 
@@ -233,4 +237,4 @@ template bool interact(const std::string &frame, const std::string &name,
 template bool interact(const std::string &frame, const std::string &name,
                        Vector3<float> &position, const float &size);
 
-} // namespace tractor
+}  // namespace tractor
