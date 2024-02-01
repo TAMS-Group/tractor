@@ -15,13 +15,25 @@ template <class Geometry>
 static void pythonizeRobot(py::module main_module, py::module type_module) {
   main_module.def("visualize", [](const std::string &topic,
                                   const JointState<Geometry> &joint_state) {
-    visualize(topic, joint_state);
+    visualize<Geometry>(topic, joint_state);
   });
 
   main_module.def("publish", [](const std::string &topic,
                                 const JointState<Geometry> &joint_state) {
-    publish(topic, joint_state);
+    publish<Geometry>(topic, joint_state);
   });
+
+  main_module.def(
+      "visualize_joint_states",
+      [](const std::string &topic, const JointState<Geometry> &joint_state) {
+        visualize<Geometry>(topic, joint_state);
+      });
+
+  main_module.def(
+      "visualize_joint_states",
+      [](const std::string &topic, const JointState<Geometry> &joint_state) {
+        publish<Geometry>(topic, joint_state);
+      });
 
   main_module.def("visualize",
                   [](const std::string &topic,

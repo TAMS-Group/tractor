@@ -12,17 +12,19 @@
 
 namespace tractor {
 
-const ros::Publisher &advertise(const std::string &topic,
-                                const std::string &hash,
-                                const std::string &name,
-                                const std::string &definition);
+ros::Publisher advertise(const std::string &topic, const std::string &hash,
+                         const std::string &name,
+                         const std::string &definition);
 
 template <class Message>
 void publish(const std::string &topic, const Message &message) {
-  advertise(topic, ros::message_traits::md5sum(message),
-            ros::message_traits::datatype(message),
-            ros::message_traits::definition(message))
-      .publish(message);
+  ros::Publisher pub = advertise(topic, ros::message_traits::md5sum(message),
+                                 ros::message_traits::datatype(message),
+                                 ros::message_traits::definition(message));
+  TRACTOR_DEBUG("publish message "
+                << topic << " " << ros::message_traits::datatype(message) << " "
+                << pub.getTopic() << " " << typeid(Message).name());
+  pub.publish(message);
 }
 
 void publish(const std::string &topic, const Message &message);

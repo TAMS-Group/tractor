@@ -79,6 +79,8 @@ void visualize(const std::string &topic,
 
 template <class Geometry>
 void visualize(const std::string &topic, const JointState<Geometry> &state) {
+  TRACTOR_DEBUG("visualize joint states");
+
   moveit_msgs::DisplayRobotState display;
   display.state.joint_state.name = state.model()->info()->variables().names();
 
