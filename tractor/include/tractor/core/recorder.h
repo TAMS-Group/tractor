@@ -11,7 +11,8 @@
 
 namespace tractor {
 
-template <class T> class Var;
+template <class T>
+class Var;
 
 class Recorder {
   Program *_program = nullptr;
@@ -23,13 +24,14 @@ class Recorder {
   std::vector<Program::Constant> _constants;
   std::vector<uint8_t> _const_data;
   std::vector<uint8_t> _bound_data;
-  std::deque<std::shared_ptr<const void>> _references;
+  std::unordered_set<std::shared_ptr<const void>> _references;
   Allocator _alloc;
   const Operator *_pending_op = nullptr;
   std::vector<const void *> _pending_args;
   std::unordered_set<const void *> _known_addresses;
 
-  template <class T> void outputImpl(const Var<T> *p, bool bind) {
+  template <class T>
+  void outputImpl(const Var<T> *p, bool bind) {
     uintptr_t temp =
         (((uintptr_t)_alloc.alloc(TypeInfo::get<T>())) | 0x8000000000000000ul);
     move(&p->value(), (T *)temp);
@@ -39,10 +41,10 @@ class Recorder {
 
   void finish(Program &program);
 
-protected:
+ protected:
   Recorder(Program *program);
 
-public:
+ public:
   static Recorder *instance();
 
   ~Recorder();
@@ -56,7 +58,8 @@ public:
 
   void arg(const TypeInfo &type, const void *a);
 
-  template <class Arg> inline void arg(const Var<Arg> *arg) {
+  template <class Arg>
+  inline void arg(const Var<Arg> *arg) {
     arg(TypeInfo::get<Arg>(), (uintptr_t)(const void *)arg);
   }
 
@@ -64,16 +67,19 @@ public:
 
   void opIndirect(const Operator *op, size_t argc, void **argv);
 
-  template <class... Args> inline void op(const Operator *o, Args *...args) {
+  template <class... Args>
+  inline void op(const Operator *o, Args *...args) {
     void *pointers[] = {(void *)args...};
     opIndirect(o, sizeof...(Args), pointers);
   }
 
-  template <class T> inline void move(const T *from, T *to) {
+  template <class T>
+  inline void move(const T *from, T *to) {
     move(TypeInfo::get<T>(), from, to);
   }
 
-  template <class T> inline void rewrite(const T *from, T *to) {
+  template <class T>
+  inline void rewrite(const T *from, T *to) {
     if (!_instructions.empty()) {
       if (_instructions.back().code() == (uintptr_t)from) {
         _instructions.back() = Program::Instruction((uintptr_t)to);
@@ -94,7 +100,8 @@ public:
     return &_inputs.back();
   }
 
-  template <class T> void parameter(const Var<T> *p) {
+  template <class T>
+  void parameter(const Var<T> *p) {
     // _parameters.emplace_back(TypeInfo::get<T>(), (uintptr_t)&p->value(), 0,
     //                          (uintptr_t)&p->value());
     uintptr_t addr = _alloc.alloc(TypeInfo::get<T>());
@@ -104,7 +111,10 @@ public:
     move((const T *)temp, (T *)&p->value());
   }
 
-  template <class T> void output(const Var<T> *p) { outputImpl(p, true); }
+  template <class T>
+  void output(const Var<T> *p) {
+    outputImpl(p, true);
+  }
 
   template <class T>
   inline void goal(const Var<T> &v, int priority = 0,
@@ -125,7 +135,8 @@ public:
 
   void constant(const TypeInfo &type, const void *var);
 
-  template <class T> void constant(const Var<T> *p) {
+  template <class T>
+  void constant(const Var<T> *p) {
     constant(TypeInfo::get<T>(), p);
   }
 
@@ -144,15 +155,18 @@ template <class T>
 inline void goal(const T &v, int priority = 0,
                  const std::string &name = std::string()) {}
 
-template <class T> inline void output(Var<T> &p) {
+template <class T>
+inline void output(Var<T> &p) {
   if (auto inst = Recorder::instance()) {
     inst->output(&p);
   }
 }
 
-template <class T> inline void parameter(T &p) {}
+template <class T>
+inline void parameter(T &p) {}
 
-template <class T> inline void parameter(Var<T> &p) {
+template <class T>
+inline void parameter(Var<T> &p) {
   if (auto inst = Recorder::instance()) {
     inst->parameter(&p);
   }
@@ -169,4 +183,4 @@ inline void recordOperation(const Operator *op, Args *...args) {
 
 void callAndRecord(const Operator *op, void **args);
 
-} // namespace tractor
+}  // namespace tractor

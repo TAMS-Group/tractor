@@ -92,11 +92,10 @@ void Recorder::goal(const TypeInfo &type, const void *var, size_t priority,
 }
 
 void Recorder::reference(const std::shared_ptr<const void> &ref) {
-  _references.push_back(ref);
+  _references.insert(ref);
 }
 
 void Recorder::constant(const TypeInfo &type, const void *var) {
-
   size_t start = _const_data.size();
   _const_data.resize(start + type.size());
   std::memcpy(_const_data.data() + start, var, type.size());
@@ -157,7 +156,6 @@ Recorder::~Recorder() {
 }
 
 void Recorder::finish(Program &program) {
-
   {
     program.clear();
 
@@ -238,4 +236,4 @@ void Recorder::finish(Program &program) {
   }
 }
 
-} // namespace tractor
+}  // namespace tractor

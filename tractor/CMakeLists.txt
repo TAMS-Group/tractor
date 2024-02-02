@@ -177,6 +177,7 @@ target_link_libraries(
   ${catkin_LIBRARIES}
   ${BULLET_LIBRARIES}
   ${ASAN_FLAGS}
+  HACD-float64
 )
 
 install(DIRECTORY include/tractor DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
