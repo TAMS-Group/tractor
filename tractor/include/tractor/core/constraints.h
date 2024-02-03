@@ -7,7 +7,8 @@
 
 namespace tractor {
 
-template <class T> auto range_constraint(const T &a, const T &lo, const T &hi) {
+template <class T>
+auto range_constraint(const T &a, const T &lo, const T &hi) {
   return T(0);
 }
 
@@ -183,7 +184,8 @@ TRACTOR_D(penalty_diagonal, range_trust_region_constraint,
 
 // -------------------------------------------------------------------
 
-template <class T> auto trust_region_constraint(const T &a, const T &tr) {
+template <class T>
+auto trust_region_constraint(const T &a, const T &tr) {
   return T(0);
 }
 
@@ -268,28 +270,28 @@ TRACTOR_D(penalty_diagonal, trust_region_constraint, (const T &dda, T &ddx),
 
 // template <class T> inline void variable(T &p) {}
 template <class T>
-inline Program::Input *
-variable(T &p, Program::InputMode mode = Program::InputMode::Variable) {
+inline Program::Input *variable(
+    T &p, Program::InputMode mode = Program::InputMode::Variable) {
   return nullptr;
 }
 template <class T>
-inline Program::Input *
-variable(T &p, const T &lo, const T &hi,
-         Program::InputMode mode = Program::InputMode::Variable) {
+inline Program::Input *variable(
+    T &p, const T &lo, const T &hi,
+    Program::InputMode mode = Program::InputMode::Variable) {
   return nullptr;
 }
 template <class T>
-inline Program::Input *
-variable(Var<T> &p, Program::InputMode mode = Program::InputMode::Variable) {
+inline Program::Input *variable(
+    Var<T> &p, Program::InputMode mode = Program::InputMode::Variable) {
   if (auto inst = Recorder::instance()) {
     return inst->input(&p, mode);
   }
   return nullptr;
 }
 template <class T>
-inline Program::Input *
-variable(Var<T> &p, const T &lo, const T &hi,
-         Program::InputMode mode = Program::InputMode::Variable) {
+inline Program::Input *variable(
+    Var<T> &p, const T &lo, const T &hi,
+    Program::InputMode mode = Program::InputMode::Variable) {
   if (auto inst = Recorder::instance()) {
     goal(range_constraint(p, lo, hi));
     auto *var = inst->input(&p, lo, hi, mode);
@@ -299,7 +301,8 @@ variable(Var<T> &p, const T &lo, const T &hi,
   return nullptr;
 }
 
-template <class... TT> inline Program::Input *slackVariable(TT &&... args) {
+template <class... TT>
+inline Program::Input *slackVariable(TT &&...args) {
   auto *input = variable(args..., Program::InputMode::SlackVariable);
   if (input) {
     if (input->name().empty()) {
@@ -311,12 +314,12 @@ template <class... TT> inline Program::Input *slackVariable(TT &&... args) {
   return input;
 }
 
-/*
-TRACTOR_OP(constraint_positive, (const T &a),
-           {
-           //return a > 0 ? T(0) : std::numeric_limits<T>::max();
-           return T(0);
-       })
+// -------------
+
+TRACTOR_OP(constraint_positive, (const T &a), {
+  // return a > 0 ? T(0) : std::numeric_limits<T>::max();
+  return T(0);
+})
 TRACTOR_D(prepare, constraint_positive, (const T &a, const T &x), {})
 TRACTOR_D(forward, constraint_positive, (const T &a, T &x), { x = T(0); })
 TRACTOR_D(reverse, constraint_positive, (T & a, const T &x), { a = T(0); })
@@ -330,7 +333,8 @@ TRACTOR_D(barrier_init, constraint_positive,
           })
 TRACTOR_D(barrier_step, constraint_positive, (const T &dda, const T &da, T &dx),
           { dx = dda * da; })
-*/
+TRACTOR_D(barrier_diagonal, constraint_positive, (const T &dda, T &ddx),
+          { ddx = dda; })
 
 /*
 TRACTOR_OP(interval_constraint, (const T &a), { return T(0); })
@@ -365,4 +369,4 @@ TRACTOR_D(barrier_step, interval_constraint, (const T &dda, const T &da, T &dx),
           { dx = dda * da; })
 */
 
-} // namespace tractor
+}  // namespace tractor

@@ -7,11 +7,11 @@
 
 namespace tractor {
 
-template <class Scalar> class InteriorPointSolver : public SolverBase {
-
-public:
+template <class Scalar>
+class InteriorPointSolver : public SolverBase {
+ public:
   typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Vector;
-  Eigen::MatrixXd _m_fprop, _m_bprop;
+  Eigen::Matrix<Scalar, Eigen::Dynamic, Eigen::Dynamic> _m_fprop, _m_bprop;
 
   Scalar _initial_barrier_weight = Scalar(1);
   Scalar _min_barrier_weight = Scalar(1e-3);
@@ -137,7 +137,6 @@ public:
 
   template <class Input, class Output>
   void _fprop(Input &&input, Output &&output) {
-
     if (_use_matrices) {
       output = _m_fprop * input;
     } else {
@@ -156,7 +155,6 @@ public:
 
   template <class Input, class Output>
   void _bprop(Input &&input, Output &&output) {
-
     if (_use_matrices) {
       output = _m_bprop * input;
     } else {
@@ -176,7 +174,6 @@ public:
   Vector _dualprop_temp, _dualprop_temp_2;
   template <class Input, class Output>
   void _dualprop(Input &&input, Output &&output) {
-
     TRACTOR_CHECK_ALL_FINITE(input);
 
     Scalar objective_weight = _computeObjectiveWeight();
@@ -197,7 +194,8 @@ public:
       if (_priority_list[i] <= 0) {
         _dualprop_temp[i] *= objective_weight;
       }
-  }*/
+    }*/
+
     _dualprop_temp *= objective_weight;
 
     if (_use_constraints) {
@@ -230,10 +228,9 @@ public:
     // output += input * 1e-9;
   }
 
-  template <class Output> void _dualdiagonal(Output &&output) {
-
+  template <class Output>
+  void _dualdiagonal(Output &&output) {
     if (_use_preconditioner) {
-
       Scalar objective_weight = _computeObjectiveWeight();
       Scalar barrier_weight = _computeBarrierWeight();
 
@@ -256,7 +253,6 @@ public:
       // TRACTOR_DEBUG(output);
 
     } else {
-
       output.setOnes(_dual_variable_count);
     }
   }
@@ -264,7 +260,6 @@ public:
   Vector _dualres_temp;
   template <class Input, class Output>
   void _dualres(Input &&input, Output &&output) {
-
     Scalar objective_weight = _computeObjectiveWeight();
     Scalar barrier_weight = _computeBarrierWeight();
 
@@ -284,7 +279,6 @@ public:
     }
 
     if (_use_barrier) {
-
       _x_barrier_init->run(input.head(_primal_variable_count), _memory,
                            _dualres_temp);
       // TRACTOR_DEBUG("barrier gradient " << _dualprop_temp);
@@ -353,14 +347,16 @@ public:
       return *this;
     }
     auto &compute(const MatrixReplacement<Scalar> &m) { return factorize(m); }
-    template <class A, class X> void _solve_impl(const A &a, X &x) const {
+    template <class A, class X>
+    void _solve_impl(const A &a, X &x) const {
       if (_use_preconditioner) {
         x.array() = _inv_diag.array() * a.array();
       } else {
         x = a;
       }
     }
-    template <class A> auto solve(const Eigen::MatrixBase<A> &a) const {
+    template <class A>
+    auto solve(const Eigen::MatrixBase<A> &a) const {
       return Eigen::Solve<DiagonalPreconditioner, A>(*this, a.derived());
     }
     Eigen::ComputationInfo info() const { return Eigen::Success; }
@@ -374,9 +370,8 @@ public:
       LinearSolver;
   LinearSolver _linear_solver;
 
-protected:
+ protected:
   virtual void _compile(const Program &prog) override {
-
     _compileGradients<Scalar>(prog);
 
     _primal_variable_count = _x_fprop->inputBufferSize() / sizeof(Scalar);
@@ -403,7 +398,6 @@ protected:
   }
 
   virtual double _step() override {
-
     TRACTOR_PROFILER("step");
 
     _linear_solver.setTolerance(tolerance() * 0.1);
@@ -590,8 +584,15 @@ protected:
 #if 1
     {
       TRACTOR_PROFILER("project inequality constraints");
-      _x_project->parameterVector(std::array<Scalar, 1>({_constraint_padding}),
-                                  _memory);
+      // _x_project->parameterVector(std::array<Scalar,
+      // 1>({_constraint_padding}),
+      //                             _memory);
+
+      Vector padding_vec;
+      padding_vec.resize(1);
+      padding_vec[0] = _constraint_padding;
+      _x_project->parameterVector(padding_vec, _memory);
+
       _x_project->run(_qp_solution.head(_primal_variable_count), _memory,
                       _qp_solution.head(_primal_variable_count));
       TRACTOR_CHECK_ALL_FINITE(_qp_solution);
@@ -606,11 +607,12 @@ protected:
 
     if (1) {
       while (_current_barrier_weight >= _min_barrier_weight * Scalar(0.99)) {
-
         TRACTOR_LOG_VAR(iteration_count);
         TRACTOR_LOG_VAR(_current_barrier_weight);
 
         TRACTOR_CHECK_FINITE(_current_barrier_weight);
+
+        TRACTOR_DEBUG("constraints " << _constraint_indices.size());
 
         /*if (_expired()) {
           return -1;
@@ -621,6 +623,8 @@ protected:
           _current_regularization = tolerance();
         }
         */
+
+        TRACTOR_LOG_VAR(_qp_solution.head(10));
 
         _step_solution = _qp_solution;
 
@@ -640,23 +644,31 @@ protected:
         _in_constraint_phase = false;
         _dualres(_step_solution, _step_residuals);
         if (!_step_residuals.allFinite()) {
-
-          {
-            auto it_nonlinear = _p_prog.inputs().begin();
-            auto it_linear = _p_fprop.inputs().begin();
-            for (size_t i = 0; i < _p_prog.inputs().size(); i++) {
-              auto &nonlinear_input = *it_nonlinear;
-              auto &linear_input = *it_linear;
-              TRACTOR_DEBUG("nl " << i << " " << nonlinear_input.name() << " ");
-              for (size_t j = 0; j < nonlinear_input.size() / sizeof(Scalar);
-                   j++) {
-                TRACTOR_DEBUG(" "
-                              << _nonlinear_solution[nonlinear_input.offset() /
-                                                         sizeof(Scalar) +
-                                                     j]);
-              }
-              ++it_nonlinear;
-              ++it_linear;
+          // {
+          //   auto it_nonlinear = _p_prog.inputs().begin();
+          //   auto it_linear = _p_fprop.inputs().begin();
+          //   for (size_t i = 0; i < _p_prog.inputs().size(); i++) {
+          //     auto &nonlinear_input = *it_nonlinear;
+          //     auto &linear_input = *it_linear;
+          //     TRACTOR_DEBUG("nl " << i << " " << nonlinear_input.name() << "
+          //     "); for (size_t j = 0; j < nonlinear_input.size() /
+          //     sizeof(Scalar);
+          //          j++) {
+          //       TRACTOR_DEBUG(" "
+          //                     << _nonlinear_solution[nonlinear_input.offset()
+          //                     /
+          //                                                sizeof(Scalar) +
+          //                                            j]);
+          //     }
+          //     ++it_nonlinear;
+          //     ++it_linear;
+          //   }
+          // }
+          // TRACTOR_FATAL("residuals not all finite");
+          for (size_t i = 0; i < _step_residuals.size(); i++) {
+            if (!std::isfinite(_step_residuals[i])) {
+              TRACTOR_FATAL("residual " << i << " not finite "
+                                        << _step_residuals[i]);
             }
           }
         }
@@ -672,8 +684,7 @@ protected:
 
         Scalar line_search_result = 1;
 
-        if (iteration_count == 0) {
-
+        /*if (iteration_count == 0) {
           _x_barrier_init->run(_step_solution.head(_primal_variable_count),
                                _memory, _temp_residuals);
 
@@ -685,8 +696,7 @@ protected:
 
           continue;
 
-        } else if (iteration_count == 1) {
-
+        }*/ /*else if (iteration_count == 1) {
           _x_barrier_init->run(_step_solution.head(_primal_variable_count),
                                _memory, _temp_residuals);
 
@@ -695,192 +705,173 @@ protected:
             continue;
           }
 
-        } else {
+        } else*/
+        {
+          // if (0) {
+          //   while (true) {
+          //     _v_barrier_input =
+          //         _qp_solution.head(_primal_variable_count) +
+          //         (_step_solution -
+          //         _qp_solution).head(_primal_variable_count) *
+          //             line_search_result;
+          //     _x_barrier_init->run(_v_barrier_input, _memory,
+          //     _temp_residuals); line_search_result *= 0.9; if
+          //     (_temp_residuals.allFinite()) {
+          //       break;
+          //     }
+          //   }
+          //   // line_search_result *= 0.1;
+          // }
 
-          if (0) {
-            while (true) {
-              _v_barrier_input =
-                  _qp_solution.head(_primal_variable_count) +
-                  (_step_solution - _qp_solution).head(_primal_variable_count) *
-                      line_search_result;
-              _x_barrier_init->run(_v_barrier_input, _memory, _temp_residuals);
-              line_search_result *= 0.9;
-              if (_temp_residuals.allFinite()) {
-                break;
-              }
-            }
-            // line_search_result *= 0.1;
-          }
+          // if (0) {
+          //   auto check = [&](const Scalar &f) {
+          //     _v_barrier_input =
+          //         _qp_solution.head(_primal_variable_count) +
+          //         (_step_solution -
+          //         _qp_solution).head(_primal_variable_count) *
+          //             f;
+          //     _x_barrier_init->run(_v_barrier_input, _memory,
+          //     _temp_residuals); return _temp_residuals.allFinite();
+          //   };
+          //   line_search_result = 1;
+          //   while (true) {
+          //     if (check(line_search_result)) {
+          //       break;
+          //     }
+          //     line_search_result *= 0.5;
+          //   }
+          //   if (line_search_result < 1 || !check(2)) {
+          //     line_search_result *= 0.5;
+          //   }
+          //   // line_search_result *= 0.1;
+          // }
 
-          if (0) {
-            auto check = [&](const Scalar &f) {
-              _v_barrier_input =
-                  _qp_solution.head(_primal_variable_count) +
-                  (_step_solution - _qp_solution).head(_primal_variable_count) *
-                      f;
-              _x_barrier_init->run(_v_barrier_input, _memory, _temp_residuals);
-              return _temp_residuals.allFinite();
-            };
-            line_search_result = 1;
-            while (true) {
-              if (check(line_search_result)) {
-                break;
-              }
-              line_search_result *= 0.5;
-            }
-            if (line_search_result < 1 || !check(2)) {
-              line_search_result *= 0.5;
-            }
-            // line_search_result *= 0.1;
-          }
+          // if (0) {
+          //   auto df = [&](const Scalar &v) {
+          //     _v_barrier_input =
+          //         _qp_solution.head(_primal_variable_count) +
+          //         (_step_solution -
+          //         _qp_solution).head(_primal_variable_count) *
+          //             line_search_result;
+          //     _x_barrier_init->run(_v_barrier_input, _memory,
+          //     _temp_residuals);
+          //     /*
+          //     if (_temp_residuals.allFinite()) {
+          //       return 10 - v;
+          //     }
+          //     return -std::numeric_limits<Scalar>::max();
+          //     */
+          //     if (_temp_residuals.allFinite()) {
+          //       return v - 10;
+          //     }
+          //     return Scalar(10);
+          //   };
+          //   line_search_result =
+          //       rootBisect(df, tolerance(), Scalar(0), Scalar(2));
+          //   line_search_result *= 0.5;
+          // }
 
-          if (0) {
-            auto df = [&](const Scalar &v) {
-              _v_barrier_input =
-                  _qp_solution.head(_primal_variable_count) +
-                  (_step_solution - _qp_solution).head(_primal_variable_count) *
-                      line_search_result;
-              _x_barrier_init->run(_v_barrier_input, _memory, _temp_residuals);
-              /*
-              if (_temp_residuals.allFinite()) {
-                return 10 - v;
-              }
-              return -std::numeric_limits<Scalar>::max();
-              */
-              if (_temp_residuals.allFinite()) {
-                return v - 10;
-              }
-              return Scalar(10);
-            };
-            line_search_result =
-                rootBisect(df, tolerance(), Scalar(0), Scalar(2));
-            line_search_result *= 0.5;
-          }
+          // if (0) {
+          //   auto df = [&](const Scalar &v) {
+          //     _line_search_temp_solution =
+          //         _qp_solution + (_step_solution - _qp_solution) * v;
+          //     _dualres(_line_search_temp_solution,
+          //     _line_search_temp_residuals);
+          //     _dualprop(_line_search_temp_solution,
+          //               _line_search_temp_gradients);
+          //     Scalar ret =
+          //         (_line_search_temp_residuals - _line_search_temp_gradients)
+          //             .squaredNorm();
+          //     if (!std::isfinite(ret)) {
+          //       ret = std::numeric_limits<Scalar>::max();
+          //     }
+          //     return ret;
+          //   };
+          //   if (1) {
+          //     TRACTOR_PROFILER("qp line search");
+          //     line_search_result =
+          //         minimizeTernary(df, tolerance(), Scalar(0), Scalar(1));
+          //     // if (line_search_result < tolerance()) {
+          //     //    line_search_result = 0;
+          //     //}
+          //   }
+          // }
 
-          if (0) {
-            auto df = [&](const Scalar &v) {
-              _line_search_temp_solution =
-                  _qp_solution + (_step_solution - _qp_solution) * v;
-              _dualres(_line_search_temp_solution, _line_search_temp_residuals);
-              _dualprop(_line_search_temp_solution,
-                        _line_search_temp_gradients);
-              Scalar ret =
-                  (_line_search_temp_residuals - _line_search_temp_gradients)
-                      .squaredNorm();
-              if (!std::isfinite(ret)) {
-                ret = std::numeric_limits<Scalar>::max();
-              }
-              return ret;
-            };
-            if (1) {
-              TRACTOR_PROFILER("qp line search");
-              line_search_result =
-                  minimizeTernary(df, tolerance(), Scalar(0), Scalar(1));
-              // if (line_search_result < tolerance()) {
-              //    line_search_result = 0;
-              //}
-            }
-          }
+          // if (0) {
+          //   auto df = [&](const Scalar &v) {
+          //     _line_search_temp_solution =
+          //         _qp_solution + (_step_solution - _qp_solution) * v;
+          //     _dualres(_line_search_temp_solution,
+          //     _line_search_temp_residuals);
+          //     _dualprop(_line_search_temp_solution,
+          //               _line_search_temp_gradients);
+          //     return Scalar((_qp_solution - _step_solution)
+          //                       .dot(_line_search_temp_residuals -
+          //                            _line_search_temp_gradients));
+          //   };
+          //   if (1) {
+          //     TRACTOR_PROFILER("qp bisection search");
+          //     line_search_result =
+          //         rootBisect(df, tolerance(), Scalar(0), Scalar(1));
+          //   }
+          // }
 
-          if (0) {
-            auto df = [&](const Scalar &v) {
-              _line_search_temp_solution =
-                  _qp_solution + (_step_solution - _qp_solution) * v;
-              _dualres(_line_search_temp_solution, _line_search_temp_residuals);
-              _dualprop(_line_search_temp_solution,
-                        _line_search_temp_gradients);
-              return Scalar((_qp_solution - _step_solution)
-                                .dot(_line_search_temp_residuals -
-                                     _line_search_temp_gradients));
-            };
-            if (1) {
-              TRACTOR_PROFILER("qp bisection search");
-              line_search_result =
-                  rootBisect(df, tolerance(), Scalar(0), Scalar(1));
-            }
-          }
+          // if (0) {
+          //   auto df = [&](const Scalar &v) {
+          //     _line_search_temp_solution =
+          //         _qp_solution + (_step_solution - _qp_solution) * v;
+          //     _dualres(_line_search_temp_solution,
+          //     _line_search_temp_residuals); return Scalar((_step_solution -
+          //     _qp_solution)
+          //                       .head(_primal_variable_count)
+          //                       .dot(_line_search_temp_residuals.head(
+          //                           _primal_variable_count)));
+          //   };
+          //   if (1) {
+          //     TRACTOR_PROFILER("qp bisection search");
+          //     line_search_result =
+          //         rootBisect(df, tolerance(), Scalar(0), Scalar(1));
+          //     TRACTOR_DEBUG("line_search_result " << line_search_result);
+          //   }
+          // }
 
-          if (0) {
-            auto df = [&](const Scalar &v) {
-              _line_search_temp_solution =
-                  _qp_solution + (_step_solution - _qp_solution) * v;
-              _dualres(_line_search_temp_solution, _line_search_temp_residuals);
-              return Scalar((_step_solution - _qp_solution)
-                                .head(_primal_variable_count)
-                                .dot(_line_search_temp_residuals.head(
-                                    _primal_variable_count)));
-            };
-            if (1) {
-              TRACTOR_PROFILER("qp bisection search");
-              line_search_result =
-                  rootBisect(df, tolerance(), Scalar(0), Scalar(1));
-              TRACTOR_DEBUG("line_search_result " << line_search_result);
-            }
-          }
+          // if (0) {
+          //   auto df = [&](const Scalar &v) {
+          //     Scalar objective_weight = _computeObjectiveWeight();
+          //     Scalar barrier_weight = _computeBarrierWeight();
 
-          if (0) {
-            auto df = [&](const Scalar &v) {
-              Scalar objective_weight = _computeObjectiveWeight();
-              Scalar barrier_weight = _computeBarrierWeight();
+          //     _line_search_temp_solution =
+          //         _qp_solution + (_step_solution - _qp_solution) * v;
 
-              _line_search_temp_solution =
-                  _qp_solution + (_step_solution - _qp_solution) * v;
+          //     Scalar ret = 0;
 
-              Scalar ret = 0;
+          //     ret += (_line_search_temp_solution - _qp_residuals)
+          //                .head(_primal_variable_count)
+          //                .dot((_step_solution - _qp_solution)
+          //                         .head(_primal_variable_count)) *
+          //            objective_weight;
 
-              ret += (_line_search_temp_solution - _qp_residuals)
-                         .head(_primal_variable_count)
-                         .dot((_step_solution - _qp_solution)
-                                  .head(_primal_variable_count)) *
-                     objective_weight;
+          //     if (_use_barrier) {
+          //       _x_barrier_init->run(
+          //           _line_search_temp_solution.head(_primal_variable_count),
+          //           _memory, _dualres_temp);
+          //       ret += _dualres_temp.dot((_step_solution - _qp_solution)
+          //                                    .head(_primal_variable_count)) *
+          //              barrier_weight;
+          //     }
 
-              if (_use_barrier) {
-                _x_barrier_init->run(
-                    _line_search_temp_solution.head(_primal_variable_count),
-                    _memory, _dualres_temp);
-                ret += _dualres_temp.dot((_step_solution - _qp_solution)
-                                             .head(_primal_variable_count)) *
-                       barrier_weight;
-              }
-
-              return -ret;
-            };
-            if (1) {
-              TRACTOR_PROFILER("qp bisection search");
-              line_search_result =
-                  rootBisect(df, tolerance(), Scalar(0), Scalar(1));
-              TRACTOR_DEBUG("line_search_result " << line_search_result);
-            }
-          }
+          //     return -ret;
+          //   };
+          //   if (1) {
+          //     TRACTOR_PROFILER("qp bisection search");
+          //     line_search_result =
+          //         rootBisect(df, tolerance(), Scalar(0), Scalar(1));
+          //     TRACTOR_DEBUG("line_search_result " << line_search_result);
+          //   }
+          // }
 
           if (1) {
             auto df = [&](const Scalar &v) {
-              /*Scalar objective_weight = _computeObjectiveWeight();
-              Scalar barrier_weight = _computeBarrierWeight();
-
-              _line_search_temp_solution =
-                  _qp_solution + (_step_solution - _qp_solution) * v;
-
-              Scalar ret = 0;
-
-              ret += (_line_search_temp_solution - _qp_residuals)
-                         .head(_primal_variable_count)
-                         .dot((_step_solution - _qp_solution)
-                                  .head(_primal_variable_count)) *
-                     objective_weight;
-
-              if (_use_barrier) {
-                _x_barrier_init->run(
-                    _line_search_temp_solution.head(_primal_variable_count),
-                    _memory, _dualres_temp);
-                ret += _dualres_temp.dot((_step_solution - _qp_solution)
-                                             .head(_primal_variable_count)) *
-                       barrier_weight;
-              }
-
-              return ret * ret;
-              */
-
               _line_search_temp_solution =
                   _qp_solution + (_step_solution - _qp_solution) * v;
               _dualres(_line_search_temp_solution, _line_search_temp_residuals);
@@ -891,38 +882,10 @@ protected:
                                       .dot((_line_search_temp_residuals -
                                             _line_search_temp_gradients)
                                                .head(_primal_variable_count)));
-
-              /*
-_line_search_temp_solution =
-_qp_solution + (_step_solution - _qp_solution) * v;
-_dualres(_line_search_temp_solution, _line_search_temp_residuals);
-Scalar ret = Scalar((_qp_solution - _step_solution)
-     .head(_primal_variable_count)
-     .dot((_line_search_temp_residuals)
-              .head(_primal_variable_count)));
-*/
-
-              // return std::abs(ret);
               return ret;
             };
             if (1) {
               TRACTOR_PROFILER("qp line search");
-              // line_search_result =
-              // minimizeTernary(df, tolerance(), Scalar(0), Scalar(1));
-              //  minimizeTernary(df, 0.01, Scalar(0), Scalar(1)) * 0.99;
-              // line_search_result = std::max(
-              //      Scalar(0), rootBisect(df, 0.1, Scalar(0), Scalar(1)) -
-              //      0.1);
-
-              // line_search_result =
-              //      std::max(Scalar(0),
-              //               rootBisect(df, 0.001, Scalar(0), Scalar(1)) -
-              //               0.001);
-
-              // line_search_result = std::max(
-              //      Scalar(0), rootBisect(df, 0.01, Scalar(0), Scalar(1)) -
-              //      0.01);
-
               {
                 Scalar x = 1;
                 while (!(df(x) < 0)) {
@@ -934,14 +897,11 @@ Scalar ret = Scalar((_qp_solution - _step_solution)
                     break;
                   }
                 }
-                if (x > 0) {
-                  x = rootBisect(df, x * 0.1, Scalar(0), x * 2);
-                }
+                // if (x > 0) {
+                //   x = rootBisect(df, x * 0.1, Scalar(0), x * 2);
+                // }
                 line_search_result = x;
               }
-
-              // line_search_result = rootBisect(df, 0.01, Scalar(0),
-              // Scalar(1));
               TRACTOR_DEBUG("line_search_result " << line_search_result);
             }
           }
@@ -965,6 +925,8 @@ Scalar ret = Scalar((_qp_solution - _step_solution)
         _previous_step = _current_step;
         */
 
+        line_search_result *= 0.9;
+
         _current_step *= line_search_result;
 
         _step_solution = _qp_solution + _current_step;
@@ -981,8 +943,7 @@ Scalar ret = Scalar((_qp_solution - _step_solution)
         Scalar tol = tolerance() *
                      std::max(Scalar(1), std::max(_computeBarrierWeight(),
                                                   _computeObjectiveWeight()));
-        if (step_size_sq <= tol * tol /*||
-            line_search_result <= tolerance()*/) {
+        if (step_size_sq <= tol * tol || line_search_result <= tolerance()) {
           _current_barrier_weight *= _barrier_decrease;
         }
       }
@@ -1000,13 +961,12 @@ Scalar ret = Scalar((_qp_solution - _step_solution)
     return (_nonlinear_solution - _previous_nonlinear_solution).squaredNorm();
   }
 
-public:
+ public:
   InteriorPointSolver(const std::shared_ptr<Engine> &engine)
       : SolverBase(engine) {
-
     _dual_matrix_replacement = std::make_shared<DualMatrixReplacement>(this);
     _hgrad = MatrixReplacement<Scalar>(_dual_matrix_replacement);
   }
 };
 
-} // namespace tractor
+}  // namespace tractor

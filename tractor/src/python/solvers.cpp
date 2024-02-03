@@ -8,6 +8,8 @@
 #include <tractor/solvers/gd.h>
 #include <tractor/solvers/spsq.h>
 #include <tractor/solvers/sq.h>
+#include <tractor/solvers/ip.h>
+#include <tractor/solvers/spsqp.h>
 
 namespace tractor {
 
@@ -138,9 +140,85 @@ static void pythonizeSolvers(py::module main_module, py::module type_module) {
 
       ;
 
+  py::class_<InteriorPointSolver<Scalar>, Solver>(type_module,
+                                                  "InteriorPointSolver")
+      .def(py::init<std::shared_ptr<Engine>>())
+      .def_readwrite("initial_barrier_weight",
+                     &InteriorPointSolver<Scalar>::_initial_barrier_weight)
+      .def_readwrite("min_barrier_weight",
+                     &InteriorPointSolver<Scalar>::_min_barrier_weight)
+      .def_readwrite("barrier_decrease",
+                     &InteriorPointSolver<Scalar>::_barrier_decrease)
+      .def_readwrite("barrier_increase",
+                     &InteriorPointSolver<Scalar>::_barrier_increase)
+      .def_readwrite("constraint_padding",
+                     &InteriorPointSolver<Scalar>::_constraint_padding)
+      .def_readwrite("use_matrices",
+                     &InteriorPointSolver<Scalar>::_use_matrices)
+      .def_readwrite("use_barrier", &InteriorPointSolver<Scalar>::_use_barrier)
+      .def_readwrite("use_objectives",
+                     &InteriorPointSolver<Scalar>::_use_objectives)
+      .def_readwrite("use_constraints",
+                     &InteriorPointSolver<Scalar>::_use_constraints)
+      .def_readwrite("use_penalty", &InteriorPointSolver<Scalar>::_use_penalty)
+      .def_readwrite("in_constraint_phase",
+                     &InteriorPointSolver<Scalar>::_in_constraint_phase)
+      .def_readwrite("use_preconditioner",
+                     &InteriorPointSolver<Scalar>::_use_preconditioner)
+
+      ;
+
   py::class_<AdamSolver<Scalar>, GradientDescentSolver<Scalar>>(type_module,
                                                                 "AdamSolver")
       .def(py::init<std::shared_ptr<Engine>>());
+
+  py::class_<SpSQPSolver<Scalar>, Solver>(type_module, "SpSQPSolver")
+      .def_readwrite("step_scaling", &SpSQPSolver<Scalar>::_step_scaling)
+      .def_readwrite("qp_solver", &SpSQPSolver<Scalar>::_qp_solver)
+      .def_readwrite("backoff_enable", &SpSQPSolver<Scalar>::_backoff_enable)
+      .def_readwrite("backoff_factor", &SpSQPSolver<Scalar>::_backoff_factor)
+      .def_readwrite("backoff_steps", &SpSQPSolver<Scalar>::_backoff_steps)
+      .def(py::init<std::shared_ptr<Engine>>());
+
+  py::class_<SpQPSolver<Scalar>, std::shared_ptr<SpQPSolver<Scalar>>>(
+      type_module, "SpQPSolver");
+
+  py::class_<LambdaSpQPSolver<Scalar>,
+             std::shared_ptr<LambdaSpQPSolver<Scalar>>, SpQPSolver<Scalar>>(
+      type_module, "LambdaSpQPSolver")
+      .def_readwrite("callback", &LambdaSpQPSolver<Scalar>::lambda)
+      .def(py::init<>());
+
+  py::class_<SpQPSolverBase<Scalar>, std::shared_ptr<SpQPSolverBase<Scalar>>,
+             SpQPSolver<Scalar>>(type_module, "SpQPSolverBase")
+      .def_readwrite("finished", &SpQPSolverBase<Scalar>::finished)
+      .def_readwrite("infeasible", &SpQPSolverBase<Scalar>::infeasible)
+      .def_readwrite("success", &SpQPSolverBase<Scalar>::success)
+      .def_readwrite("tolerance", &SpQPSolverBase<Scalar>::tolerance);
+
+  py::class_<InteriorPointSpQPSolver<Scalar>,
+             std::shared_ptr<InteriorPointSpQPSolver<Scalar>>,
+             SpQPSolverBase<Scalar>>(type_module, "InteriorPointSpQPSolver")
+      .def_readwrite("initial_barrier_weight",
+                     &InteriorPointSpQPSolver<Scalar>::initial_barrier_weight)
+      .def_readwrite("fixed_barrier",
+                     &InteriorPointSpQPSolver<Scalar>::fixed_barrier)
+      .def_readwrite("min_barrier_weight",
+                     &InteriorPointSpQPSolver<Scalar>::min_barrier_weight)
+      .def_readwrite("barrier_update_factor",
+                     &InteriorPointSpQPSolver<Scalar>::barrier_update_factor)
+      .def_readwrite("linear_tolerance",
+                     &InteriorPointSpQPSolver<Scalar>::linear_tolerance)
+      .def(py::init<>());
+
+  py::class_<SpQP<Scalar>>(type_module, "SpQP")
+      .def_readwrite("objective_matrix", &SpQP<Scalar>::objective_matrix)
+      .def_readwrite("objective_vector", &SpQP<Scalar>::objective_vector)
+      .def_readwrite("equality_matrix", &SpQP<Scalar>::equality_matrix)
+      .def_readwrite("equality_vector", &SpQP<Scalar>::equality_vector)
+      .def_readwrite("inequality_matrix", &SpQP<Scalar>::inequality_matrix)
+      .def_readwrite("inequality_vector", &SpQP<Scalar>::inequality_vector)
+      .def(py::init<>());
 }
 
 TRACTOR_PYTHON_TYPED(pythonizeSolvers);

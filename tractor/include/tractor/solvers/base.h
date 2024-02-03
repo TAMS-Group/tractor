@@ -11,16 +11,23 @@
 
 #define TRACTOR_STRINGIFY_2(x) TRACTOR_STRINGIFY(x)
 
-#define TRACTOR_CHECK_ALL_FINITE(x)                                            \
-  if (!x.allFinite()) {                                                        \
-    throw std::runtime_error(TRACTOR_STRINGIFY(                                \
-        x) " not finite " __FILE__ ":" TRACTOR_STRINGIFY_2(__LINE__));         \
+// #define TRACTOR_CHECK_ALL_FINITE(x)                                            \
+//   if (!x.allFinite()) {                                                        \
+//     throw std::runtime_error(TRACTOR_STRINGIFY(                                \
+//         x) " not finite " __FILE__ ":" TRACTOR_STRINGIFY_2(__LINE__));         \
+//   }
+
+#define TRACTOR_CHECK_FINITE(x)                                        \
+  if (!std::isfinite(x)) {                                             \
+    throw std::runtime_error(TRACTOR_STRINGIFY(                        \
+        x) " not finite " __FILE__ ":" TRACTOR_STRINGIFY_2(__LINE__)); \
   }
 
-#define TRACTOR_CHECK_FINITE(x)                                                \
-  if (!std::isfinite(x)) {                                                     \
-    throw std::runtime_error(TRACTOR_STRINGIFY(                                \
-        x) " not finite " __FILE__ ":" TRACTOR_STRINGIFY_2(__LINE__));         \
+#define TRACTOR_CHECK_ALL_FINITE(x)           \
+  {                                           \
+    for (size_t i = 0; i < (x).size(); i++) { \
+      TRACTOR_CHECK_FINITE((x)[i]);           \
+    }                                         \
   }
 
 #if 1
@@ -30,7 +37,7 @@
 #endif
 
 #if 0
-#define TRACTOR_LOG_VEC(x)                                                     \
+#define TRACTOR_LOG_VEC(x) \
   TRACTOR_DEBUG(TRACTOR_STRINGIFY_2(x)) << x << std::endl << std::endl;
 #else
 #define TRACTOR_LOG_VEC(x)
@@ -39,10 +46,9 @@
 namespace tractor {
 
 class SolverBase : public Solver {
-
   Buffer _accu_in, _accu_grad;
 
-protected:
+ protected:
   Program _p_prog, _p_prep, _p_fprop, _p_bprop, _p_hprop, _p_accu;
   std::shared_ptr<Executable> _x_prog, _x_prep, _x_fprop, _x_bprop, _x_hprop,
       _x_accu;
@@ -64,7 +70,7 @@ protected:
     typedef Eigen::Matrix<Scalar, Eigen::Dynamic, 1> Vector;
     Scalar _regularization = Scalar(0);
 
-  public:
+   public:
     virtual void mul(const Vector &input, Vector &output) const override {
       TRACTOR_PROFILER("hprop");
       TRACTOR_CHECK_ALL_FINITE(input);
@@ -82,11 +88,13 @@ protected:
 
   void _compileGradients(const Program &prog, const TypeInfo &type);
 
-  template <class Scalar> void _compileGradients(const Program &prog) {
+  template <class Scalar>
+  void _compileGradients(const Program &prog) {
     _compileGradients(prog, TypeInfo::get<Scalar>());
   }
 
-  template <class Pos, class Grad> void accumulate(Pos &pos, const Grad &grad) {
+  template <class Pos, class Grad>
+  void accumulate(Pos &pos, const Grad &grad) {
     _accu_in.fromVector(pos);
     _accu_grad.fromVector(grad);
     _accu_in.append(_accu_grad);
@@ -98,4 +106,4 @@ protected:
   SolverBase(const std::shared_ptr<Engine> &engine);
 };
 
-} // namespace tractor
+}  // namespace tractor

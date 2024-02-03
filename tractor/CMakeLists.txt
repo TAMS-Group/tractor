@@ -161,6 +161,7 @@ add_library(${LIBNAME}
     src/solvers/pgd.cpp
     src/solvers/ps.cpp
     src/solvers/spsq.cpp
+    src/solvers/spsqp.cpp
     src/solvers/sq.cpp
     src/tensor/ops.cpp
     src/tensor/matmul.cpp
