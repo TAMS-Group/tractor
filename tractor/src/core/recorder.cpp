@@ -156,6 +156,8 @@ Recorder::~Recorder() {
 }
 
 void Recorder::finish(Program &program) {
+  TRACTOR_INFO("rec finish");
+
   {
     program.clear();
 
@@ -234,6 +236,7 @@ void Recorder::finish(Program &program) {
     program.setInstructions(prog_insts);
     _alloc.apply(program);
   }
+  TRACTOR_INFO("rec ready");
 }
 
 }  // namespace tractor

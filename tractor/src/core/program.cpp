@@ -65,16 +65,21 @@ void Program::record(const std::function<void()> &function, bool _simplify) {
     }
   }
 
+  TRACTOR_INFO("prog rec verify");
   verify(*this);
 
   if (_simplify) {
+    TRACTOR_INFO("prog rec simplify");
     simplify(*this);
+
+    TRACTOR_INFO("prog rec verify");
     verify(*this);
   }
+
+  TRACTOR_INFO("prog rec ready");
 }
 
 std::ostream &operator<<(std::ostream &stream, const Program &prog) {
-
   // printPorts(stream, "inputs", prog.inputs());
   // printPorts(stream, "parameters", prog.parameters());
   // printPorts(stream, "outputs", prog.outputs());
@@ -134,4 +139,4 @@ std::ostream &operator<<(std::ostream &stream, const Program &prog) {
   return stream;
 }
 
-} // namespace tractor
+}  // namespace tractor

@@ -7,7 +7,6 @@
 namespace tractor {
 
 void SolverBase::_compileGradients(const Program &prog, const TypeInfo &type) {
-
   _p_prog = prog;
   _x_prog->compile(_p_prog);
 
@@ -66,4 +65,4 @@ SolverBase::SolverBase(const std::shared_ptr<Engine> &engine) : Solver(engine) {
   _x_project = engine->createExecutable();
 }
 
-} // namespace tractor
+}  // namespace tractor

@@ -210,14 +210,23 @@ class SparseLeastSquaresSolver : public SolverBase {
   virtual void _compile(const Program &prog) override {
     //_compileGradients<Scalar>(prog);
 
+    TRACTOR_INFO("spsq compile nl");
     _p_prog = prog;
     _x_prog->compile(_p_prog);
 
+    TRACTOR_INFO("spsq build gradients");
     buildGradients(_p_prog, _p_prep, &_p_fprop, nullptr, nullptr, &_p_accu);
+
+    TRACTOR_INFO("spsq compile prep");
     _x_prep->compile(_p_prep);
+
+    TRACTOR_INFO("spsq compile fprop");
     _x_fprop->compile(_p_fprop);
+
+    TRACTOR_INFO("spsq compile accu");
     _x_accu->compile(_p_accu);
 
+    TRACTOR_INFO("spsq sparsity");
     _matrix_builder = std::make_shared<SparseMatrixBuilder<Scalar>>(
         _engine, _p_fprop, _x_fprop);
   }
