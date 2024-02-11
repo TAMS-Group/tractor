@@ -156,6 +156,8 @@ class SparseMatrixBuilder : public SparsityBase {
   size_t complexity() const { return _input_groups.size(); }
 
   Eigen::SparseMatrix<T> build(const std::shared_ptr<Memory> &memory) {
+    TRACTOR_PROFILER("spmb build");
+
     if (_multi_threading) {
       std::vector<Eigen::Triplet<T>> triplets;
 
@@ -212,7 +214,10 @@ class SparseMatrixBuilder : public SparsityBase {
           for (auto &output_group : input_group.outputGroups()) {
             size_t col = output_group.inputIndex();
             for (size_t row : output_group.outputIndices()) {
-              triplets.emplace_back(row, col, tda.output_vector(row));
+              T v = tda.output_vector(row);
+              if (v != T(0)) {
+                triplets.emplace_back(row, col, v);
+              }
             }
           }
         }
@@ -242,7 +247,10 @@ class SparseMatrixBuilder : public SparsityBase {
         for (auto &output_group : input_group.outputGroups()) {
           size_t col = output_group.inputIndex();
           for (size_t row : output_group.outputIndices()) {
-            triplets.emplace_back(row, col, output_vector(row));
+            T v = output_vector(row);
+            if (v != T(0)) {
+              triplets.emplace_back(row, col, v);
+            }
           }
         }
       }

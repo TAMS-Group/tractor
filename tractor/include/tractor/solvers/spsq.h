@@ -89,11 +89,11 @@ template <class Scalar>
 struct SparseLinearLU : SparseLinearSolver<Scalar> {
   typedef typename SparseLinearSolver<Scalar>::Matrix Matrix;
   typedef typename SparseLinearSolver<Scalar>::Vector Vector;
+  // Eigen::SparseLU<Matrix, Eigen::NaturalOrdering<int>>
+  Eigen::SparseLU<Matrix, Eigen::COLAMDOrdering<int>> solver;
   virtual void solve(const Matrix &matrix, const Vector &residuals,
                      Vector &solution) override {
-    // Eigen::SparseLU<Eigen::SparseMatrix<Scalar>, Eigen::NaturalOrdering<int>>
-    Eigen::SparseLU<Eigen::SparseMatrix<Scalar>, Eigen::COLAMDOrdering<int>>
-        solver;
+    solver.isSymmetric(true);
     {
       TRACTOR_DEBUG("linear analyze");
       TRACTOR_PROFILER("linear analyze");
@@ -196,6 +196,9 @@ class SparseLeastSquaresSolver : public SolverBase {
   Vector _test_vector_a;
   Vector _test_vector_b;
   Vector _diagonal;
+  Eigen::SparseMatrix<Scalar> _hessian;
+  Eigen::SparseMatrix<Scalar> _jacobian;
+  Eigen::SparseMatrix<Scalar> _jacobian_transpose;
 
  public:
   Scalar _regularization = 0.0;
@@ -261,30 +264,45 @@ class SparseLeastSquaresSolver : public SolverBase {
       _x_prep->execute(_memory);
     }
 
-    Eigen::SparseMatrix<Scalar> jacobian;
     {
       TRACTOR_DEBUG("build jacobian");
       TRACTOR_PROFILER("build jacobian");
-      jacobian = _matrix_builder->build(_memory);
+      _jacobian = _matrix_builder->build(_memory);
     }
 
     {
       TRACTOR_PROFILER("linear residuals");
-      _linear_residuals = jacobian.transpose() * _nonlinear_residuals;
+      _linear_residuals = _jacobian.transpose() * _nonlinear_residuals;
     }
 
     if (_test_gradients) {
       TRACTOR_PROFILER("test gradients");
       _x_fprop->run(_linear_residuals, _memory, _test_vector_a);
-      _test_vector_b = jacobian * _linear_residuals;
+      _test_vector_b = _jacobian * _linear_residuals;
       TRACTOR_ASSERT(_test_vector_a.isApprox(_test_vector_b));
     }
 
-    Eigen::SparseMatrix<Scalar> hessian;
     {
+      TRACTOR_INFO("compute hessian begin");
       TRACTOR_DEBUG("compute hessian");
-      TRACTOR_PROFILER("compute hessian");
-      hessian = jacobian.transpose() * jacobian;
+      // {
+      //   TRACTOR_PROFILER("compute hessian");
+      //   _hessian = _jacobian.transpose() * _jacobian;
+      //   // _hessian.template selfadjointView<Eigen::Lower>() =
+      //   //     _jacobian.transpose() * _jacobian;
+      //   // _hessian.template
+      //   // selfadjointView<Eigen::Upper>().rankUpdate(_jacobian);
+      // }
+      // _jacobian.prune();
+      {
+        TRACTOR_PROFILER("transpose jacobian");
+        _jacobian_transpose = _jacobian.transpose();
+      }
+      {
+        TRACTOR_PROFILER("compute hessian");
+        _hessian = (_jacobian_transpose * _jacobian);  // .pruned();
+      }
+      TRACTOR_INFO("compute hessian ready");
     }
 
     if (_regularization > Scalar(0)) {
@@ -300,17 +318,17 @@ class SparseLeastSquaresSolver : public SolverBase {
       //     //.sparseView()
       //     ;
       std::vector<Eigen::Triplet<Scalar>> tri;
-      for (size_t i = 0; i < hessian.rows(); i++) {
+      for (size_t i = 0; i < _hessian.rows(); i++) {
         tri.emplace_back(i, i, _regularization);
       }
-      Eigen::SparseMatrix<Scalar> reg(hessian.rows(), hessian.cols());
+      Eigen::SparseMatrix<Scalar> reg(_hessian.rows(), _hessian.cols());
       reg.setFromTriplets(tri.begin(), tri.end());
-      hessian = hessian + reg;
+      _hessian = _hessian + reg;
     }
 
-    _linear_solution = Vector::Zero(hessian.rows());
+    _linear_solution.setZero(_hessian.rows());
 
-    _linear_solver->solve(hessian, _linear_residuals, _linear_solution);
+    _linear_solver->solve(_hessian, _linear_residuals, _linear_solution);
 
     TRACTOR_DEBUG("ready");
 

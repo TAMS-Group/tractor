@@ -17,8 +17,9 @@
 
 namespace tractor {
 
-template <class Scalar>
-static TensorShape findTensorPythonShape(const py::array_t<Scalar> &array) {
+template <class Scalar, int Options>
+static TensorShape findTensorPythonShape(
+    const py::array_t<Scalar, Options> &array) {
   std::vector<size_t> ss;
   ss.resize(array.ndim());
   for (size_t i = 0; i < array.ndim(); i++) {
@@ -30,18 +31,19 @@ static TensorShape findTensorPythonShape(const py::array_t<Scalar> &array) {
 template <class Scalar, class Class>
 static void initTensorClass(
     typename std::enable_if_t<std::is_pod<Scalar>::value, Class> &cls) {
-
-  cls.def(py::init([](const py::array_t<Scalar> &array) {
-    auto tensor_shape = findTensorPythonShape(array);
-    auto element_count = tensor_shape.elementCount();
-    auto array_data = array.data();
-    std::vector<Scalar> tensor_data(element_count);
-    for (size_t i = 0; i < element_count; i++) {
-      tensor_data[i] = *array_data;
-      array_data++;
-    }
-    return Tensor<Scalar>(tensor_shape, tensor_data.data());
-  }));
+  cls.def(py::init(
+      [](const py::array_t<Scalar, py::array::c_style | py::array::forcecast>
+             &array) {
+        auto tensor_shape = findTensorPythonShape(array);
+        auto element_count = tensor_shape.elementCount();
+        auto array_data = array.data();
+        std::vector<Scalar> tensor_data(element_count);
+        for (size_t i = 0; i < element_count; i++) {
+          tensor_data[i] = *array_data;
+          array_data++;
+        }
+        return Tensor<Scalar>(tensor_shape, tensor_data.data());
+      }));
 
   cls.def(py::init([](const std::vector<Var<Scalar>> &array) {
     return pack_tensor(array);
@@ -61,7 +63,9 @@ static void initTensorClass(
         }
         return ret;
       },
-      [](Tensor<Scalar> &tensor, const py::array_t<Scalar> &array) {
+      [](Tensor<Scalar> &tensor,
+         const py::array_t<Scalar, py::array::c_style | py::array::forcecast>
+             &array) {
         auto tensor_shape = findTensorPythonShape(array);
         if (tensor_shape != tensor.shape()) {
           if (tensor.empty()) {
@@ -82,7 +86,6 @@ static void initTensorClass(
 template <class Scalar, class Class>
 static void initTensorClass(
     typename std::enable_if_t<!std::is_pod<Scalar>::value, Class> &cls) {
-
   cls.def(py::init([](const std::vector<Scalar> &array) {
     return Tensor<Scalar>(TensorShape({array.size()}), array.data());
   }));
@@ -151,7 +154,6 @@ static auto pythonizeBase(py::module main_module, py::module type_module,
 
 template <class Scalar>
 static void pythonizeTensor(py::module main_module, py::module type_module) {
-
   pythonizeBase<Scalar>(main_module, type_module, "Tensor")
       .def(py::self + py::self)
       .def(py::self - py::self)
@@ -205,4 +207,4 @@ static void pythonizeTensor(py::module main_module, py::module type_module) {
 
 TRACTOR_PYTHON_TYPED_BATCH(pythonizeTensor);
 
-} // namespace tractor
+}  // namespace tractor
