@@ -159,6 +159,10 @@ static void pythonizeRobot(py::module main_module, py::module type_module) {
 
   py::class_<JointState<Geometry>>(type_module, "JointStates")
       .def(py::init<const std::shared_ptr<const RobotModel<Geometry>> &>())
+      .def("__copy__",
+           [](const JointState<Geometry> &self) {
+             return std::make_unique<JointState<Geometry>>(self);
+           })
       .def("serialize",
            [](JointState<Geometry> &_this) {
              AlignedStdVector<typename Geometry::Scalar> positions;

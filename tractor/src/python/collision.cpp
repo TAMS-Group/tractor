@@ -10,9 +10,6 @@
 #include <tractor/geometry/fast.h>
 #include <tractor/robot/robot.h>
 
-#include <moveit/planning_scene/planning_scene.h>
-#include <moveit/collision_detection/collision_matrix.h>
-
 namespace tractor {
 
 static void pythonizeCollisionGlobal(py::module main_module) {
@@ -80,27 +77,6 @@ static void pythonizeCollisionTwist(py::module main_module,
     CollisionRobot(const std::shared_ptr<CollisionEngine> &r)
         : tractor::CollisionRobot(r) {}
   };
-
-  struct PyPlanningScene {
-    planning_scene::PlanningScenePtr scene;
-  };
-  py::class_<PyPlanningScene>(type_module, "PlanningScene")
-      .def(py::init([](const RobotModel<Geometry> &robot_model) {
-        auto moveit_robot =
-            ((const PyRobotModel<Geometry> *)&robot_model)->moveit_model;
-        PyPlanningScene ret;
-        ret.scene =
-            std::make_shared<planning_scene::PlanningScene>(moveit_robot);
-        return ret;
-      }))
-      .def("check_allowed_collision_matrix",
-           [](const PyPlanningScene *scene, const std::string &a,
-              const std::string &b) {
-             auto allowed = collision_detection::AllowedCollision::NEVER;
-             scene->scene->getAllowedCollisionMatrix().getAllowedCollision(
-                 a, b, allowed);
-             return (allowed != collision_detection::AllowedCollision::ALWAYS);
-           });
 
   py::class_<CollisionRobot>(type_module, "CollisionRobot")
       .def(py::init([](const RobotModel<Geometry> &robot_model) {

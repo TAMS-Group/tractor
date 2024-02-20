@@ -9,6 +9,12 @@
 
 #include <ros/ros.h>
 
+#include <moveit/planning_scene_interface/planning_scene_interface.h>
+#include <tf2_ros/transform_listener.h>
+#include <moveit/planning_scene/planning_scene.h>
+#include <moveit/collision_detection/collision_matrix.h>
+#include <moveit/planning_scene_monitor/current_state_monitor.h>
+
 namespace tractor {
 
 template <class Scalar>
@@ -131,7 +137,11 @@ static void pythonizeROS(py::module m) {
     }
     ros::init(argc, argv.data(), name, flags);
     static ros::NodeHandle node_handle("~");
-    static ros::AsyncSpinner spinner(4);
+    static ros::AsyncSpinner spinner = []() {
+      ros::AsyncSpinner spinner(0);
+      spinner.start();
+      return spinner;
+    }();
     clearVisualization();
   };
   m.def("init_ros", init_ros);
@@ -162,8 +172,145 @@ static void pythonizeROS(py::module m) {
     //                            << " def:" << definition);
     advertise(topic, hash, name, definition);
   });
-}
 
+  // py::class_<moveit::planning_interface::PlanningSceneInterface>(
+  //     m, "PlanningSceneInterface")
+  //     .def(py::init([](const RobotModel<Geometry> &robot_model) {
+  //       auto *ret = new CollisionRobot(engine);
+  //       loadCollisionRobot(
+  //           engine,
+  //           *((const PyRobotModel<Geometry> *)&robot_model)->moveit_model,
+  //           ret);
+  //       return ret;
+  //     }))
+  //     .def_property_readonly("links", &CollisionRobot::links)
+  //     .def("link", &CollisionRobot::link);
+
+  // struct PyPlanningScene {
+  //   planning_scene::PlanningScenePtr planning_scene;
+  // };
+  // py::class_<PyPlanningScene>(m, "PlanningScene")
+  //     .def(py::init(
+  //         [](const std::shared_ptr<RobotModel<Geometry>> &robot_model) {
+  //   auto moveit_robot =
+  //       ((const PyRobotModel<Geometry> *)robot_model.get())->moveit_model;
+  //   PyPlanningScene ret;
+  //   ret.robot_model = robot_model;
+  //   ret.planning_scene =
+  //       std::make_shared<planning_scene::PlanningScene>(moveit_robot);
+  //   return ret;
+  //         }))
+  //     .def("check_allowed_collision_matrix",
+  //          [](const PyPlanningScene *scene, const std::string &a,
+  //             const std::string &b) {
+  //   auto allowed = collision_detection::AllowedCollision::NEVER;
+  //   scene->planning_scene->getAllowedCollisionMatrix().getAllowedCollision(
+  //       a, b, allowed);
+  //   return (allowed != collision_detection::AllowedCollision::ALWAYS);
+  //          })
+  //     // .def("get_current_state",
+  //     //      [](const PyPlanningScene *scene, JointState<Geometry>
+  //     *out_state)
+  //     //      {
+  //     // out_state->fromMoveIt(scene->planning_scene->getCurrentState());
+  //     //      })
+  //     // .def("get_current_state", [](const PyPlanningScene *scene) {
+  //     //   JointState<Geometry> ret(scene->robot_model);
+  //     //   ret.fromMoveIt(scene->planning_scene->getCurrentState());
+  //     //   return ret;
+  //     // })
+  //     ;
+}
 TRACTOR_PYTHON_GLOBAL(pythonizeROS);
+
+template <class Geometry>
+static void pythonizeROSTwist(py::module main_module, py::module type_module) {
+  struct PyCurrentStateMonitor {
+    std::shared_ptr<tf2_ros::Buffer> tf_buffer =
+        std::make_shared<tf2_ros::Buffer>();
+    std::shared_ptr<tf2_ros::TransformListener> tf_listener;
+    std::shared_ptr<RobotModel<Geometry>> robot_model;
+    planning_scene_monitor::CurrentStateMonitor state_monitor;
+    PyCurrentStateMonitor(
+        const std::shared_ptr<RobotModel<Geometry>> &robot_model)
+        : tf_listener(std::make_shared<tf2_ros::TransformListener>(*tf_buffer)),
+          robot_model(robot_model),
+          state_monitor(
+              ((const PyRobotModel<Geometry> *)robot_model.get())->moveit_model,
+              tf_buffer) {
+      state_monitor.startStateMonitor("joint_states");
+      if (!state_monitor.isActive()) {
+        throw std::runtime_error("failed to start state monitor");
+      }
+    }
+  };
+  py::class_<PyCurrentStateMonitor, std::shared_ptr<PyCurrentStateMonitor>>(
+      type_module, "CurrentStateMonitor")
+      .def(py::init<std::shared_ptr<RobotModel<Geometry>>>())
+      // .def(py::init(
+      //     [](const std::shared_ptr<RobotModel<Geometry>> &robot_model) {
+      //       auto moveit_robot =
+      //           ((const PyRobotModel<Geometry> *)robot_model.get())
+      //               ->moveit_model;
+      //       auto ret =
+      //  std::make_shared<PyCurrentStateMonitor>(moveit_robot);
+      //       ret->startStateMonitor();
+      //       return ret;
+      //     }))
+      // .def("start_state_monitor",
+      //      [](PyCurrentStateMonitor *thiz) {
+      //        thiz->state_monitor.startStateMonitor("/joint_states");
+      //      })
+      .def("get_current_state",
+           [](PyCurrentStateMonitor *thiz) {
+             std::vector<std::string> missing;
+             if (!thiz->state_monitor.haveCompleteState(missing)) {
+               for (auto &m : missing) {
+                 TRACTOR_FATAL("joint state missing " << m);
+               }
+               throw std::runtime_error("robot state incomplete");
+             }
+             auto state = thiz->state_monitor.getCurrentState();
+             if (!state) {
+               throw std::runtime_error("failed to get current state");
+             }
+             JointState<Geometry> ret(thiz->robot_model);
+             ret.fromMoveIt(*state);
+             return ret;
+           })
+      .def("wait_for_complete_state",
+           [](PyCurrentStateMonitor *thiz, double timeout) {
+             bool ok = thiz->state_monitor.waitForCompleteState(timeout);
+             if (!ok) {
+               throw std::runtime_error("wait for robot state failed");
+             }
+           });
+
+  struct PyPlanningScene {
+    std::shared_ptr<RobotModel<Geometry>> robot_model;
+    planning_scene::PlanningScenePtr planning_scene;
+  };
+  py::class_<PyPlanningScene>(type_module, "PlanningScene")
+      .def(py::init(
+          [](const std::shared_ptr<RobotModel<Geometry>> &robot_model) {
+            auto moveit_robot =
+                ((const PyRobotModel<Geometry> *)robot_model.get())
+                    ->moveit_model;
+            PyPlanningScene ret;
+            ret.robot_model = robot_model;
+            ret.planning_scene =
+                std::make_shared<planning_scene::PlanningScene>(moveit_robot);
+            return ret;
+          }))
+      .def("check_allowed_collision_matrix", [](const PyPlanningScene *scene,
+                                                const std::string &a,
+                                                const std::string &b) {
+        auto allowed = collision_detection::AllowedCollision::NEVER;
+        scene->planning_scene->getAllowedCollisionMatrix().getAllowedCollision(
+            a, b, allowed);
+        return (allowed != collision_detection::AllowedCollision::ALWAYS);
+      });
+}
+TRACTOR_PYTHON_TWIST(pythonizeROSTwist);
 
 }  // namespace tractor
