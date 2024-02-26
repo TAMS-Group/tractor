@@ -17,6 +17,7 @@
 #include <pybind11/stl_bind.h>
 
 #include <moveit/robot_model/robot_model.h>
+#include <moveit/robot_model_loader/robot_model_loader.h>
 
 namespace tractor {
 
@@ -24,9 +25,17 @@ namespace py = pybind11;
 
 template <class Geometry>
 struct PyRobotModel : RobotModel<Geometry> {
+  robot_model_loader::RobotModelLoaderConstPtr moveit_loader;
   moveit::core::RobotModelConstPtr moveit_model;
-  PyRobotModel(const moveit::core::RobotModelConstPtr &m)
-      : RobotModel<Geometry>(*m), moveit_model(m) {
+  // PyRobotModel(const moveit::core::RobotModelConstPtr &m)
+  //     : RobotModel<Geometry>(*m), moveit_model(m) {
+  //   TRACTOR_DEBUG("robot model created");
+  // }
+  PyRobotModel(const moveit::core::RobotModelConstPtr &model,
+               const robot_model_loader::RobotModelLoaderConstPtr &loader)
+      : RobotModel<Geometry>(*model),
+        moveit_model(model),
+        moveit_loader(loader) {
     TRACTOR_DEBUG("robot model created");
   }
   ~PyRobotModel() { TRACTOR_DEBUG("robot model destroyed"); }

@@ -30,6 +30,7 @@ static void pythonizeCollisionGlobal(py::module main_module) {
 
   py::class_<ConvexCollisionMesh, std::shared_ptr<ConvexCollisionMesh>,
              CollisionShape>(main_module, "ConvexCollisionMesh")
+      .def_property_readonly("faces", &ConvexCollisionMesh::faces)
       .def_property_readonly("vertices", [](const ConvexCollisionMesh &_this) {
         auto &verts = _this.vertices();
         Eigen::MatrixXd ret(verts.size(), 3);

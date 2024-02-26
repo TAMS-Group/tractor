@@ -8,6 +8,9 @@
 #include <tractor/core/error.h>
 #include <tractor/core/log.h>
 
+#include <tractor/geometry/fast.h>
+#include <tractor/geometry/eigen.h>
+
 #include <geometric_shapes/mesh_operations.h>
 #include <moveit/robot_model/robot_model.h>
 #include <moveit/robot_state/robot_state.h>
@@ -38,14 +41,43 @@ void _loadCollisionLink(CollisionRobot *collision_robot,
                           << typeid(*shape).name());
     auto &shape_origin = origins[shape_index];
     Eigen::Affine3d shape_pose = Eigen::Affine3d(link_transform) * shape_origin;
+    Pose3d shape_pose_x = convertEigenToPose<GeometryFast<double>>(shape_pose);
 
-    const shapes::Mesh *mesh = dynamic_cast<const shapes::Mesh *>(shape.get());
-    std::shared_ptr<const shapes::Mesh> mesh_cleanup;
-    if (!mesh) {
-      shapes::Mesh *m = shapes::createMeshFromShape(shape.get());
-      mesh = m;
-      mesh_cleanup = std::shared_ptr<shapes::Mesh>(
-          m, [](shapes::Mesh *mesh) { delete mesh; });
+    TRACTOR_INFO("shape type " << shape->type);
+
+    if (auto *sphere = dynamic_cast<const shapes::Sphere *>(shape.get())) {
+      TRACTOR_INFO("sphere " << sphere->radius << " " << shape_origin.matrix()
+                             << " " << shape_pose.matrix());
+      collision_link->addShape(collision_robot->engine()->createSphere(
+          link_model->getName(), shape_pose_x, sphere->radius));
+      continue;
+    }
+
+    if (auto *cylinder = dynamic_cast<const shapes::Cylinder *>(shape.get())) {
+      TRACTOR_INFO("cylinder " << cylinder->length << " " << cylinder->radius
+                               << " " << shape_origin.matrix() << " "
+                               << shape_pose.matrix());
+      collision_link->addShape(collision_robot->engine()->createCylinder(
+          link_model->getName(), shape_pose_x, cylinder->length,
+          cylinder->radius));
+      continue;
+    }
+
+    if (auto *box = dynamic_cast<const shapes::Box *>(shape.get())) {
+      TRACTOR_INFO("box " << box->size[0] << " " << box->size[1] << " "
+                          << box->size[2] << " " << shape_origin.matrix() << " "
+                          << shape_pose.matrix());
+      collision_link->addShape(collision_robot->engine()->createBox(
+          link_model->getName(), shape_pose_x,
+          Vec3d(box->size[0], box->size[1], box->size[2])));
+      continue;
+    }
+
+    std::shared_ptr<shapes::Mesh> mesh;
+    if (!dynamic_cast<const shapes::Mesh *>(shape.get())) {
+      mesh.reset(shapes::createMeshFromShape(shape.get()));
+    } else {
+      mesh.reset(dynamic_cast<shapes::Mesh *>(shape->clone()));
     }
     for (size_t i = 0; i < mesh->vertex_count; i++) {
       Eigen::Vector3d &v = ((Eigen::Vector3d *)mesh->vertices)[i];
@@ -56,12 +88,13 @@ void _loadCollisionLink(CollisionRobot *collision_robot,
       continue;
     }
 
-    if (shapes::computeShapeExtents(mesh).norm() < 1.0) {
+    if (shapes::computeShapeExtents(mesh.get()).norm() < 1.0) {
       TRACTOR_INFO("adding convex hull for link " << link_model->getName()
                                                   << " shape " << shape_index);
 
       auto collision_shape = collision_robot->engine()->createConvexMesh(
-          link_model->getName() /*+ "_" + std::to_string(shape_index)*/, mesh);
+          link_model->getName() /*+ "_" + std::to_string(shape_index)*/,
+          mesh.get());
       collision_link->addShape(
           std::dynamic_pointer_cast<const CollisionShape>(collision_shape));
 
@@ -70,7 +103,7 @@ void _loadCollisionLink(CollisionRobot *collision_robot,
                    << link_model->getName() << " shape " << shape_index);
 
       HACD::HACD hacd;
-      hacd.SetConcavity(0.1);
+      hacd.SetConcavity(0.01);
       hacd.SetNClusters(1);
       hacd.SetAddExtraDistPoints(false);
       hacd.SetAddNeighboursDistPoints(false);

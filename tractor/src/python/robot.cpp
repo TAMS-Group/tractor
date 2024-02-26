@@ -48,16 +48,31 @@ static void pythonizeRobot(py::module main_module, py::module type_module) {
                     visualize(topic, trajectory, time_step);
                   });
 
-  static Factory::Key<std::string>::Value<moveit::core::RobotModelConstPtr>
+  // static Factory::Key<std::string>::Value<moveit::core::RobotModelConstPtr>
+  //     robot_model_factory([](const std::string &robot_description) {
+  //       TRACTOR_DEBUG("loading robot model " << robot_description);
+  //       robot_model_loader::RobotModelLoader loader(robot_description);
+  //       moveit::core::RobotModelConstPtr ret = loader.getModel();
+  //       if (!ret) {
+  //         throw std::runtime_error("failed to load robot model: " +
+  //                                  robot_description);
+  //       }
+  //       return ret;
+  //     });
+
+  static Factory::Key<std::string>::Value<std::shared_ptr<RobotModel<Geometry>>>
       robot_model_factory([](const std::string &robot_description) {
         TRACTOR_DEBUG("loading robot model " << robot_description);
-        robot_model_loader::RobotModelLoader loader(robot_description);
-        moveit::core::RobotModelConstPtr ret = loader.getModel();
-        if (!ret) {
+        auto loader = std::make_shared<robot_model_loader::RobotModelLoader>(
+            robot_description);
+        auto model = loader->getModel();
+        if (!model) {
           throw std::runtime_error("failed to load robot model: " +
                                    robot_description);
         }
-        return ret;
+        return std::static_pointer_cast<RobotModel<Geometry>>(
+            std::shared_ptr<PyRobotModel<Geometry>>(
+                new PyRobotModel<Geometry>(model, nullptr)));
       });
 
   py::class_<JointLimits<Geometry>>(type_module, "JointLimits")
@@ -213,14 +228,16 @@ static void pythonizeRobot(py::module main_module, py::module type_module) {
   py::class_<RobotModel<Geometry>, std::shared_ptr<RobotModel<Geometry>>>(
       type_module, "RobotModel")
       .def(py::init([](const std::string &robot_description) {
-        return std::static_pointer_cast<RobotModel<Geometry>>(
-            std::make_shared<PyRobotModel<Geometry>>(
-                robot_model_factory.get(robot_description)));
+        // return std::static_pointer_cast<RobotModel<Geometry>>(
+        //     std::make_shared<PyRobotModel<Geometry>>(
+        //         robot_model_factory.get(robot_description)));
+        return robot_model_factory.get(robot_description);
       }))
       .def(py::init([]() {
-        return std::static_pointer_cast<RobotModel<Geometry>>(
-            std::make_shared<PyRobotModel<Geometry>>(
-                robot_model_factory.get("/robot_description")));
+        // return std::static_pointer_cast<RobotModel<Geometry>>(
+        //     std::make_shared<PyRobotModel<Geometry>>(
+        //         robot_model_factory.get("/robot_description")));
+        return robot_model_factory.get("/robot_description");
       }))
       .def(py::init([](const std::string &urdf, const std::string &srdf) {
         // TiXmlDocument uxml, sxml;
@@ -231,7 +248,8 @@ static void pythonizeRobot(py::module main_module, py::module type_module) {
         return std::static_pointer_cast<RobotModel<Geometry>>(
             std::make_shared<PyRobotModel<Geometry>>(
                 std::make_shared<moveit::core::RobotModel>(loader.getURDF(),
-                                                           loader.getSRDF())));
+                                                           loader.getSRDF()),
+                nullptr));
       }))
       .def("forward_kinematics",
            [](const RobotModel<Geometry> &robot_model,

@@ -75,17 +75,24 @@ struct SurfaceSampler {
 };
 
 void ConvexCollisionMesh::sample(Vec3d &point, Vec3d &normal) const {
-  surface_sampler->sample(point, normal);
+  // surface_sampler->sample(point, normal);
+  throw 0;
 }
 
-void ConvexCollisionMesh::initConvexMesh(const std::string &name,
-                                         const shapes::Mesh *mesh) {
-  _name = name;
-  surface_sampler = std::make_shared<SurfaceSampler>(mesh);
-  for (size_t i = 0; i < mesh->vertex_count; i++) {
-    _vertices.emplace_back(mesh->vertices[i * 3 + 0], mesh->vertices[i * 3 + 1],
-                           mesh->vertices[i * 3 + 2]);
-  }
-}
+// void ConvexCollisionMesh::initConvexMesh(const std::string &name,
+//                                          // const shapes::Mesh *mesh,
+//                                          const VertexList &vertices,
+//                                          const FaceList &faces) {
+//   _name = name;
+//   // surface_sampler = std::make_shared<SurfaceSampler>(mesh);
+//   // for (size_t i = 0; i < mesh->vertex_count; i++) {
+//   //   _vertices.emplace_back(mesh->vertices[i * 3 + 0], mesh->vertices[i * 3
+//   +
+//   //   1],
+//   //                          mesh->vertices[i * 3 + 2]);
+//   // }
+//   _vertices = vertices;
+//   _faces = faces;
+// }
 
-} // namespace tractor
+}  // namespace tractor

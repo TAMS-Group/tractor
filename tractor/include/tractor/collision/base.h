@@ -9,25 +9,34 @@
 namespace shapes {
 class Shape;
 class Mesh;
-} // namespace shapes
+}  // namespace shapes
 
 namespace tractor {
 
 class SurfaceSampler;
 
-class ConvexCollisionMesh : public CollisionShape {
-  std::string _name;
-  std::vector<Vec3d> _vertices;
+typedef std::vector<Plane3d> PlaneList;
+typedef std::vector<Vec3d> VertexList;
+typedef std::vector<std::vector<size_t>> FaceList;
 
-public:
+class ConvexCollisionMesh : virtual public CollisionShape {
+ protected:
+  std::string _name;
+  VertexList _vertices;
+  FaceList _faces;
+  PlaneList _planes;
+
+ public:
   virtual void sample(Vec3d &point, Vec3d &normal) const override;
   virtual const std::string &name() const override { return _name; }
-  virtual const std::vector<Plane3d> &planes() const = 0;
-  const std::vector<Vec3d> &vertices() const { return _vertices; };
+  const PlaneList &planes() const { return _planes; }
+  const VertexList &vertices() const { return _vertices; }
+  const FaceList &faces() const { return _faces; }
 
-protected:
-  std::shared_ptr<const SurfaceSampler> surface_sampler;
-  void initConvexMesh(const std::string &name, const shapes::Mesh *mesh);
+ protected:
+  // std::shared_ptr<const SurfaceSampler> surface_sampler;
+  // void initConvexMesh(const std::string &name,  // const shapes::Mesh *mesh,
+  //                     const VertexList &vertices, const FaceList &faces);
 };
 
-} // namespace tractor
+}  // namespace tractor
