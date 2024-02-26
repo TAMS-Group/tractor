@@ -482,6 +482,18 @@ struct InteriorPointSpQPSolver : SpQPSolverBase<Scalar> {
   }
 };
 
+class ScopeTimer {
+  typedef std::chrono::steady_clock Clock;
+  double *result = nullptr;
+  Clock::time_point start;
+
+ public:
+  ScopeTimer(double *result) : result(result), start(Clock::now()) {}
+  ~ScopeTimer() {
+    *result = std::chrono::duration<double>(Clock::now() - start).count();
+  }
+};
+
 template <class Scalar>
 class SpSQPSolver : public SolverBase {
   typedef Eigen::SparseMatrix<Scalar> SparseMatrix;
@@ -499,9 +511,18 @@ class SpSQPSolver : public SolverBase {
   Scalar _step_scaling = 1.0;
   bool _backoff_enable = true;
   Scalar _backoff_factor = 0.5;
-  size_t _backoff_steps = 100;
   std::shared_ptr<SparseMatrixBuilder<Scalar>> _matrix_builder;
   std::shared_ptr<SpQPSolver<Scalar>> _qp_solver;
+
+  double _time_compute = 0;
+  double _time_prepare = 0;
+  double _time_matrix = 0;
+  double _time_select = 0;
+  double _time_solve = 0;
+  double _time_negate = 0;
+  double _time_backoff = 0;
+  double _time_accumulate = 0;
+  size_t _backoff_steps = 0;
 
   SparseMatrix _make_selection_matrix(size_t priority) {
     std::vector<Eigen::Triplet<Scalar>> triplets;
@@ -552,52 +573,73 @@ class SpSQPSolver : public SolverBase {
 
     {
       TRACTOR_PROFILER("nonlinear");
+      ScopeTimer t(&_time_compute);
       _x_prog->run(_nonlinear_solution, _memory, _nonlinear_residuals);
     }
 
     {
       TRACTOR_PROFILER("linearize");
+      ScopeTimer t(&_time_prepare);
       _x_prep->execute(_memory);
     }
 
     {
       TRACTOR_DEBUG("build matrix");
       TRACTOR_PROFILER("build matrix");
+      ScopeTimer t(&_time_matrix);
       _multi_matrix = _matrix_builder->build(_memory);
     }
 
-    _qp.objective_matrix = _objective_selector * _multi_matrix;
-    _qp.objective_vector = _objective_selector * _nonlinear_residuals;
+    {
+      ScopeTimer t(&_time_select);
 
-    _qp.equality_matrix = _equality_selector * _multi_matrix;
-    _qp.equality_vector = _equality_selector * _nonlinear_residuals;
+      _qp.objective_matrix = _objective_selector * _multi_matrix;
+      _qp.objective_vector = _objective_selector * _nonlinear_residuals;
 
-    _qp.inequality_matrix = _inequality_selector * _multi_matrix;
-    _qp.inequality_vector = _inequality_selector * _nonlinear_residuals;
+      _qp.equality_matrix = _equality_selector * _multi_matrix;
+      _qp.equality_vector = _equality_selector * _nonlinear_residuals;
 
-    _qp_solver->solve(_qp, _linear_solution);
+      _qp.inequality_matrix = _inequality_selector * _multi_matrix;
+      _qp.inequality_vector = _inequality_selector * _nonlinear_residuals;
+    }
 
-    _linear_solution.array() = -_linear_solution.array();
+    {
+      ScopeTimer t(&_time_solve);
+      _qp_solver->solve(_qp, _linear_solution);
+    }
 
-    if (_backoff_enable) {
-      for (size_t i = 0;; i++) {
-        auto nl2 = _nonlinear_solution;
-        accumulate(nl2, _linear_solution);
-        _x_prog->run(nl2, _memory, _nonlinear_residuals);
-        if (((_inequality_selector * _nonlinear_residuals).array() >= 0)
-                .all()) {
-          break;
-        }
-        _linear_solution *= _backoff_factor;
-        TRACTOR_DEBUG("step back " << i);
-        if (i > _backoff_steps) {
-          _linear_solution *= 0;
-          break;
+    {
+      ScopeTimer t(&_time_negate);
+      _linear_solution.array() = -_linear_solution.array();
+    }
+
+    {
+      ScopeTimer t(&_time_backoff);
+      _backoff_steps = 0;
+      if (_backoff_enable) {
+        for (size_t i = 0;; i++) {
+          auto nl2 = _nonlinear_solution;
+          accumulate(nl2, _linear_solution);
+          _x_prog->run(nl2, _memory, _nonlinear_residuals);
+          if (((_inequality_selector * _nonlinear_residuals).array() >= 0)
+                  .all()) {
+            break;
+          }
+          _linear_solution *= _backoff_factor;
+          _backoff_steps++;
+          TRACTOR_DEBUG("step back " << i);
+          if (i > _backoff_steps) {
+            _linear_solution *= 0;
+            break;
+          }
         }
       }
     }
 
-    accumulate(_nonlinear_solution, _linear_solution * _step_scaling);
+    {
+      ScopeTimer t(&_time_accumulate);
+      accumulate(_nonlinear_solution, _linear_solution * _step_scaling);
+    }
 
     TRACTOR_DEBUG("ready");
     Scalar step = _linear_solution.squaredNorm();

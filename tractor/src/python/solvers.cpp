@@ -178,6 +178,14 @@ static void pythonizeSolvers(py::module main_module, py::module type_module) {
       .def_readwrite("backoff_enable", &SpSQPSolver<Scalar>::_backoff_enable)
       .def_readwrite("backoff_factor", &SpSQPSolver<Scalar>::_backoff_factor)
       .def_readwrite("backoff_steps", &SpSQPSolver<Scalar>::_backoff_steps)
+      .def_readwrite("time_compute", &SpSQPSolver<Scalar>::_time_compute)
+      .def_readwrite("time_prepare", &SpSQPSolver<Scalar>::_time_prepare)
+      .def_readwrite("time_matrix", &SpSQPSolver<Scalar>::_time_matrix)
+      .def_readwrite("time_select", &SpSQPSolver<Scalar>::_time_select)
+      .def_readwrite("time_solve", &SpSQPSolver<Scalar>::_time_solve)
+      .def_readwrite("time_negate", &SpSQPSolver<Scalar>::_time_negate)
+      .def_readwrite("time_backoff", &SpSQPSolver<Scalar>::_time_backoff)
+      .def_readwrite("time_accumulate", &SpSQPSolver<Scalar>::_time_accumulate)
       .def(py::init<std::shared_ptr<Engine>>());
 
   py::class_<SpQPSolver<Scalar>, std::shared_ptr<SpQPSolver<Scalar>>>(
