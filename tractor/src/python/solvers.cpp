@@ -175,6 +175,7 @@ static void pythonizeSolvers(py::module main_module, py::module type_module) {
   py::class_<SpSQPSolver<Scalar>, Solver>(type_module, "SpSQPSolver")
       .def_readwrite("step_scaling", &SpSQPSolver<Scalar>::_step_scaling)
       .def_readwrite("qp_solver", &SpSQPSolver<Scalar>::_qp_solver)
+      .def_readwrite("matrix_builder", &SpSQPSolver<Scalar>::_matrix_builder)
       .def_readwrite("backoff_enable", &SpSQPSolver<Scalar>::_backoff_enable)
       .def_readwrite("backoff_factor", &SpSQPSolver<Scalar>::_backoff_factor)
       .def_readwrite("backoff_steps", &SpSQPSolver<Scalar>::_backoff_steps)

@@ -80,6 +80,22 @@ static void pythonizeMain(py::module &m) {
 
   // mtrace();
 
+  m.def("print_info", [](const std::string& s) {
+    TRACTOR_INFO(s);
+  });
+
+  m.def("print_debug", [](const std::string& s) {
+    TRACTOR_DEBUG(s);
+  });
+
+  m.def("print_error", [](const std::string& s) {
+    TRACTOR_ERROR(s);
+  });
+
+  m.def("print_success", [](const std::string& s) {
+    TRACTOR_SUCCESS(s);
+  });
+
   m.def("debug", []() {
     static auto printStackTrace = []() {
       TRACTOR_INFO(boost::stacktrace::stacktrace());
