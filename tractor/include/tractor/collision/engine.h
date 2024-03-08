@@ -20,6 +20,7 @@ struct CollisionRequest {
   const CollisionShape *shape_a = nullptr;
   Pose3d pose_b = Pose3d::Identity();
   const CollisionShape *shape_b = nullptr;
+  const Vec3d *guess = nullptr;
 };
 
 struct CollisionResponse {
@@ -27,6 +28,7 @@ struct CollisionResponse {
   Vec3d point_b = Vec3d::Zero();
   Vec3d normal = Vec3d::Zero();
   double distance = 0.0;
+  Vec3d guess = Vec3d::Zero();
 };
 
 struct ContinuousCollisionRequest {

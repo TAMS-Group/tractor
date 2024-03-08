@@ -7,11 +7,11 @@
 #include <tractor/engines/jit.h>
 #include <tractor/engines/parallel.h>
 #include <tractor/engines/simple.h>
+#include <tractor/engines/loop.h>
 
 namespace tractor {
 
 static void pythonizeEngine(py::module &m) {
-
   py::class_<Memory, std::shared_ptr<Memory>>(m, "Memory");
 
   py::class_<Executable, std::shared_ptr<Executable>>(m, "Executable")
@@ -93,10 +93,13 @@ static void pythonizeEngine(py::module &m) {
       m, "ParallelEngine")
       .def(py::init<>());
 
+  py::class_<LoopEngine, std::shared_ptr<LoopEngine>, Engine>(m, "LoopEngine")
+      .def(py::init<>());
+
   // py::class_<JITEngine, std::shared_ptr<JITEngine>, Engine>(m, "JITEngine")
   //     .def(py::init<>());
 }
 
 TRACTOR_PYTHON_GLOBAL(pythonizeEngine);
 
-} // namespace tractor
+}  // namespace tractor

@@ -91,23 +91,68 @@ struct BulletCollisionWrapper {
   }
 };
 
-static void bulletCollide(         //
-    const char *name_a,            //
-    const btTransform &pose_a,     //
-    const btConvexShape *shape_a,  //
-    const btVector3 &center_a,     //
-    const char *name_b,            //
-    const btTransform &pose_b,     //
-    const btConvexShape *shape_b,  //
-    const btVector3 &center_b,     //
-    CollisionResponse &response    //
+// https://pybullet.org/Bullet/BulletFull/btGjkEpa3_8h_source.html
+template <typename btConvexTemplate>
+bool btGjkEpaSolver3_Distance_Mod(const btConvexTemplate &a,
+                                  const btConvexTemplate &b, btVector3 &guess,
+                                  btGjkEpaSolver3::sResults &results) {
+  MinkowskiDiff<btConvexTemplate> shape(a, b);
+  Initialize(a, b, results, shape);
+  GJK<btConvexTemplate> gjk(a, b);
+  eGjkStatus gjk_status = gjk.Evaluate(shape, guess);
+  if (gjk_status == eGjkValid) {
+    btVector3 w0 = btVector3(0, 0, 0);
+    btVector3 w1 = btVector3(0, 0, 0);
+    for (U i = 0; i < gjk.m_simplex->rank; ++i) {
+      const btScalar p = gjk.m_simplex->p[i];
+      w0 += shape.Support(gjk.m_simplex->c[i]->d, 0) * p;
+      w1 += shape.Support(-gjk.m_simplex->c[i]->d, 1) * p;
+    }
+    results.witnesses[0] = a.getWorldTransform() * w0;
+    results.witnesses[1] = a.getWorldTransform() * w1;
+    results.normal = w0 - w1;
+    results.distance = results.normal.length();
+    results.normal /= results.distance > 0.0001 ? results.distance : 1;
+    // TRACTOR_INFO("gjk guess " << toVec3d(guess) << " " <<
+    // toVec3d(gjk.m_ray));
+    guess = gjk.m_ray;
+    return (true);
+  } else {
+    // TRACTOR_WARN("gjk failed");
+    results.status = gjk_status == eGjkInside
+                         ? btGjkEpaSolver3::sResults::Penetrating
+                         : btGjkEpaSolver3::sResults::GJK_Failed;
+    return (false);
+  }
+}
+
+static void bulletCollide(            //
+    const char *name_a,               //
+    const btTransform &pose_a,        //
+    const btConvexShape *shape_a,     //
+    const btVector3 &center_a,        //
+    const char *name_b,               //
+    const btTransform &pose_b,        //
+    const btConvexShape *shape_b,     //
+    const btVector3 &center_b,        //
+    CollisionResponse &response,      //
+    const Vec3d *guess_opt = nullptr  //
 ) {
   TRACTOR_PROFILER("bullet gjk");
   BulletCollisionWrapper wa = BulletCollisionWrapper(pose_a, shape_a, center_a);
   BulletCollisionWrapper wb = BulletCollisionWrapper(pose_b, shape_b, center_b);
-  btVector3 guess = btVector3(1, 2, 3).normalized();
+  btVector3 guess = btVector3(0, 0, 0);
+  if (guess_opt) {
+    // TRACTOR_SUCCESS("guess")
+    // guess = pose_a.getBasis().inverse() * toBulletVector3(*guess_opt);
+    guess = toBulletVector3(*guess_opt);
+  }
+  if (guess.isZero()) {
+    // TRACTOR_WARN("no guess")
+    guess = btVector3(1, 2, 3).normalized();
+  }
   btGjkEpaSolver3::sResults results;
-  bool ok = btGjkEpaSolver3_Distance(wa, wb, guess, results);
+  bool ok = btGjkEpaSolver3_Distance_Mod(wa, wb, guess, results);
   if (!ok) {
     ok = btGjkEpaSolver3_Penetration(wa, wb, guess, results);
   }
@@ -116,10 +161,16 @@ static void bulletCollide(         //
     response.point_b = toVec3d(results.witnesses[1]);
     response.normal = toVec3d(pose_a.getBasis() * results.normal);
     response.distance = results.distance;
+    response.guess = toVec3d(guess);
+    // response.guess = toVec3d(results.normal * -results.distance);
+    // TRACTOR_INFO(results.normal.norm());
+    // response.guess = toVec3d(wa.getWorldTransform().inverse() *
+    //                          (results.witnesses[0] - results.witnesses[1]));
   } else {
     TRACTOR_WARN("collision detection failed " << name_a << " " << name_b);
     response = CollisionResponse();
   }
+  // TRACTOR_INFO("guess " << toVec3d(guess) << " " << response.guess);
 }
 
 struct ContinuousBulletCollisionWrapper {
@@ -402,7 +453,9 @@ void BulletCollisionEngine::collide(const CollisionRequest &request,
       shape_b->bullet_shape.get(),                             //
       shape_b->center,                                         //
                                                                //
-      response                                                 //
+      response,                                                //
+                                                               //
+      request.guess                                            //
   );
 }
 

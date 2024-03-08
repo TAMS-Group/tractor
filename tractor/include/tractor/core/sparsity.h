@@ -131,11 +131,15 @@ class SparseMatrixBuilder : public SparsityBase {
   std::shared_ptr<const Engine> _engine;
   std::shared_ptr<const Executable> _executable;
   struct ThreadData {
+    bool initialized = false;
     Eigen::Matrix<T, Eigen::Dynamic, 1> input_vector, output_vector;
     std::shared_ptr<Memory> memory;
     Buffer input_buffer, output_buffer;
   };
   std::vector<ThreadData> _thread_data;
+  std::vector<Eigen::Triplet<T>> _triplets;
+  std::vector<std::vector<Eigen::Triplet<T>>> _triplet_buffers;
+  Eigen::SparseMatrix<T> _ret;
 
  public:
   SparseMatrixBuilder(const std::shared_ptr<const Engine> &engine,
@@ -155,23 +159,19 @@ class SparseMatrixBuilder : public SparsityBase {
 
   size_t complexity() const { return _input_groups.size(); }
 
-  Eigen::SparseMatrix<T> build(const std::shared_ptr<Memory> &memory) {
+  const Eigen::SparseMatrix<T> &build(const std::shared_ptr<Memory> &memory) {
     TRACTOR_PROFILER("spmb build");
 
-    if (_multi_threading) {
-      std::vector<Eigen::Triplet<T>> triplets;
+    _triplets.clear();
 
+    if (_multi_threading) {
       size_t input_group_count = _input_groups.size();
 
-#pragma omp parallel
-      {
-        // TRACTOR_DEBUG(_memories.size() << " " << omp_get_thread_num());
-        auto &tda = _thread_data.at(omp_get_thread_num());
-        {
-          TRACTOR_PROFILER("spmb copy memory");
-          memory->copyTo(tda.memory);
-        }
+      for (auto &tda : _thread_data) {
+        tda.initialized = false;
       }
+
+      _triplet_buffers.resize(input_group_count);
 
 #pragma omp parallel for
       for (size_t input_group_index = 0; input_group_index < input_group_count;
@@ -180,10 +180,14 @@ class SparseMatrixBuilder : public SparsityBase {
 
         auto &tda = _thread_data.at(omp_get_thread_num());
 
+        if (!tda.initialized) {
+          tda.initialized = true;
+          memory->copyTo(tda.memory);
+        }
+
         {
           TRACTOR_PROFILER("spmb input vector");
-          tda.input_vector = Eigen::Matrix<T, Eigen::Dynamic, 1>::Zero(
-              _executable->inputBufferSize() / sizeof(T));
+          tda.input_vector.setZero(_executable->inputBufferSize() / sizeof(T));
           for (size_t i : input_group.inputIndices()) {
             tda.input_vector(i) = T(1);
           }
@@ -208,9 +212,9 @@ class SparseMatrixBuilder : public SparsityBase {
           tda.output_buffer.toVector(tda.output_vector);
         }
 
-#pragma omp critical
         {
-          TRACTOR_PROFILER("spmb collect coefficients");
+          auto &triplets = _triplet_buffers[input_group_index];
+          triplets.clear();
           for (auto &output_group : input_group.outputGroups()) {
             size_t col = output_group.inputIndex();
             for (size_t row : output_group.outputIndices()) {
@@ -221,18 +225,35 @@ class SparseMatrixBuilder : public SparsityBase {
             }
           }
         }
+
+        // #pragma omp critical
+        //         {
+        //           TRACTOR_PROFILER("spmb collect coefficients");
+        //           for (auto &output_group : input_group.outputGroups()) {
+        //             size_t col = output_group.inputIndex();
+        //             for (size_t row : output_group.outputIndices()) {
+        //               T v = tda.output_vector(row);
+        //               if (v != T(0)) {
+        //                 _triplets.emplace_back(row, col, v);
+        //               }
+        //             }
+        //           }
+        //         }
       }
 
-      Eigen::SparseMatrix<T> ret(_sparsity_matrix.rows(),
-                                 _sparsity_matrix.cols());
-      {
-        TRACTOR_PROFILER("spmb assemble matrix");
-        ret.setFromTriplets(triplets.begin(), triplets.end());
-        ret.makeCompressed();
+      size_t total_triplet_count = 0;
+      for (auto &tb : _triplet_buffers) {
+        total_triplet_count += tb.size();
       }
-      return ret;
+      _triplets.resize(total_triplet_count);
+      size_t triplet_start = 0;
+      for (auto &tb : _triplet_buffers) {
+        std::memcpy(_triplets.data() + triplet_start, tb.data(),
+                    tb.size() * sizeof(tb[0]));
+        triplet_start += tb.size();
+      }
+
     } else {
-      std::vector<Eigen::Triplet<T>> triplets;
       Eigen::Matrix<T, Eigen::Dynamic, 1> input_vector;
       Eigen::Matrix<T, Eigen::Dynamic, 1> output_vector;
       for (auto &input_group : _input_groups) {
@@ -249,17 +270,20 @@ class SparseMatrixBuilder : public SparsityBase {
           for (size_t row : output_group.outputIndices()) {
             T v = output_vector(row);
             if (v != T(0)) {
-              triplets.emplace_back(row, col, v);
+              _triplets.emplace_back(row, col, v);
             }
           }
         }
       }
-      Eigen::SparseMatrix<T> ret(_sparsity_matrix.rows(),
-                                 _sparsity_matrix.cols());
-      ret.setFromTriplets(triplets.begin(), triplets.end());
-      ret.makeCompressed();
-      return ret;
     }
+
+    _ret.resize(_sparsity_matrix.rows(), _sparsity_matrix.cols());
+    {
+      TRACTOR_PROFILER("spmb assemble matrix");
+      _ret.setFromTriplets(_triplets.begin(), _triplets.end());
+      _ret.makeCompressed();
+    }
+    return _ret;
   }
 };
 
