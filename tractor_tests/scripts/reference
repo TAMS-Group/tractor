@@ -15,7 +15,7 @@ if len(sys.argv) >= 2:
     robot_description = sys.argv[1]
 
 robot = tt.RobotModel(robot_description)
-print "link names:", robot.link_names
+print("link names:", robot.link_names)
 
 state = tt.RobotState(robot)
 
@@ -25,12 +25,12 @@ state = False
 robot = False
 gc.collect()
 
-print "sleep"
+print("sleep")
 time.sleep(1)
 
-print joint_states.serialize()
+print(joint_states.serialize())
 
-print "sleep"
+print("sleep")
 time.sleep(1)
 
-print "exit"
+print("exit")

@@ -6,6 +6,7 @@
 #include <string>
 #include <type_traits>
 #include <typeindex>
+#include <cstdint>
 
 namespace tractor {
 

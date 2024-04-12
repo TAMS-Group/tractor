@@ -57,24 +57,24 @@ output = tt.DenseLayer(
 
 network = tt.NeuralNetwork([input], [output])
 
-print "xx", xx
-print "xx v", xx.value.shape
-print "yy", yy
-print "yy v", yy.value.shape
+print("xx", xx)
+print("xx v", xx.value.shape)
+print("yy", yy)
+print("yy v", yy.value.shape)
 
 def f():
-    print "f begin"
+    print("f begin")
     tr.parameter(xx)
     tr.parameter(yy)
     pp = network.predict(xx)
-    print pp
+    print(pp)
     tr.goal(pp - yy)
-    print "f ready"
+    print("f ready")
 
-print "rec begin"
+print("rec begin")
 prog = tr.record(f)
-print "rec ready"
-print prog
+print("rec ready")
+print(prog)
 
 def test():
     plt.cla()
@@ -103,12 +103,19 @@ solver.step_scaling = 1
 solver.compile(prog)
 
 solver.timeout = 0.005
+
+print("a")
+
 while True:
     for i in range(1):
+        print("b")
         update()
+        print("c")
         solver.gather()
+        print("1")
         solver.parameterize()
         solver.step()
         solver.scatter()
+        print("d")
     #xx.value = np.linspace(-5, +5, count).reshape([count,1])
     test()

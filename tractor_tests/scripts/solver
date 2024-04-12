@@ -5,13 +5,13 @@ import tractor as tr
 import tractor.types_double as tt
 import math
 
-print tr.__dict__.keys()
+print(tr.__dict__.keys())
 
+a = tt.Vector3(2,3,4)
 b = tt.Vector3(1,2,3)
 
 def f():
-    global a
-    a = tt.Vector3(2,3,4)
+    global a, b
     tr.variable(a)
     tr.variable(b)
     tr.goal(a * tt.Scalar(0.1))
@@ -20,18 +20,18 @@ def f():
 
 prog = tr.record(f)
 
-print prog
+print(prog)
 
-solver = tt.LeastSquaresSolver(tr.DefaultEngine())
-#solver = tt.GradientDescentSolver(tr.DefaultEngine())
+#solver = tt.LeastSquaresSolver(tr.DefaultEngine())
+solver = tt.GradientDescentSolver(tr.DefaultEngine())
 
 solver.compile(prog)
 #solver.timeout = 1
 solver.tolerance = 1e-12
-solver.regularization = 0.01
+#solver.regularization = 0.01
 
-print a, b
+print(a, b)
 
 solver.solve()
 
-print a, b
+print(a, b)

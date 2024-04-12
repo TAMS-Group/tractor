@@ -18,12 +18,12 @@ for i in range(100):
     quat2 = tt.Orientation.angle_axis(tr.norm(vec1), tr.normalized(vec1))
     vec2 = tr.residual(quat2)
 
-    print i
-    print quat1
-    print quat2
-    print vec1
-    print vec2
-    print ""
+    print(i)
+    print(quat1)
+    print(quat2)
+    print(vec1)
+    print(vec2)
+    print("")
 
     assert(np.allclose(vec1.value, vec2.value))
     assert(np.allclose(quat1.value, quat2.value) or np.allclose(quat1.value, -quat2.value))
@@ -31,12 +31,12 @@ for i in range(100):
     quat2 = tt.Orientation() + vec1
     vec2 = tr.residual(quat2)
 
-    print i
-    print quat1
-    print quat2
-    print vec1
-    print vec2
-    print ""
+    print(i)
+    print(quat1)
+    print(quat2)
+    print(vec1)
+    print(vec2)
+    print("")
 
     assert(np.allclose(vec1.value, vec2.value))
     assert(np.allclose(quat1.value, quat2.value) or np.allclose(quat1.value, -quat2.value))
@@ -47,34 +47,34 @@ for i in range(100):
     pose2 = tt.Pose() + twist1
     twist2 = tr.residual(pose2)
 
-    print i
-    print pose1
-    print pose2
-    print twist1
-    print twist2
-    print ""
+    print(i)
+    print(pose1)
+    print(pose2)
+    print(twist1)
+    print(twist2)
+    print("")
 
     assert(np.allclose(tr.rotation(twist1).value, tr.rotation(twist2).value))
 
-print ""
+print("")
 
-print tr.residual(tt.Orientation(0,0,0,1))
-print tr.residual(tt.Orientation(1,0,0,0))
-print tr.residual(tt.Orientation(math.sqrt(0.5),0,0,math.sqrt(0.5)))
-print tr.residual(tt.Orientation(-math.sqrt(0.5),0,0,-math.sqrt(0.5)))
+print(tr.residual(tt.Orientation(0,0,0,1)))
+print(tr.residual(tt.Orientation(1,0,0,0)))
+print(tr.residual(tt.Orientation(math.sqrt(0.5),0,0,math.sqrt(0.5))))
+print(tr.residual(tt.Orientation(-math.sqrt(0.5),0,0,-math.sqrt(0.5))))
 
-print ""
+print("")
 
-print tt.Orientation.angle_axis(tt.Scalar(0), tt.Vector3(1,0,0))
-print tt.Orientation.angle_axis(tt.Scalar(math.pi), tt.Vector3(1,0,0))
-print tt.Orientation.angle_axis(tt.Scalar(math.pi*2), tt.Vector3(1,0,0))
-print tt.Orientation.angle_axis(tt.Scalar(math.pi*2.5), tt.Vector3(1,0,0))
-print tt.Orientation.angle_axis(tt.Scalar(math.pi*3), tt.Vector3(1,0,0))
+print(tt.Orientation.angle_axis(tt.Scalar(0), tt.Vector3(1,0,0)))
+print(tt.Orientation.angle_axis(tt.Scalar(math.pi), tt.Vector3(1,0,0)))
+print(tt.Orientation.angle_axis(tt.Scalar(math.pi*2), tt.Vector3(1,0,0)))
+print(tt.Orientation.angle_axis(tt.Scalar(math.pi*2.5), tt.Vector3(1,0,0)))
+print(tt.Orientation.angle_axis(tt.Scalar(math.pi*3), tt.Vector3(1,0,0)))
 
-print ""
+print("")
 
-print tr.residual(tt.Orientation.angle_axis(tt.Scalar(0), tt.Vector3(1,0,0)))
-print tr.residual(tt.Orientation.angle_axis(tt.Scalar(math.pi), tt.Vector3(1,0,0)))
-print tr.residual(tt.Orientation.angle_axis(tt.Scalar(math.pi*2), tt.Vector3(1,0,0)))
-print tr.residual(tt.Orientation.angle_axis(tt.Scalar(math.pi*2.5), tt.Vector3(1,0,0)))
-print tr.residual(tt.Orientation.angle_axis(tt.Scalar(math.pi*3), tt.Vector3(1,0,0)))
+print(tr.residual(tt.Orientation.angle_axis(tt.Scalar(0), tt.Vector3(1,0,0))))
+print(tr.residual(tt.Orientation.angle_axis(tt.Scalar(math.pi), tt.Vector3(1,0,0))))
+print(tr.residual(tt.Orientation.angle_axis(tt.Scalar(math.pi*2), tt.Vector3(1,0,0))))
+print(tr.residual(tt.Orientation.angle_axis(tt.Scalar(math.pi*2.5), tt.Vector3(1,0,0))))
+print(tr.residual(tt.Orientation.angle_axis(tt.Scalar(math.pi*3), tt.Vector3(1,0,0))))

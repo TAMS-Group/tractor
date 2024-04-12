@@ -12,16 +12,16 @@ def f():
     tr.goal(q * tt.Vector3(0,0,1) - tt.Vector3(0,1,0))
 
 prog = tr.record(f)
-print prog
+print(prog)
 
 solver = tt.LeastSquaresSolver(tr.DefaultEngine())
 solver.compile(prog)
 solver.tolerance = 1e-12
 solver.regularization = 0.01
 
-print q
+print(q)
 
 solver.solve()
 
-print q
-print q * tt.Vector3(0,0,1)
+print(q)
+print(q * tt.Vector3(0,0,1))

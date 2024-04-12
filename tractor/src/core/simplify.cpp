@@ -9,6 +9,7 @@
 #include <tractor/core/program.h>
 
 #include <unordered_set>
+#include <algorithm>
 
 namespace tractor {
 
