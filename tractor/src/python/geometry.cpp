@@ -129,6 +129,11 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
           [](const Vector3 &translation, const Orientation &orientation) {
             return Geometry::pack(translation, orientation);
           }))
+      .def_property_readonly(
+          "position", [](const Pose &pose) { return Geometry::position(pose); })
+      .def_property_readonly(
+          "orientation",
+          [](const Pose &pose) { return Geometry::orientation(pose); })
       .def_property(
           "value",
           [](const Pose &pose) {
@@ -360,6 +365,24 @@ static void pythonizeGeometry(py::module mod_main, py::module mod_type) {
       .def(py::init([](const Scalar &x, const Scalar &y, const Scalar &z) {
         return Geometry::pack(x, y, z);
       }))
+      .def_property_readonly("x",
+                             [](const Vector3 &v) {
+                               Scalar x, y, z;
+                               Geometry::unpack(v, x, y, z);
+                               return x;
+                             })
+      .def_property_readonly("y",
+                             [](const Vector3 &v) {
+                               Scalar x, y, z;
+                               Geometry::unpack(v, x, y, z);
+                               return y;
+                             })
+      .def_property_readonly("z",
+                             [](const Vector3 &v) {
+                               Scalar x, y, z;
+                               Geometry::unpack(v, x, y, z);
+                               return z;
+                             })
       .def_property(
           "value",
           [](const Vector3 &_this) {
