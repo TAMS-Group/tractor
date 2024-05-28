@@ -124,7 +124,8 @@ static void pythonizeROS(py::module m) {
 
   m.def("ros_ok", []() { return ros::ok(); });
 
-  auto init_ros = [](const std::string &name, bool sigint_handler = false) {
+  auto init_ros = [](const std::string &name, bool sigint_handler = false,
+                     bool anonymous = false) {
     TRACTOR_DEBUG("init_ros " << name);
     auto args =
         py::module::import("sys").attr("argv").cast<std::vector<std::string>>();
@@ -137,6 +138,9 @@ static void pythonizeROS(py::module m) {
     int flags = ros::init_options::NoRosout;
     if (!sigint_handler) {
       flags |= ros::init_options::NoSigintHandler;
+    }
+    if (anonymous) {
+      flags |= ros::init_options::AnonymousName;
     }
     ros::init(argc, argv.data(), name, flags);
     static ros::NodeHandle node_handle("~");
