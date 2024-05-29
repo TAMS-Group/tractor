@@ -154,12 +154,20 @@ static void pythonizeROS(py::module m) {
   m.def("init_ros", init_ros);
   m.def("init_ros", [init_ros](const std::string &name) { init_ros(name); });
 
-  m.def("ros_wait_for_shutdown", []() { ros::waitForShutdown(); });
+  m.def("ros_wait_for_shutdown", []() {
+    py::gil_scoped_release release;
+    ros::waitForShutdown();
+  });
 
   m.def("ros_now", []() {
     static auto rospy_time = py::module::import("rospy").attr("Time");
     auto now = ros::Time::now();
     return rospy_time(now.sec, now.nsec);
+  });
+
+  m.def("sleep", [](double t) {
+    py::gil_scoped_release release;
+    ros::Duration(t).sleep();
   });
 
   m.def("publish", [](const std::string &topic, const py::object &message) {

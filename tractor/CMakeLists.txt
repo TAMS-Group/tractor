@@ -145,6 +145,7 @@ add_library(${LIBNAME}
     src/python/ros.cpp
     src/python/solvers.cpp
     src/python/tensor.cpp
+    src/python/utils.cpp
     src/robot/robot.cpp
     src/robot/robotinfo.cpp
     src/robot/robotmodel.cpp
