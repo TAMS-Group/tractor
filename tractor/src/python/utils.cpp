@@ -38,8 +38,8 @@ static void pythonizeUtils(py::module m) {
     VizData new_data;
     bool ok = true;
     std::thread thread;
-    VizLooper(double time_step) {
-      thread = std::thread([this, time_step]() {
+    VizLooper(double time_step, bool sync) {
+      thread = std::thread([this, time_step, sync]() {
         VizData data;
         std::chrono::steady_clock::time_point tlast =
             std::chrono::steady_clock::now();
@@ -48,22 +48,38 @@ static void pythonizeUtils(py::module m) {
             std::chrono::duration_cast<std::chrono::steady_clock::duration>(
                 std::chrono::duration<double>(time_step));
         while (true) {
+          bool timeout = false;
+
           {
             std::unique_lock<std::mutex> lock(mutex);
             while (true) {
               if (!ok) return;
               auto tnext = tlast + tstep;
-              bool timeout = (std::chrono::steady_clock::now() >= tnext);
-              if (has_new_data || timeout) {
-                if (has_new_data) {
-                  has_new_data = false;
-                  data = new_data;
-                }
+              timeout = (std::chrono::steady_clock::now() >= tnext);
+              if (timeout) {
+                tlast = tlast + tstep;
+              }
+              if (sync) {
                 if (timeout) {
-                  index++;
-                  tlast = tlast + tstep;
+                  if (index >= data.size()) {
+                    index = 0;
+                    data = new_data;
+                    has_new_data = false;
+                  }
+                  break;
                 }
-                break;
+              } else {
+                if (has_new_data || timeout) {
+                  if (has_new_data) {
+                    has_new_data = false;
+                    data = new_data;
+                  }
+                  index++;
+                  if (index >= data.size()) {
+                    index = 0;
+                  }
+                  break;
+                }
               }
               condition.wait_until(lock, tnext);
             }
@@ -71,52 +87,54 @@ static void pythonizeUtils(py::module m) {
 
           TRACTOR_DEBUG("update viz loop");
 
-          {
-            visualization_msgs::MarkerArray marker_array;
+          visualization_msgs::MarkerArray marker_array;
 
-            if (data.size()) {
-              for (auto& dat : data.at(index % data.size())) {
-                visualization_msgs::Marker marker;
+          if (data.size()) {
+            for (auto& dat : data.at(index)) {
+              visualization_msgs::Marker marker;
 
-                marker = visualization_msgs::Marker();
-                marker.ns = dat.ns;
-                marker.id = dat.id;
-                marker.type = dat.type;
-                marker.action = dat.action;
-                marker.color.r = dat.color.x();
-                marker.color.g = dat.color.y();
-                marker.color.b = dat.color.z();
-                marker.color.a = dat.color.w();
-                marker.scale.x = dat.scale.x();
-                marker.scale.y = dat.scale.y();
-                marker.scale.z = dat.scale.z();
+              marker = visualization_msgs::Marker();
+              marker.ns = dat.ns;
+              marker.id = dat.id;
+              marker.type = dat.type;
+              marker.action = dat.action;
+              marker.color.r = dat.color.x();
+              marker.color.g = dat.color.y();
+              marker.color.b = dat.color.z();
+              marker.color.a = dat.color.w();
+              marker.scale.x = dat.scale.x();
+              marker.scale.y = dat.scale.y();
+              marker.scale.z = dat.scale.z();
 
-                if (dat.colors.rows() > 0) {
-                  TRACTOR_ASSERT(dat.colors.cols() == 4);
-                  for (size_t row = 0; row < dat.colors.rows(); row++) {
-                    marker.colors.emplace_back();
-                    marker.colors.back().r = dat.colors(row, 0);
-                    marker.colors.back().g = dat.colors(row, 1);
-                    marker.colors.back().b = dat.colors(row, 2);
-                    marker.colors.back().a = dat.colors(row, 3);
-                  }
+              if (dat.colors.rows() > 0) {
+                TRACTOR_ASSERT(dat.colors.cols() == 4);
+                for (size_t row = 0; row < dat.colors.rows(); row++) {
+                  marker.colors.emplace_back();
+                  marker.colors.back().r = dat.colors(row, 0);
+                  marker.colors.back().g = dat.colors(row, 1);
+                  marker.colors.back().b = dat.colors(row, 2);
+                  marker.colors.back().a = dat.colors(row, 3);
                 }
-
-                if (dat.points.rows() > 0) {
-                  TRACTOR_ASSERT(dat.points.cols() == 3);
-                  for (size_t row = 0; row < dat.points.rows(); row++) {
-                    marker.points.emplace_back();
-                    marker.points.back().x = dat.points(row, 0);
-                    marker.points.back().y = dat.points(row, 1);
-                    marker.points.back().z = dat.points(row, 2);
-                  }
-                }
-
-                marker_array.markers.push_back(marker);
               }
-            }
 
-            tractor::publish("/tractor/visualization", marker_array);
+              if (dat.points.rows() > 0) {
+                TRACTOR_ASSERT(dat.points.cols() == 3);
+                for (size_t row = 0; row < dat.points.rows(); row++) {
+                  marker.points.emplace_back();
+                  marker.points.back().x = dat.points(row, 0);
+                  marker.points.back().y = dat.points(row, 1);
+                  marker.points.back().z = dat.points(row, 2);
+                }
+              }
+
+              marker_array.markers.push_back(marker);
+            }
+          }
+
+          tractor::publish("/tractor/visualization", marker_array);
+
+          if (timeout) {
+            index++;
           }
         }
       });
@@ -154,7 +172,7 @@ static void pythonizeUtils(py::module m) {
       .def_readwrite("points", &VizMarker::points);
 
   py::class_<VizLooper>(m, "VizLooper")
-      .def(py::init<double>())
+      .def(py::init<double, bool>())
       .def("update", &VizLooper::update);
 
   //   struct RateThread {
