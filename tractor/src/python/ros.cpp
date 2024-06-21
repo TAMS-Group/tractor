@@ -22,45 +22,54 @@ namespace tractor {
 
 template <class Scalar>
 static void pythonizeROSTyped(py::module main_module, py::module type_module) {
-  main_module.def("interact",
-                  [](const std::string &frame, const std::string &name,
-                     Var<Vector3<Scalar>> &point, double size) {
-                    return interact(frame, name, point, Scalar(size));
-                  });
+  main_module.def(
+      "interact",
+      [](const std::string &frame, const std::string &name,
+         Var<Vector3<Scalar>> &point,
+         double size) { return interact(frame, name, point, Scalar(size)); },
+      py::arg("frame"), py::arg("name"), py::arg("point"), py::arg("size"));
 
-  main_module.def("interact",
-                  [](const std::string &frame, const std::string &name,
-                     Var<Pose<Scalar>> &pose, double size) {
-                    return interact(frame, name, pose, Scalar(size));
-                  });
+  main_module.def(
+      "interact",
+      [](const std::string &frame, const std::string &name,
+         Var<Pose<Scalar>> &pose,
+         double size) { return interact(frame, name, pose, Scalar(size)); },
+      py::arg("frame"), py::arg("name"), py::arg("pose"), py::arg("size"));
 }
 
 TRACTOR_PYTHON_TYPED(pythonizeROSTyped);
 
 static void pythonizeROS(py::module m) {
-  m.def("visualize_points",
-        py::overload_cast<const std::string &, double, const Eigen::Vector4d &,
-                          const std::vector<Eigen::Vector3d> &>(
-            &visualizePoints));
+  using namespace py::literals;
 
-  m.def("visualize_points",
-        py::overload_cast<const std::string &, double,
-                          const std::vector<Eigen::Vector4d> &,
-                          const std::vector<Eigen::Vector3d> &>(
-            &visualizePoints));
+  m.def(
+      "visualize_points",
+      py::overload_cast<const std::string &, double, const Eigen::Vector4d &,
+                        const std::vector<Eigen::Vector3d> &>(&visualizePoints),
+      "name"_a, "scale"_a, "color"_a, "points"_a);
+
+  m.def(
+      "visualize_points",
+      py::overload_cast<const std::string &, double,
+                        const std::vector<Eigen::Vector4d> &,
+                        const std::vector<Eigen::Vector3d> &>(&visualizePoints),
+      "name"_a, "scale"_a, "colors"_a, "points"_a);
 
   m.def(
       "visualize_lines",
       py::overload_cast<const std::string &, double, const Eigen::Vector4d &,
-                        const std::vector<Eigen::Vector3d> &>(&visualizeLines));
+                        const std::vector<Eigen::Vector3d> &>(&visualizeLines),
+      "name"_a, "scale"_a, "color"_a, "points"_a);
 
   m.def(
       "visualize_lines",
       py::overload_cast<const std::string &, double,
                         const std::vector<Eigen::Vector4d> &,
-                        const std::vector<Eigen::Vector3d> &>(&visualizeLines));
+                        const std::vector<Eigen::Vector3d> &>(&visualizeLines),
+      "name"_a, "scale"_a, "colors"_a, "points"_a);
 
-  m.def("visualize_text", &visualizeText);
+  m.def("visualize_text", &visualizeText, "name"_a, "scale"_a, "color"_a,
+        "position"_a, "text"_a);
 
   // m.def(
   //     "visualize_mesh",
@@ -75,50 +84,52 @@ static void pythonizeROS(py::module m) {
   //                       const std::vector<Eigen::Vector3d>
   //                       &>(&visualizeMesh));
 
-  m.def("visualize_mesh",
-        [](const std::string &name, const py::array_t<float> &colors,
-           const py::array_t<float> &vertices) {
-          TRACTOR_ASSERT(colors.ndim() == 1 || colors.ndim() == 2);
-          TRACTOR_ASSERT(vertices.ndim() == 2);
-          TRACTOR_ASSERT(vertices.shape(1) == 3);
+  m.def(
+      "visualize_mesh",
+      [](const std::string &name, const py::array_t<float> &colors,
+         const py::array_t<float> &vertices) {
+        TRACTOR_ASSERT(colors.ndim() == 1 || colors.ndim() == 2);
+        TRACTOR_ASSERT(vertices.ndim() == 2);
+        TRACTOR_ASSERT(vertices.shape(1) == 3);
 
-          size_t count = vertices.shape(0);
+        size_t count = vertices.shape(0);
 
-          auto vertex_data = vertices.unchecked<2>();
+        auto vertex_data = vertices.unchecked<2>();
 
-          std::vector<Eigen::Vector3d> vertex_vector(count);
+        std::vector<Eigen::Vector3d> vertex_vector(count);
 
+        for (size_t i = 0; i < count; i++) {
+          vertex_vector[i].x() = vertex_data(i, 0);
+          vertex_vector[i].y() = vertex_data(i, 1);
+          vertex_vector[i].z() = vertex_data(i, 2);
+        }
+
+        if (colors.ndim() == 1) {
+          TRACTOR_ASSERT(colors.shape(0) == 4);
+          auto color_data = colors.unchecked<1>();
+          Eigen::Vector4d color_vector;
+          color_vector.x() = color_data(0);
+          color_vector.y() = color_data(1);
+          color_vector.z() = color_data(2);
+          color_vector.w() = color_data(3);
+          visualizeMesh(name, color_vector, vertex_vector);
+        }
+
+        if (colors.ndim() == 2) {
+          TRACTOR_ASSERT(colors.shape(0) == vertices.shape(0));
+          TRACTOR_ASSERT(colors.shape(1) == 4);
+          auto color_data = colors.unchecked<2>();
+          std::vector<Eigen::Vector4d> color_vector(count);
           for (size_t i = 0; i < count; i++) {
-            vertex_vector[i].x() = vertex_data(i, 0);
-            vertex_vector[i].y() = vertex_data(i, 1);
-            vertex_vector[i].z() = vertex_data(i, 2);
+            color_vector[i].x() = color_data(i, 0);
+            color_vector[i].y() = color_data(i, 1);
+            color_vector[i].z() = color_data(i, 2);
+            color_vector[i].w() = color_data(i, 3);
           }
-
-          if (colors.ndim() == 1) {
-            TRACTOR_ASSERT(colors.shape(0) == 4);
-            auto color_data = colors.unchecked<1>();
-            Eigen::Vector4d color_vector;
-            color_vector.x() = color_data(0);
-            color_vector.y() = color_data(1);
-            color_vector.z() = color_data(2);
-            color_vector.w() = color_data(3);
-            visualizeMesh(name, color_vector, vertex_vector);
-          }
-
-          if (colors.ndim() == 2) {
-            TRACTOR_ASSERT(colors.shape(0) == vertices.shape(0));
-            TRACTOR_ASSERT(colors.shape(1) == 4);
-            auto color_data = colors.unchecked<2>();
-            std::vector<Eigen::Vector4d> color_vector(count);
-            for (size_t i = 0; i < count; i++) {
-              color_vector[i].x() = color_data(i, 0);
-              color_vector[i].y() = color_data(i, 1);
-              color_vector[i].z() = color_data(i, 2);
-              color_vector[i].w() = color_data(i, 3);
-            }
-            visualizeMesh(name, color_vector, vertex_vector);
-          }
-        });
+          visualizeMesh(name, color_vector, vertex_vector);
+        }
+      },
+      "name"_a, "colors"_a, "vertices"_a);
 
   m.def("clear_visualization", &clearVisualization);
 
