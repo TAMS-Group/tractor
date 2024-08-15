@@ -32,7 +32,9 @@ void collision_axes(const Pose<T> &pose_a, const Pose<T> &pose_b,
   local_a = pose_a.inverse() * point_a;
   local_b = pose_b.inverse() * point_b;
 
-  *(Vec3d *)guess = res.guess;
+  if (guess) {
+    *(Vec3d *)guess = res.guess;
+  }
 }
 
 template <class T, size_t S>

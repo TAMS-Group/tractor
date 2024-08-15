@@ -15,7 +15,7 @@
 namespace pybind11 {
 class module_;
 using module = module_;
-}
+}  // namespace pybind11
 
 #ifdef TRACTOR_IMPLEMENT_OPS
 #include <pybind11/pybind11.h>
@@ -25,10 +25,11 @@ namespace tractor {
 
 class VarBase {};
 
-template <class T> class alignas(T) Var : public VarBase {
+template <class T>
+class alignas(T) Var : public VarBase {
   T _x = T();
 
-public:
+ public:
   typedef T Value;
   inline Var() {
     if (auto *inst = Recorder::instance()) {
@@ -77,21 +78,36 @@ public:
   }
 };
 
-template <class T> struct MakeVar { typedef const Var<T> Type; };
-template <class T> struct MakeVar<const T> { typedef const Var<T> Type; };
-template <class T> struct MakeVar<const T &> { typedef const Var<T> Type; };
-template <class T> struct MakeVar<T &> { typedef Var<T> Type; };
-template <class T> struct MakeVar<T *> { typedef const Var<T *> Type; };
+template <class T>
+struct MakeVar {
+  typedef const Var<T> Type;
+};
+template <class T>
+struct MakeVar<const T> {
+  typedef const Var<T> Type;
+};
+template <class T>
+struct MakeVar<const T &> {
+  typedef const Var<T> Type;
+};
+template <class T>
+struct MakeVar<T &> {
+  typedef Var<T> Type;
+};
+template <class T>
+struct MakeVar<T *> {
+  typedef const Var<T *> Type;
+};
 
 class OpTypeBase {
-protected:
+ protected:
   std::type_index _type_index = typeid(void);
   const void *_pointer = nullptr;
   std::tuple<std::type_index, const void *> pack() const {
     return std::make_tuple(_type_index, _pointer);
   }
 
-public:
+ public:
   inline OpTypeBase(const std::type_index &type_index)
       : _type_index(type_index) {}
   inline OpTypeBase(const void *pointer) : _pointer(pointer) {}
@@ -110,37 +126,40 @@ public:
 };
 
 class OpType : public OpTypeBase {
-public:
+ public:
   OpType(const std::type_index &type_index) : OpTypeBase(type_index) {}
   OpType(const std::type_info &type_index) : OpTypeBase(type_index) {}
   inline OpType(const void *pointer) : OpTypeBase(pointer) {}
 };
 
 class OpGroup : public OpTypeBase {
-public:
+ public:
   OpGroup(const std::type_index &type_index) : OpTypeBase(type_index) {}
   OpGroup(const std::type_info &type_index) : OpTypeBase(type_index) {}
   inline OpGroup(const void *pointer) : OpTypeBase(pointer) {}
 };
 
 class OpMode : public OpTypeBase {
-public:
+ public:
   OpMode(const std::type_index &type_index) : OpTypeBase(type_index) {}
   OpMode(const std::type_info &type_index) : OpTypeBase(type_index) {}
 };
-} // namespace tractor
+}  // namespace tractor
 
-template <> struct std::hash<tractor::OpType> {
+template <>
+struct std::hash<tractor::OpType> {
   std::size_t operator()(const tractor::OpType &v) const noexcept {
     return v.hash();
   }
 };
-template <> struct std::hash<tractor::OpGroup> {
+template <>
+struct std::hash<tractor::OpGroup> {
   std::size_t operator()(const tractor::OpGroup &v) const noexcept {
     return v.hash();
   }
 };
-template <> struct std::hash<tractor::OpMode> {
+template <>
+struct std::hash<tractor::OpMode> {
   std::size_t operator()(const tractor::OpMode &v) const noexcept {
     return v.hash();
   }
@@ -161,55 +180,69 @@ struct OperatorFunctions {
   const void *direct = nullptr;
 };
 
-template <class Functor> class RawArgumentTuple {
+template <class Functor>
+class RawArgumentTuple {
   template <class Ret, class... Args>
   static std::tuple<Args...> *getArgumentTuple(Ret (*)(Args...)) {
     return nullptr;
   }
 
-public:
+ public:
   typedef typename std::decay<decltype(*getArgumentTuple(
       *(Functor *)nullptr))>::type Type;
 };
 
-template <class Functor> class ArgumentValueTuple {
+template <class Functor>
+class ArgumentValueTuple {
   template <class Ret, class... Args>
-  static std::tuple<typename std::decay<Args>::type...> *
-  getArgumentTuple(Ret (*)(Args...)) {
+  static std::tuple<typename std::decay<Args>::type...> *getArgumentTuple(
+      Ret (*)(Args...)) {
     return nullptr;
   }
 
-public:
+ public:
   typedef typename std::decay<decltype(*getArgumentTuple(
       *(Functor *)nullptr))>::type Type;
 };
 
-template <class Functor> class ReturnType {
+template <class Functor>
+class ReturnType {
   template <class Ret, class... Args>
   static Ret *getReturnType(Ret (*)(Args...)) {
     return nullptr;
   }
 
-public:
+ public:
   typedef
       typename std::decay<typename std::remove_pointer<decltype(getReturnType(
           *(Functor *)nullptr))>::type>::type Type;
 };
 
-template <class T> struct IsVar { static constexpr bool value = false; };
-template <class T> struct IsVar<Var<T>> { static constexpr bool value = true; };
+template <class T>
+struct IsVar {
+  static constexpr bool value = false;
+};
+template <class T>
+struct IsVar<Var<T>> {
+  static constexpr bool value = true;
+};
 
-template <class... TT> struct AnyVar {};
-template <class T, class... TT> struct AnyVar<T, TT...> {
+template <class... TT>
+struct AnyVar {};
+template <class T, class... TT>
+struct AnyVar<T, TT...> {
   static constexpr bool value =
       (IsVar<typename std::decay<T>::type>::value || AnyVar<TT...>::value);
 };
-template <> struct AnyVar<> { static constexpr bool value = false; };
+template <>
+struct AnyVar<> {
+  static constexpr bool value = false;
+};
 
 class OperatorModeMap {
   std::vector<const Operator *> _ops;
 
-public:
+ public:
   static size_t index(const OpMode &type);
   inline auto at(size_t i) const { return i < _ops.size() ? _ops[i] : nullptr; }
   void put(size_t i, const Operator *op) {
@@ -219,14 +252,15 @@ public:
 };
 
 class Operator {
-public:
+ public:
   class Argument {
     // size_t _size = 0;
     bool _is_const = false;
     TypeInfo _type;
 
-  public:
-    template <class T> static Argument make() {
+   public:
+    template <class T>
+    static Argument make() {
       Argument ret;
       // ret._size = sizeof(typename std::decay<T>::type);
       ret._is_const =
@@ -268,13 +302,13 @@ public:
     }
   };
 
-private:
+ private:
   std::string _name, _label;
   OpMode _mode;
   OpType _op;
   const OperatorModeMap *_map = nullptr;
 
-protected:
+ protected:
   OperatorFunctions _functions;
   // size_t _argument_count = 0;
   std::vector<Argument> _arguments;
@@ -287,10 +321,11 @@ protected:
   //   return tryFind(OpMode(typeid(Mode *)), OpType(typeid(Op *)), {args...});
   // }
 
-public:
+ public:
   Operator(const Operator &) = delete;
   Operator &operator=(const Operator &) = delete;
-  template <class T> inline bool isMode() const {
+  template <class T>
+  inline bool isMode() const {
     return _mode == OpMode(typeid(T *));
   }
   inline const std::string &name() const { return _name; }
@@ -303,12 +338,14 @@ public:
   inline size_t argumentSize(size_t i) const { return _arguments[i].size(); }
   inline auto arguments() const { return ArrayRef<const Argument>(_arguments); }
   inline const Argument &arg(size_t i) const { return _arguments.at(i); }
-  template <class T> inline const Operator *tryFindVariant() const {
+  template <class T>
+  inline const Operator *tryFindVariant() const {
     size_t index = OperatorModeMap::index(OpMode(typeid(T *)));
     auto *op = _map->at(index);
     return op;
   }
-  template <class T> inline const Operator *variant() const {
+  template <class T>
+  inline const Operator *variant() const {
     auto *op = tryFindVariant<T>();
     if (!op) {
       throw std::runtime_error(std::string() + "variant not found: " +
@@ -332,18 +369,24 @@ public:
   }
   const OpType &opType() const { return _op; }
   const OpMode &opMode() const { return _mode; }
-  template <class Op> bool is() const { return _op == OpType(typeid(Op *)); }
+  template <class Op>
+  bool is() const {
+    return _op == OpType(typeid(Op *));
+  }
   static std::vector<const Operator *> all();
   virtual void pythonize(pybind11::module &) const {}
 };
 
-template <class T> struct ArgumentConverter {
+template <class T>
+struct ArgumentConverter {
   static inline const T &map(const Var<T> &v) { return v.value(); }
   static inline T &map(Var<T> &v) { return v.value(); }
 };
 
-template <class Ret, class Op> struct Caller {
-  template <class... Args> static inline Var<Ret> call2(Args &...args) {
+template <class Ret, class Op>
+struct Caller {
+  template <class... Args>
+  static inline Var<Ret> call2(Args &...args) {
     Var<Ret> ret;
     ret.value() = Op::call(args...);
     recordOperation(Op::instance(), &args..., &ret.value());
@@ -354,8 +397,10 @@ template <class Ret, class Op> struct Caller {
     return std::move(call2(ArgumentConverter<ImplArgs>::map(args)...));
   }
 };
-template <class Op> struct Caller<void, Op> {
-  template <class... Args> static inline void call2(Args &...args) {
+template <class Op>
+struct Caller<void, Op> {
+  template <class... Args>
+  static inline void call2(Args &...args) {
     Op::call(args...);
     recordOperation(Op::instance(), &args...);
   }
@@ -369,8 +414,10 @@ template <class Op> struct Caller<void, Op> {
 
 template <class Impl, class Mode, class Op, class Group, class Scalar>
 class OperatorImpl : public Operator {
-  template <class... Args> struct Init {
-    template <class Ret, size_t... Indices> struct Looper {
+  template <class... Args>
+  struct Init {
+    template <class Ret, size_t... Indices>
+    struct Looper {
       // static void loop(void *base, const uintptr_t *offsets,
       //                  size_t iterations) TRACTOR_FAST {
       //   for (size_t i = 0; i < iterations; i++) {
@@ -381,9 +428,9 @@ class OperatorImpl : public Operator {
       //     offsets += sizeof...(Indices) + 1;
       //   }
       // }
-      static inline void
-      iterateImpl(size_t iterations, Ret *ret,
-                  typename std::decay<Args>::type *...args) TRACTOR_FAST {
+      static inline void iterateImpl(size_t iterations, Ret *ret,
+                                     typename std::decay<Args>::type *...args)
+          TRACTOR_FAST {
         for (size_t i = 0; i < iterations; i++) {
           ret[i] = Impl::call(args[i]...);
         }
@@ -409,7 +456,8 @@ class OperatorImpl : public Operator {
         return {Argument::make<Args>()..., Argument::make<Ret &>()};
       }
     };
-    template <size_t... Indices> struct Looper<void, Indices...> {
+    template <size_t... Indices>
+    struct Looper<void, Indices...> {
       // static void loop(void *base, const uintptr_t *offsets,
       //                  size_t iterations) {
       //   for (size_t i = 0; i < iterations; i++)
@@ -420,9 +468,9 @@ class OperatorImpl : public Operator {
       //       offsets += sizeof...(Indices);
       //     }
       // }
-      static inline void
-      iterateImpl(size_t iterations,
-                  typename std::decay<Args>::type *...args) TRACTOR_FAST {
+      static inline void iterateImpl(size_t iterations,
+                                     typename std::decay<Args>::type *...args)
+          TRACTOR_FAST {
         for (size_t i = 0; i < iterations; i++) {
           Impl::call(args[i]...);
         }
@@ -439,8 +487,8 @@ class OperatorImpl : public Operator {
             *(typename std::decay<Args>::type *)(void *)((uint8_t *)base +
                                                          offsets[Indices])...);
       }
-      static void
-      direct(typename std::decay<Args>::type *...args) TRACTOR_FAST {
+      static void direct(typename std::decay<Args>::type *...args)
+          TRACTOR_FAST {
         Impl::call(*args...);
       }
       static std::vector<Argument> arguments() TRACTOR_SLOW {
@@ -462,7 +510,8 @@ class OperatorImpl : public Operator {
   }
   typedef typename RawArgumentTuple<decltype(&Impl::call)>::Type ArgumentTuple;
 
-  template <class Ret, class... Args> struct Pythonizer {
+  template <class Ret, class... Args>
+  struct Pythonizer {
     static void pythonize(const Operator *op, pybind11::module &m,
                           Ret (*func)(Args &...)) {
       m.def(op->label().c_str(), [op](typename MakeVar<Args>::Type &...args) {
@@ -473,7 +522,8 @@ class OperatorImpl : public Operator {
       });
     }
   };
-  template <class... Args> struct Pythonizer<void, Args...> {
+  template <class... Args>
+  struct Pythonizer<void, Args...> {
     static void pythonize(const Operator *op, pybind11::module &m,
                           void (*func)(Args &...)) {
       m.def(op->label().c_str(), [op](typename MakeVar<Args>::Type &...args) {
@@ -491,10 +541,12 @@ class OperatorImpl : public Operator {
     });
   }
 
-  template <class X, class T> struct PythonizerFilter {
+  template <class X, class T>
+  struct PythonizerFilter {
     static void pythonize(const Operator *op, pybind11::module &m) {}
   };
-  template <class X> struct PythonizerFilter<X, compute> {
+  template <class X>
+  struct PythonizerFilter<X, compute> {
     static void pythonize(const Operator *op, pybind11::module &m) {
       pythonizeImpl(op, m, &Impl::call);
     }
@@ -503,7 +555,7 @@ class OperatorImpl : public Operator {
     PythonizerFilter<int, Mode>::pythonize(this, m);
   }
 
-public:
+ public:
   OperatorImpl(const std::string &name, const std::string &label)
       : Operator(name, label, OpMode(typeid(Mode *)), OpType(typeid(Op *)),
                  OpGroup(typeid(Group *))) {
@@ -525,22 +577,27 @@ public:
 
 #endif
 
-template <class T> class Var;
+template <class T>
+class Var;
 
-template <class T> struct OverloadSelector {
+template <class T>
+struct OverloadSelector {
   template <class U,
             std::enable_if_t<std::is_convertible<T, U>::value, int> Z = 0>
   operator const U &() {
     return *(const U *)nullptr;
   }
 };
-template <class T> struct OverloadSelector<const Var<T> &> {
+template <class T>
+struct OverloadSelector<const Var<T> &> {
   operator const T &() { return *(const T *)nullptr; }
 };
-template <class T> struct OverloadSelector<Var<T> &> {
+template <class T>
+struct OverloadSelector<Var<T> &> {
   operator T &() { return *(T *)nullptr; }
 };
-template <class T> struct OverloadSelector<Var<T>> {
+template <class T>
+struct OverloadSelector<Var<T>> {
   operator const T &() { return *(const T *)nullptr; }
 };
 
@@ -548,92 +605,89 @@ template <class T> struct OverloadSelector<Var<T>> {
 
 #ifdef TRACTOR_IMPLEMENT_OPS
 
-#define TRACTOR_OP_TYPED(mode, prefix, name, args, impl, scalar, postfix)      \
-                                                                               \
-  class op_##name;                                                             \
-  struct op_##prefix##name##_##postfix##_impl_1 {                              \
-    typedef scalar T;                                                          \
-    typedef BatchScalar<scalar>::Type S;                                       \
-    static inline auto call args TRACTOR_FAST impl;                            \
-  };                                                                           \
-                                                                               \
-  struct scalar##postfix##_group;                                              \
-                                                                               \
-  struct op_##prefix##name##_##postfix##_impl_2                                \
-      : op_##prefix##name##_##postfix##_impl_1 {                               \
-    static const Operator *instance();                                         \
-  };                                                                           \
-                                                                               \
-  __attribute__((weak))                                                        \
-  const Operator *op_##prefix##name##_##postfix##_impl_2_x = OperatorImpl<     \
-      op_##prefix##name##_##postfix##_impl_1, mode, op_##name,                 \
-      std::tuple<op_##name *, scalar##postfix##_group *>,                      \
-      scalar>::instance(TRACTOR_STRINGIFY(prefix##name##_##postfix),           \
-                        TRACTOR_STRINGIFY(name));                              \
-                                                                               \
-  __attribute__((weak))                                                        \
-  const Operator *op_##prefix##name##_##postfix##_impl_2::instance() {         \
-    return op_##prefix##name##_##postfix##_impl_2_x;                           \
-  }                                                                            \
-                                                                               \
-  namespace op_##prefix##name##_##postfix##_ns {                               \
-    typedef scalar T;                                                          \
-    typedef BatchScalar<scalar>::Type S;                                       \
-    static op_##prefix##name##_##postfix##_impl_2                              \
-        *op_##prefix##name##_overload args;                                    \
-  }                                                                            \
+#define TRACTOR_OP_TYPED(mode, prefix, name, args, impl, scalar, postfix)  \
+                                                                           \
+  class op_##name;                                                         \
+  struct op_##prefix##name##_##postfix##_impl_1 {                          \
+    typedef scalar T;                                                      \
+    typedef BatchScalar<scalar>::Type S;                                   \
+    static inline auto call args TRACTOR_FAST impl;                        \
+  };                                                                       \
+                                                                           \
+  struct scalar##postfix##_group;                                          \
+                                                                           \
+  struct op_##prefix##name##_##postfix##_impl_2                            \
+      : op_##prefix##name##_##postfix##_impl_1 {                           \
+    static const Operator *instance();                                     \
+  };                                                                       \
+                                                                           \
+  __attribute__((weak))                                                    \
+  const Operator *op_##prefix##name##_##postfix##_impl_2_x = OperatorImpl< \
+      op_##prefix##name##_##postfix##_impl_1, mode, op_##name,             \
+      std::tuple<op_##name *, scalar##postfix##_group *>,                  \
+      scalar>::instance(TRACTOR_STRINGIFY(prefix##name##_##postfix),       \
+                        TRACTOR_STRINGIFY(name));                          \
+                                                                           \
+  __attribute__((weak))                                                    \
+  const Operator *op_##prefix##name##_##postfix##_impl_2::instance() {     \
+    return op_##prefix##name##_##postfix##_impl_2_x;                       \
+  }                                                                        \
+                                                                           \
+  namespace op_##prefix##name##_##postfix##_ns {                           \
+    typedef scalar T;                                                      \
+    typedef BatchScalar<scalar>::Type S;                                   \
+    static op_##prefix##name##_##postfix##_impl_2                          \
+        *op_##prefix##name##_overload args;                                \
+  }                                                                        \
   using op_##prefix##name##_##postfix##_ns::op_##prefix##name##_overload;
 
 #else
 
-#define TRACTOR_OP_TYPED(mode, prefix, name, args, impl, scalar, postfix)      \
-                                                                               \
-  class op_##name;                                                             \
-  struct op_##prefix##name##_##postfix##_impl_1 {                              \
-    typedef scalar T;                                                          \
-    typedef BatchScalar<scalar>::Type S;                                       \
-    static inline auto call args TRACTOR_SLOW impl;                            \
-  };                                                                           \
-                                                                               \
-  struct scalar##postfix##_group;                                              \
-                                                                               \
-  struct op_##prefix##name##_##postfix##_impl_2                                \
-      : op_##prefix##name##_##postfix##_impl_1 {                               \
-                                                                               \
-    static const Operator *instance();                                         \
-  };                                                                           \
-                                                                               \
-  namespace op_##prefix##name##_##postfix##_ns {                               \
-    typedef scalar T;                                                          \
-    typedef BatchScalar<scalar>::Type S;                                       \
-    static op_##prefix##name##_##postfix##_impl_2                              \
-        *op_##prefix##name##_overload args;                                    \
-  }                                                                            \
+#define TRACTOR_OP_TYPED(mode, prefix, name, args, impl, scalar, postfix) \
+                                                                          \
+  class op_##name;                                                        \
+  struct op_##prefix##name##_##postfix##_impl_1 {                         \
+    typedef scalar T;                                                     \
+    typedef BatchScalar<scalar>::Type S;                                  \
+    static inline auto call args TRACTOR_SLOW impl;                       \
+  };                                                                      \
+                                                                          \
+  struct scalar##postfix##_group;                                         \
+                                                                          \
+  struct op_##prefix##name##_##postfix##_impl_2                           \
+      : op_##prefix##name##_##postfix##_impl_1 {                          \
+    static const Operator *instance();                                    \
+  };                                                                      \
+                                                                          \
+  namespace op_##prefix##name##_##postfix##_ns {                          \
+    typedef scalar T;                                                     \
+    typedef BatchScalar<scalar>::Type S;                                  \
+    static op_##prefix##name##_##postfix##_impl_2                         \
+        *op_##prefix##name##_overload args;                               \
+  }                                                                       \
   using op_##prefix##name##_##postfix##_ns::op_##prefix##name##_overload;
 
 #endif
 
-#define TRACTOR_OP_IMPL(mode, prefix, name, args, impl, postfix)               \
-  TRACTOR_OP_TYPED(mode, prefix, name, args, impl, float, postfix##f)          \
-  TRACTOR_OP_TYPED(mode, prefix, name, args, impl, double, postfix##d)         \
-  TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch4f, postfix##4f)       \
-  TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch4d, postfix##4d)
-
-// TRACTOR_OP_TYPED(mode, prefix, name, args, impl, uint64_t, postfix##i)       \
-// TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch8d, postfix##8d)
-// TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch16d, postfix##16d)
+#define TRACTOR_OP_IMPL(mode, prefix, name, args, impl, postfix)         \
+  TRACTOR_OP_TYPED(mode, prefix, name, args, impl, float, postfix##f)    \
+  TRACTOR_OP_TYPED(mode, prefix, name, args, impl, double, postfix##d)   \
+  TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch4f, postfix##4f) \
+  TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch4d, postfix##4d) \
+  TRACTOR_OP_TYPED(mode, prefix, name, args, impl, Batch8d, postfix##8d)
 
 // template <class T> struct IsBatch { static constexpr bool value = false; };
 
 class BatchBase {
-public:
+ public:
   virtual ~BatchBase() {}
   virtual const void *vdata() const = 0;
   virtual void *vdata() = 0;
 };
 
-template <class T> class TypedBatchBase : public BatchBase {
-public:
+template <class T>
+class TypedBatchBase : public BatchBase {
+ public:
   virtual const T *data() const = 0;
   virtual T *data() = 0;
   virtual const void *vdata() const override { return data(); }
@@ -643,51 +697,51 @@ public:
 // static void isBatchTypeHelper(const std::initializer_list<BatchBase> &args)
 // {}
 
-#define TRACTOR_VAR_OP(name)                                                   \
-  template <class... Args,                                                     \
-            std::enable_if_t<AnyVar<Args...>::value, int> X = 0,               \
-            class Impl = typename std::decay<decltype(*op_##name##_overload(   \
-                OverloadSelector<Args>()...))>::type,                          \
-            class ImplArgs =                                                   \
-                typename ArgumentValueTuple<decltype(&Impl::call)>::Type,      \
-            class Ret = decltype(Impl::call(OverloadSelector<Args>()...)),     \
-            decltype(Impl::call(OverloadSelector<Args>()...)) *Y = nullptr>    \
-  inline auto name(Args &&...args) {                                           \
-    return Caller<Ret, Impl>::call((ImplArgs *)nullptr, args...);              \
-  }                                                                            \
-                                                                               \
-  template <class... Args,                                                     \
-            class TensorCheck =                                                \
-                decltype(checkAllTensorStatic(std::declval<Args>()...)),       \
-            class Impl = typename std::decay<decltype(*op_##name##_overload(   \
-                *std::declval<Args>().data()...))>::type,                      \
-            class Ret = typename std::decay<decltype(Impl::call(               \
-                *std::declval<Args>().data()...))>::type>                      \
-  inline auto name(Args &&...args) {                                           \
-    return TensorOpCaller<Ret>::call(Impl::instance(), args...);               \
+#define TRACTOR_VAR_OP(name)                                                 \
+  template <class... Args,                                                   \
+            std::enable_if_t<AnyVar<Args...>::value, int> X = 0,             \
+            class Impl = typename std::decay<decltype(*op_##name##_overload( \
+                OverloadSelector<Args>()...))>::type,                        \
+            class ImplArgs =                                                 \
+                typename ArgumentValueTuple<decltype(&Impl::call)>::Type,    \
+            class Ret = decltype(Impl::call(OverloadSelector<Args>()...)),   \
+            decltype(Impl::call(OverloadSelector<Args>()...)) *Y = nullptr>  \
+  inline auto name(Args &&...args) {                                         \
+    return Caller<Ret, Impl>::call((ImplArgs *)nullptr, args...);            \
+  }                                                                          \
+                                                                             \
+  template <class... Args,                                                   \
+            class TensorCheck =                                              \
+                decltype(checkAllTensorStatic(std::declval<Args>()...)),     \
+            class Impl = typename std::decay<decltype(*op_##name##_overload( \
+                *std::declval<Args>().data()...))>::type,                    \
+            class Ret = typename std::decay<decltype(Impl::call(             \
+                *std::declval<Args>().data()...))>::type>                    \
+  inline auto name(Args &&...args) {                                         \
+    return TensorOpCaller<Ret>::call(Impl::instance(), args...);             \
   }
 
-#define TRACTOR_OP(name, args, impl)                                           \
-  TRACTOR_OP_IMPL(compute, , name, args, impl, )                               \
+#define TRACTOR_OP(name, args, impl)             \
+  TRACTOR_OP_IMPL(compute, , name, args, impl, ) \
   TRACTOR_VAR_OP(name)
 
-#define TRACTOR_D(mode, name, args, impl)                                      \
+#define TRACTOR_D(mode, name, args, impl) \
   TRACTOR_OP_IMPL(mode, mode##_, name, args, impl, )
 
-#define TRACTOR_OP_T(postfix, name, args, impl)                                \
+#define TRACTOR_OP_T(postfix, name, args, impl) \
   TRACTOR_OP_IMPL(compute, , name, args, impl, postfix##_)
 
-#define TRACTOR_D_T(mode, postfix, name, args, impl)                           \
+#define TRACTOR_D_T(mode, postfix, name, args, impl) \
   TRACTOR_OP_IMPL(mode, mode##_, name, args, impl, postfix##_)
 
-#define TRACTOR_D_LOOP(mode, name, args, args2, impl)                          \
-  TRACTOR_D(mode, name, args, {                                                \
-    typedef S T;                                                               \
-    auto f = [] args {                                                         \
-      typedef S T;                                                             \
-      impl                                                                     \
-    };                                                                         \
-    makeBatchLoop(f).run args2;                                                \
+#define TRACTOR_D_LOOP(mode, name, args, args2, impl) \
+  TRACTOR_D(mode, name, args, {                       \
+    typedef S T;                                      \
+    auto f = [] args {                                \
+      typedef S T;                                    \
+      impl                                            \
+    };                                                \
+    makeBatchLoop(f).run args2;                       \
   })
 
-} // namespace tractor
+}  // namespace tractor

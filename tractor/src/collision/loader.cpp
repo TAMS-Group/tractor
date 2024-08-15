@@ -24,7 +24,8 @@ namespace tractor {
 void _loadCollisionLink(CollisionRobot *collision_robot,
                         const moveit::core::LinkModel *link_model,
                         const Eigen::Isometry3d &link_transform,
-                        std::shared_ptr<CollisionLink> collision_link) {
+                        std::shared_ptr<CollisionLink> collision_link,
+                        const CollisionLoaderOptions &options) {
   auto new_collision_link =
       std::make_shared<CollisionLink>(link_model->getName());
   collision_robot->addLink(new_collision_link);
@@ -45,32 +46,35 @@ void _loadCollisionLink(CollisionRobot *collision_robot,
 
     TRACTOR_INFO("shape type " << shape->type);
 
-    if (auto *sphere = dynamic_cast<const shapes::Sphere *>(shape.get())) {
-      TRACTOR_INFO("sphere " << sphere->radius << " " << shape_origin.matrix()
-                             << " " << shape_pose.matrix());
-      collision_link->addShape(collision_robot->engine()->createSphere(
-          link_model->getName(), shape_pose_x, sphere->radius));
-      continue;
-    }
+    if (options.use_primitives) {
+      if (auto *sphere = dynamic_cast<const shapes::Sphere *>(shape.get())) {
+        TRACTOR_INFO("sphere " << sphere->radius << " " << shape_origin.matrix()
+                               << " " << shape_pose.matrix());
+        collision_link->addShape(collision_robot->engine()->createSphere(
+            link_model->getName(), shape_pose_x, sphere->radius));
+        continue;
+      }
 
-    if (auto *cylinder = dynamic_cast<const shapes::Cylinder *>(shape.get())) {
-      TRACTOR_INFO("cylinder " << cylinder->length << " " << cylinder->radius
-                               << " " << shape_origin.matrix() << " "
-                               << shape_pose.matrix());
-      collision_link->addShape(collision_robot->engine()->createCylinder(
-          link_model->getName(), shape_pose_x, cylinder->length,
-          cylinder->radius));
-      continue;
-    }
+      if (auto *cylinder =
+              dynamic_cast<const shapes::Cylinder *>(shape.get())) {
+        TRACTOR_INFO("cylinder " << cylinder->length << " " << cylinder->radius
+                                 << " " << shape_origin.matrix() << " "
+                                 << shape_pose.matrix());
+        collision_link->addShape(collision_robot->engine()->createCylinder(
+            link_model->getName(), shape_pose_x, cylinder->length,
+            cylinder->radius));
+        continue;
+      }
 
-    if (auto *box = dynamic_cast<const shapes::Box *>(shape.get())) {
-      TRACTOR_INFO("box " << box->size[0] << " " << box->size[1] << " "
-                          << box->size[2] << " " << shape_origin.matrix() << " "
-                          << shape_pose.matrix());
-      collision_link->addShape(collision_robot->engine()->createBox(
-          link_model->getName(), shape_pose_x,
-          Vec3d(box->size[0], box->size[1], box->size[2])));
-      continue;
+      if (auto *box = dynamic_cast<const shapes::Box *>(shape.get())) {
+        TRACTOR_INFO("box " << box->size[0] << " " << box->size[1] << " "
+                            << box->size[2] << " " << shape_origin.matrix()
+                            << " " << shape_pose.matrix());
+        collision_link->addShape(collision_robot->engine()->createBox(
+            link_model->getName(), shape_pose_x,
+            Vec3d(box->size[0], box->size[1], box->size[2])));
+        continue;
+      }
     }
 
     std::shared_ptr<shapes::Mesh> mesh;
@@ -88,7 +92,8 @@ void _loadCollisionLink(CollisionRobot *collision_robot,
       continue;
     }
 
-    if (shapes::computeShapeExtents(mesh.get()).norm() < 1.0) {
+    if (shapes::computeShapeExtents(mesh.get()).norm() < 1.0 ||
+        !options.use_convex_decomposition) {
       TRACTOR_INFO("adding convex hull for link " << link_model->getName()
                                                   << " shape " << shape_index);
 
@@ -211,28 +216,29 @@ void _loadCollisionLink(CollisionRobot *collision_robot,
 
   for (auto *child_joint : link_model->getChildJointModels()) {
     auto *child_link = child_joint->getChildLinkModel();
-    if (child_joint->getType() == moveit::core::JointModel::FIXED) {
+    if (child_joint->getType() == moveit::core::JointModel::FIXED &&
+        options.merge_fixed_links) {
       _loadCollisionLink(
           collision_robot, child_link,
           Eigen::Isometry3d(
               (link_transform * child_link->getJointOriginTransform())
                   .matrix()),
-          collision_link);
+          collision_link, options);
     } else {
       _loadCollisionLink(collision_robot, child_link,
-                         Eigen::Isometry3d::Identity(), nullptr);
+                         Eigen::Isometry3d::Identity(), nullptr, options);
     }
   }
 }
 
 void loadCollisionRobot(const std::shared_ptr<const CollisionEngine> &engine,
                         const moveit::core::RobotModel &moveit_model,
-                        CollisionRobot *collision_robot) {
+                        CollisionRobot *collision_robot,
+                        const CollisionLoaderOptions &options) {
   TRACTOR_ASSERT(collision_robot->links().empty());
-
   _loadCollisionLink(collision_robot,
                      moveit_model.getRootJoint()->getChildLinkModel(),
-                     Eigen::Isometry3d::Identity(), nullptr);
+                     Eigen::Isometry3d::Identity(), nullptr, options);
 }
 
 }  // namespace tractor

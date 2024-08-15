@@ -191,14 +191,14 @@ pybind_add_module(tractor MODULE
 target_link_libraries(tractor PRIVATE libtractor ${catkin_LIBRARIES})
 set_target_properties(tractor PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_PYTHON_DESTINATION})
 
-add_custom_command(
-  OUTPUT "${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_PYTHON_DESTINATION}/tractor/__init__.pyi"
-  COMMAND echo "building python typings for tractor"
-  COMMAND pybind11-stubgen tractor -o "${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_PYTHON_DESTINATION}" --ignore-all-errors
-  VERBATIM
-  DEPENDS tractor
-)
-add_custom_target(
-  tractor_python_typings ALL DEPENDS 
-  ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_PYTHON_DESTINATION}/tractor/__init__.pyi
-)
+# add_custom_command(
+#   OUTPUT "${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_PYTHON_DESTINATION}/tractor/__init__.pyi"
+#   COMMAND echo "building python typings for tractor"
+#   COMMAND pybind11-stubgen tractor -o "${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_PYTHON_DESTINATION}" --ignore-all-errors
+#   VERBATIM
+#   DEPENDS tractor
+# )
+# add_custom_target(
+#   tractor_python_typings ALL DEPENDS 
+#   ${CATKIN_DEVEL_PREFIX}/${CATKIN_GLOBAL_PYTHON_DESTINATION}/tractor/__init__.pyi
+# )

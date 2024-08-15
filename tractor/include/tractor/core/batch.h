@@ -3,6 +3,7 @@
 #pragma once
 
 #include <tractor/core/platform.h>
+#include <tractor/core/error.h>
 
 #include <cmath>
 #include <cstdint>
@@ -14,11 +15,12 @@
 
 namespace tractor {
 
-//#define ALIGNBATCH(T, S) alignas(min(32, sizeof(T) * S))
+// #define ALIGNBATCH(T, S) alignas(min(32, sizeof(T) * S))
 #define ALIGNBATCH(T, S) alignas(sizeof(T) * S)
 
-template <class T, size_t S> class ALIGNBATCH(T, S) BatchStorage {
-public:
+template <class T, size_t S>
+class ALIGNBATCH(T, S) BatchStorage {
+ public:
   T _data[S];
   inline void _check() const {
     // for (size_t i = 0; i < S; i++) {
@@ -29,10 +31,11 @@ public:
   }
 };
 
-template <size_t S> class ALIGNBATCH(double, S) BatchStorage<double, S> {
+template <size_t S>
+class ALIGNBATCH(double, S) BatchStorage<double, S> {
   static constexpr std::enable_if_t<S / 4 * 4 == S> *_validate_size = nullptr;
 
-public:
+ public:
   union {
     double _data[S];
     __m256d _simd[S / 4];
@@ -49,8 +52,7 @@ public:
 
 template <class T, size_t S>
 class ALIGNBATCH(T, S) Batch : public BatchStorage<T, S> {
-
-public:
+ public:
   static constexpr size_t Size = S;
   inline Batch(const Batch &other) {
     other._check();
@@ -107,8 +109,7 @@ template <class T, size_t S>
 std::ostream &operator<<(std::ostream &s, const Batch<T, S> &batch) {
   s << "Batch(";
   for (size_t i = 0; i < S; i++) {
-    if (i > 0)
-      s << ",";
+    if (i > 0) s << ",";
     s << batch[i];
   }
   s << ")";
@@ -117,7 +118,8 @@ std::ostream &operator<<(std::ostream &s, const Batch<T, S> &batch) {
 
 // -----------------------------------------------------------------------------
 
-template <class T, size_t S> inline auto operator-(const Batch<T, S> &v) {
+template <class T, size_t S>
+inline auto operator-(const Batch<T, S> &v) {
   Batch<T, S> ret;
   for (size_t i = 0; i < S; i++) {
     ret[i] = -v[i];
@@ -125,7 +127,10 @@ template <class T, size_t S> inline auto operator-(const Batch<T, S> &v) {
   return ret;
 }
 
-template <class T, size_t S> auto operator+(const Batch<T, S> &v) { return v; }
+template <class T, size_t S>
+auto operator+(const Batch<T, S> &v) {
+  return v;
+}
 
 // template <class L, class R, size_t S>                                        \
 // inline auto operator op(const Batch<L, S> &l, const Batch<R, S> &r) {        \
@@ -146,7 +151,7 @@ template <class T, size_t S> auto operator+(const Batch<T, S> &v) { return v; }
     return ret;                                                                \
   }                                                                            \
   template <class T, size_t S>                                                 \
-  inline Batch<T, S> operator op(const Batch<T, S> &l, const T &r) {           \
+  inline Batch<T, S> operator op(const Batch<T, S> &l, const T & r) {          \
     Batch<T, S> ret;                                                           \
     for (size_t i = 0; i < S; i++) {                                           \
       ret[i] = l[i] op r;                                                      \
@@ -154,7 +159,7 @@ template <class T, size_t S> auto operator+(const Batch<T, S> &v) { return v; }
     return ret;                                                                \
   }                                                                            \
   template <class T, size_t S>                                                 \
-  inline Batch<T, S> operator op(const T &l, const Batch<T, S> &r) {           \
+  inline Batch<T, S> operator op(const T & l, const Batch<T, S> &r) {          \
     Batch<T, S> ret;                                                           \
     for (size_t i = 0; i < S; i++) {                                           \
       ret[i] = l op r[i];                                                      \
@@ -174,20 +179,20 @@ BATCH_OP_2(/)
 //   return l;                                                                  \
 // }                                                                            \
 
-#define BATCH_OP_2_X(op)                                                       \
-  template <class T, size_t S>                                                 \
-  inline Batch<T, S> &operator op(Batch<T, S> &l, const Batch<T, S> &r) {      \
-    for (size_t i = 0; i < S; i++) {                                           \
-      l[i] op r[i];                                                            \
-    }                                                                          \
-    return l;                                                                  \
-  }                                                                            \
-  template <class T, size_t S>                                                 \
-  inline Batch<T, S> &operator op(Batch<T, S> &l, const T &r) {                \
-    for (size_t i = 0; i < S; i++) {                                           \
-      l[i] op r[i];                                                            \
-    }                                                                          \
-    return l;                                                                  \
+#define BATCH_OP_2_X(op)                                                  \
+  template <class T, size_t S>                                            \
+  inline Batch<T, S> &operator op(Batch<T, S> &l, const Batch<T, S> &r) { \
+    for (size_t i = 0; i < S; i++) {                                      \
+      l[i] op r[i];                                                       \
+    }                                                                     \
+    return l;                                                             \
+  }                                                                       \
+  template <class T, size_t S>                                            \
+  inline Batch<T, S> &operator op(Batch<T, S> &l, const T & r) {          \
+    for (size_t i = 0; i < S; i++) {                                      \
+      l[i] op r[i];                                                       \
+    }                                                                     \
+    return l;                                                             \
   }
 BATCH_OP_2_X(+=)
 BATCH_OP_2_X(-=)
@@ -304,7 +309,8 @@ inline Batch<double, S> operator-(const Batch<double, S> &a) {
 
 // -----------------------------------------------------------------------------
 
-template <class T> TRACTOR_FAST inline void batch_sum(const T &dx, T &da) {
+template <class T>
+TRACTOR_FAST inline void batch_sum(const T &dx, T &da) {
   da = dx;
 }
 template <class T, size_t S>
@@ -318,7 +324,10 @@ TRACTOR_FAST inline void batch_sum(const Batch<T, S> &dx, T &da) {
 
 // -----------------------------------------------------------------------------
 
-template <class T> TRACTOR_FAST inline T batch_sum(const T &v) { return v; }
+template <class T>
+TRACTOR_FAST inline T batch_sum(const T &v) {
+  return v;
+}
 template <class T, size_t S>
 TRACTOR_FAST inline T batch_sum(const Batch<T, S> &dx) {
   T rs = T(0);
@@ -330,20 +339,29 @@ TRACTOR_FAST inline T batch_sum(const Batch<T, S> &dx) {
 
 // -----------------------------------------------------------------------------
 
-template <class T> struct BatchScalar { typedef T Type; };
-template <class T, size_t S> struct BatchScalar<Batch<T, S>> {
+template <class T>
+struct BatchScalar {
+  typedef T Type;
+};
+template <class T, size_t S>
+struct BatchScalar<Batch<T, S>> {
   typedef T Type;
 };
 
-template <class T> struct BatchSize { static constexpr size_t Size = 1; };
-template <class T, size_t S> struct BatchSize<Batch<T, S>> {
+template <class T>
+struct BatchSize {
+  static constexpr size_t Size = 1;
+};
+template <class T, size_t S>
+struct BatchSize<Batch<T, S>> {
   static constexpr size_t Size = S;
 };
 
-template <class F> class BatchLoop {
+template <class F>
+class BatchLoop {
   F _f;
 
-public:
+ public:
   BatchLoop(const F &f) : _f(f) {}
 
   template <class... Args>
@@ -364,12 +382,29 @@ public:
     }
   }
 };
-template <class F> auto makeBatchLoop(const F &f) { return BatchLoop<F>(f); }
+template <class F>
+auto makeBatchLoop(const F &f) {
+  return BatchLoop<F>(f);
+}
 
-template <class T> auto firstBatchElement(const T &v) { return v; }
+template <class T>
+auto firstBatchElement(const T &v) {
+  return v;
+}
 template <class T, size_t S>
 auto firstBatchElement(const tractor::Batch<T, S> &v) {
   return v[0];
+}
+
+template <class T>
+auto extractBatchElement(const T &v, size_t i) {
+  TRACTOR_ASSERT(i == 0);
+  return v;
+}
+template <class T, size_t S>
+auto extractBatchElement(const tractor::Batch<T, S> &v, size_t i) {
+  TRACTOR_ASSERT(i < S);
+  return v[i];
 }
 
 typedef Batch<float, 4> Batch4f;
@@ -381,18 +416,18 @@ typedef Batch<double, 8> Batch8d;
 typedef Batch<float, 16> Batch16f;
 typedef Batch<double, 16> Batch16d;
 
-} // namespace tractor
+}  // namespace tractor
 
-#define BATCH_FN(name)                                                         \
-  namespace std {                                                              \
-  template <class T, size_t S>                                                 \
-  tractor::Batch<T, S> name(const tractor::Batch<T, S> &v) {                   \
-    tractor::Batch<T, S> ret;                                                  \
-    for (size_t i = 0; i < S; i++) {                                           \
-      ret[i] = name(v[i]);                                                     \
-    }                                                                          \
-    return ret;                                                                \
-  }                                                                            \
+#define BATCH_FN(name)                                       \
+  namespace std {                                            \
+  template <class T, size_t S>                               \
+  tractor::Batch<T, S> name(const tractor::Batch<T, S> &v) { \
+    tractor::Batch<T, S> ret;                                \
+    for (size_t i = 0; i < S; i++) {                         \
+      ret[i] = name(v[i]);                                   \
+    }                                                        \
+    return ret;                                              \
+  }                                                          \
   }
 BATCH_FN(sin)
 BATCH_FN(cos)
@@ -436,4 +471,4 @@ tractor::Batch<T, S> min(const tractor::Batch<T, S> &l,
   return ret;
 }
 
-} // namespace std
+}  // namespace std

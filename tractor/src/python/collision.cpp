@@ -84,7 +84,8 @@ static void pythonizeCollisionTwist(py::module main_module,
         auto *ret = new CollisionRobot(engine);
         loadCollisionRobot(
             engine,
-            *((const PyRobotModel<Geometry> *)&robot_model)->moveit_model, ret);
+            *((const PyRobotModel<Geometry> *)&robot_model)->moveit_model, ret,
+            CollisionLoaderOptions());
         return ret;
       }))
       .def_property_readonly("links", &CollisionRobot::links)

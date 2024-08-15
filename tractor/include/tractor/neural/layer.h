@@ -17,18 +17,18 @@ template <class T>
 Tensor<T> applyActivation(const Tensor<T> &input_tensor,
                           const ActivationType &activation) {
   switch (activation) {
-  case ActivationType::Linear:
-    return input_tensor;
-    break;
-  case ActivationType::TanH:
-    return tanh(input_tensor);
-    break;
-  case ActivationType::ReLU:
-    return relu(input_tensor);
-    break;
-  default:
-    throw std::runtime_error("unsupported activation");
-    break;
+    case ActivationType::Linear:
+      return input_tensor;
+      break;
+    case ActivationType::TanH:
+      return tanh(input_tensor);
+      break;
+    case ActivationType::ReLU:
+      return relu(input_tensor);
+      break;
+    default:
+      throw std::runtime_error("unsupported activation");
+      break;
   }
 }
 
@@ -38,28 +38,29 @@ struct LayerMode {
 
 struct NeuralBase {
   virtual ~NeuralBase() {}
-  virtual void
-  serialize(const std::function<void(NeuralBase *, void *, size_t)> &fnc) {}
+  virtual void serialize(
+      const std::function<void(NeuralBase *, void *, size_t)> &fnc) {}
 };
 
 template <class Scalar>
 class Layer : public NeuralBase,
               public std::enable_shared_from_this<Layer<Scalar>> {
-protected:
+ protected:
   std::vector<std::shared_ptr<Layer>> _inputs;
 
-public:
+ public:
   const std::vector<std::shared_ptr<Layer>> &inputs() const { return _inputs; }
   virtual Tensor<Scalar> evaluate(const std::vector<Tensor<Scalar>> &inputs,
                                   const LayerMode &mode) = 0;
-  std::shared_ptr<Layer<Scalar>>
-  operator()(const std::vector<std::shared_ptr<Layer<Scalar>>> &inputs);
+  std::shared_ptr<Layer<Scalar>> operator()(
+      const std::vector<std::shared_ptr<Layer<Scalar>>> &inputs);
 };
 
-template <class Scalar> class CallLayer : public Layer<Scalar> {
+template <class Scalar>
+class CallLayer : public Layer<Scalar> {
   std::shared_ptr<Layer<Scalar>> _layer;
 
-public:
+ public:
   CallLayer(const std::shared_ptr<Layer<Scalar>> &layer,
             const std::vector<std::shared_ptr<Layer<Scalar>>> &inputs) {
     _layer = layer;
@@ -81,9 +82,9 @@ std::shared_ptr<Layer<Scalar>> Layer<Scalar>::operator()(
   return std::make_shared<CallLayer<Scalar>>(this->shared_from_this(), inputs);
 }
 
-template <class Scalar> class InputLayer : public Layer<Scalar> {
-
-public:
+template <class Scalar>
+class InputLayer : public Layer<Scalar> {
+ public:
   InputLayer() {}
   virtual Tensor<Scalar> evaluate(const std::vector<Tensor<Scalar>> &inputs,
                                   const LayerMode &mode) override {
@@ -91,19 +92,21 @@ public:
   }
 };
 
-template <class Scalar> class DenseLayer : public Layer<Scalar> {
+template <class Scalar>
+class DenseLayer : public Layer<Scalar> {
   typedef typename BatchScalar<Scalar>::Type WeightScalar;
+  static_assert(BatchSize<WeightScalar>::Size == 1);
   size_t _units = 0;
   ActivationType _activation;
   bool _initialized = false;
   Tensor<WeightScalar> _weights;
-  Tensor<Scalar> _bias;
+  Tensor<WeightScalar> _bias;
   WeightScalar _bias_regularization = 0;
   WeightScalar _weight_regularization = 0;
   WeightScalar _activity_regularization = 0;
   WeightScalar _stdev = 0;
   bool _use_bias = true;
-  Tensor<Scalar> _activity_regularization_temp;
+  // Tensor<Scalar> _activity_regularization_temp;
 
   template <class TensorScalar>
   void _randomizeWeights(Tensor<TensorScalar> &tensor,
@@ -116,16 +119,18 @@ template <class Scalar> class DenseLayer : public Layer<Scalar> {
     }
   }
 
-public:
+ public:
   DenseLayer(size_t units, ActivationType activation = ActivationType::Linear,
              WeightScalar bias_regularization = 0,
              WeightScalar weight_regularization = 0,
              WeightScalar activity_regularization = 0,
              WeightScalar stdev = 0.001, bool use_bias = true)
-      : _units(units), _activation(activation),
+      : _units(units),
+        _activation(activation),
         _bias_regularization(bias_regularization),
         _weight_regularization(weight_regularization),
-        _activity_regularization(activity_regularization), _stdev(stdev),
+        _activity_regularization(activity_regularization),
+        _stdev(stdev),
         _use_bias(use_bias) {}
   virtual Tensor<Scalar> evaluate(const std::vector<Tensor<Scalar>> &inputs,
                                   const LayerMode &mode) override {
@@ -142,7 +147,7 @@ public:
 
       if (_use_bias) {
         TRACTOR_DEBUG("dense layer create bias");
-        _bias = Tensor<Scalar>(TensorShape(_units));
+        _bias = Tensor<WeightScalar>(TensorShape(_units));
         _randomizeWeights(_bias, _stdev);
         variable(_bias);
       }
@@ -157,7 +162,7 @@ public:
         TRACTOR_DEBUG("dense layer bias regularization "
                       << _bias_regularization);
         auto reg_tens =
-            make_tensor(_bias.shape(), Scalar(_bias_regularization));
+            make_tensor(_bias.shape(), WeightScalar(_bias_regularization));
         TRACTOR_DEBUG("bias regularization " << _bias.shape() << " "
                                              << reg_tens.shape());
         goal(_bias * reg_tens);
@@ -194,10 +199,11 @@ public:
   }
 };
 
-template <class Scalar> class ActivationLayer : public Layer<Scalar> {
+template <class Scalar>
+class ActivationLayer : public Layer<Scalar> {
   ActivationType _activation = ActivationType::Linear;
 
-public:
+ public:
   ActivationLayer(const ActivationType &activation) : _activation(activation) {}
   virtual Tensor<Scalar> evaluate(const std::vector<Tensor<Scalar>> &inputs,
                                   const LayerMode &mode) override {
@@ -205,10 +211,11 @@ public:
   }
 };
 
-template <class Scalar> class LambdaLayer : public Layer<Scalar> {
+template <class Scalar>
+class LambdaLayer : public Layer<Scalar> {
   std::function<Tensor<Scalar>(const Tensor<Scalar>)> _lambda;
 
-public:
+ public:
   LambdaLayer(const std::function<Tensor<Scalar>(const Tensor<Scalar>)> &lambda)
       : _lambda(lambda) {}
   virtual Tensor<Scalar> evaluate(const std::vector<Tensor<Scalar>> &inputs,
@@ -217,11 +224,12 @@ public:
   }
 };
 
-template <class Scalar> class GaussianNoiseLayer : public Layer<Scalar> {
+template <class Scalar>
+class GaussianNoiseLayer : public Layer<Scalar> {
   typedef typename BatchScalar<Scalar>::Type WeightScalar;
   WeightScalar _standard_deviation = 0.0;
 
-public:
+ public:
   GaussianNoiseLayer(const WeightScalar &standard_deviation)
       : _standard_deviation(standard_deviation) {}
   virtual Tensor<Scalar> evaluate(const std::vector<Tensor<Scalar>> &inputs,
@@ -236,11 +244,12 @@ public:
   }
 };
 
-template <class Scalar> class DropoutLayer : public Layer<Scalar> {
+template <class Scalar>
+class DropoutLayer : public Layer<Scalar> {
   typedef typename BatchScalar<Scalar>::Type WeightScalar;
   WeightScalar _rate = 0.0;
 
-public:
+ public:
   DropoutLayer(const WeightScalar &rate) : _rate(rate) {}
   virtual Tensor<Scalar> evaluate(const std::vector<Tensor<Scalar>> &inputs,
                                   const LayerMode &mode) override {
@@ -259,7 +268,7 @@ class ActivityRegularizationLayer : public Layer<Scalar> {
   Tensor<Scalar> _l2_temp;
   bool _initialized = false;
 
-public:
+ public:
   ActivityRegularizationLayer(const double &l2) : _l2(l2) {}
   virtual Tensor<Scalar> evaluate(const std::vector<Tensor<Scalar>> &inputs,
                                   const LayerMode &mode) override {
@@ -273,4 +282,4 @@ public:
   }
 };
 
-} // namespace tractor
+}  // namespace tractor

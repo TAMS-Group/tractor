@@ -171,11 +171,12 @@ TRACTOR_D(prepare, batch, (const S &a, const T &x), {})
 TRACTOR_D(forward, batch, (const S &da, T &dx), { dx = T(da); })
 TRACTOR_D(reverse, batch, (S & da, const T &dx), { batch_sum(dx, da); })
 
-TRACTOR_OP_TYPED(
-    compute, , zero, (T & x), { x = T(0); }, uint64_t, i)
+TRACTOR_OP_TYPED(compute, , zero, (T & x), { x = T(0); }, uint64_t, i)
+TRACTOR_OP_TYPED(prepare, prepare_, zero, (const T &x), {}, uint64_t, i)
+TRACTOR_OP_TYPED(forward, forward_, zero, (T & dx), { dx = 0; }, uint64_t, i)
+TRACTOR_OP_TYPED(reverse, reverse_, zero, (T & da), { da = 0; }, uint64_t, i)
 
-TRACTOR_OP_TYPED(
-    compute, , move, (const T &a, T &x), { x = a; }, uint64_t, i)
+TRACTOR_OP_TYPED(compute, , move, (const T &a, T &x), { x = a; }, uint64_t, i)
 TRACTOR_OP_TYPED(prepare, prepare_, move, (const T &a, const T &x), {},
                  uint64_t, i)
 TRACTOR_OP_TYPED(
@@ -198,4 +199,4 @@ TRACTOR_OP_TYPED(
     },
     uint64_t, i)
 
-} // namespace tractor
+}  // namespace tractor
